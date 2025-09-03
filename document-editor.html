@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LILAC Document Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="fixed top-0 left-0 right-0 z-40 bg-white border-b shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+            <button onclick="window.history.back()" class="p-2 rounded hover:bg-gray-100" title="Back">
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <h1 class="font-semibold text-gray-800">Untitled Document</h1>
+            <div class="ml-auto flex items-center gap-2">
+                <button onclick="saveDoc()" class="px-3 py-1.5 rounded bg-blue-600 text-white text-sm hover:bg-blue-700">Save</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-20 max-w-6xl mx-auto px-4">
+        <div class="bg-white rounded-xl shadow border">
+            <div class="p-3 border-b flex flex-wrap gap-2">
+                <button class="px-2 py-1 rounded hover:bg-gray-100" onclick="exec('bold')"><b>B</b></button>
+                <button class="px-2 py-1 rounded hover:bg-gray-100" onclick="exec('italic')"><i>I</i></button>
+                <button class="px-2 py-1 rounded hover:bg-gray-100" onclick="exec('underline')"><u>U</u></button>
+                <div class="w-px bg-gray-200 mx-1"></div>
+                <button class="px-2 py-1 rounded hover:bg-gray-100" onclick="exec('insertUnorderedList')">• List</button>
+                <button class="px-2 py-1 rounded hover:bg-gray-100" onclick="exec('insertOrderedList')">1. List</button>
+                <button class="px-2 py-1 rounded hover:bg-gray-100" onclick="exec('formatBlock','<h2>')">H2</button>
+                <button class="px-2 py-1 rounded hover:bg-gray-100" onclick="exec('formatBlock','<p>')">Paragraph</button>
+            </div>
+            <div id="editor" contenteditable="true" class="min-h-[60vh] p-6 outline-none leading-relaxed">
+                <p class="text-gray-500">Start typing your document here...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    function exec(cmd, val = null) { document.execCommand(cmd, false, val); }
+    function saveDoc() {
+        const content = document.getElementById('editor').innerHTML;
+        try {
+            localStorage.setItem('lilac_temp_doc', content);
+            alert('Document saved locally.');
+        } catch (e) { alert('Save failed.'); }
+    }
+    // Restore if exists
+    (function(){
+        const saved = localStorage.getItem('lilac_temp_doc');
+        if (saved) document.getElementById('editor').innerHTML = saved;
+    })();
+    </script>
+</body>
+</html> 

@@ -1,0 +1,19 @@
+{
+    "name": "lilac/document-management",
+    "description": "LILAC Document Management System",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "smalot/pdfparser": "^2.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lilac\\": "classes/"
+        }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "echo 'PDF Parser library installed successfully!'"
+        ]
+    }
+} 

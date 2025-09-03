@@ -1,0 +1,34 @@
+RewriteEngine On
+
+# Security headers
+Header always set X-Content-Type-Options nosniff
+Header always set X-Frame-Options DENY
+Header always set X-XSS-Protection "1; mode=block"
+
+# Enable PHP error display for development (remove in production)
+php_flag display_errors on
+php_value error_reporting "E_ALL"
+
+# Set default charset
+AddDefaultCharset UTF-8
+
+# Protect sensitive files
+<Files "config/database.php">
+    Require all denied
+</Files>
+
+# Allow access to API endpoints
+<Files "api/*.php">
+    Require all granted
+</Files>
+
+# Cache static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+</IfModule> 

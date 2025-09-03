@@ -1,0 +1,48 @@
+To: patriciochrisjane@gmail.com
+Subject: Documents Shared: Patricio_Resume +1 more
+Headers: From: LILAC System <noreply@lilac-system.com>
+Reply-To: noreply@lilac-system.com
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Body:
+
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                        .content { background-color: #ffffff; padding: 20px; border: 1px solid #e9ecef; border-radius: 8px; }
+                        .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 12px; color: #6c757d; }
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h2>Documents Shared with You</h2>
+                        </div>
+                        <div class='content'>
+                            <p>Hello,</p>
+                            <p>The following documents have been shared with you from the LILAC System:</p>
+                            
+                    <div style='margin: 15px 0; padding: 15px; border: 1px solid #e9ecef; border-radius: 8px; background-color: #f8f9fa;'>
+                        <h4 style='margin: 0 0 10px 0; color: #333;'>Patricio_Resume</h4>
+                        <a href='/LILAC/uploads/Patricio_Resume.pdf' style='display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; margin: 10px 0;'>View Document</a>
+                        <p style='margin: 10px 0 0 0; font-size: 12px; color: #6c757d;'>Direct link: <a href='/LILAC/uploads/Patricio_Resume.pdf'>/LILAC/uploads/Patricio_Resume.pdf</a></p>
+                    </div>
+                    <div style='margin: 15px 0; padding: 15px; border: 1px solid #e9ecef; border-radius: 8px; background-color: #f8f9fa;'>
+                        <h4 style='margin: 0 0 10px 0; color: #333;'>SelfPaceCourse_Patricio</h4>
+                        <a href='/LILAC/uploads/SelfPaceCourse_Patricio.jpg' style='display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; margin: 10px 0;'>View Document</a>
+                        <p style='margin: 10px 0 0 0; font-size: 12px; color: #6c757d;'>Direct link: <a href='/LILAC/uploads/SelfPaceCourse_Patricio.jpg'>/LILAC/uploads/SelfPaceCourse_Patricio.jpg</a></p>
+                    </div>
+                            <div style='margin: 20px 0; padding: 15px; background-color: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px;'><strong>Message:</strong><br>tst</div>
+                            <p>These links will remain active for sharing purposes.</p>
+                        </div>
+                        <div class='footer'>
+                            <p>This email was sent from the LILAC System.</p>
+                            <p>If you didn't expect this email, please ignore it.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+---

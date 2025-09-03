@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LILAC - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="modern-design-system.css">
+</head>
+<body class="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 via-white to-yellow-100">
+  <div class="w-full max-w-md mx-auto p-8 bg-white/90 rounded-2xl shadow-2xl border border-gray-200 flex flex-col items-center mt-12 mb-6 relative">
+    <!-- Close Button -->
+    <a href="index.html" class="absolute top-4 right-4 w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-all duration-200 group" title="Back to Home">
+      <svg class="w-5 h-5 text-gray-600 group-hover:text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </a>
+    
+    <div class="flex flex-col items-center mb-6">
+      <div class="w-24 h-24 rounded-full bg-white shadow-lg flex items-center justify-center mb-4 border-4 border-blue-200">
+        <img src="img/cpu-logo.png" alt="CPU Logo" class="w-20 h-20 object-contain rounded-full">
+      </div>
+      <h1 class="text-3xl font-extrabold text-blue-900 mb-1 tracking-tight">Welcome to LILAC</h1>
+      <p class="text-sm text-gray-500 mb-2">Central Philippine University</p>
+      <p class="text-xs text-gray-400">Institutional Management System</p>
+    </div>
+    <form id="loginForm" autocomplete="off" class="space-y-6 w-full">
+      <div>
+        <label for="username" class="block text-gray-700 font-medium mb-1">Username</label>
+        <input id="username" name="username" type="text" required autofocus class="mt-1 w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 transition">
+      </div>
+      <div>
+        <label for="password" class="block text-gray-700 font-medium mb-1">Password</label>
+        <div class="flex items-center">
+          <input id="password" name="password" type="password" required class="flex-1 border border-gray-300 rounded-l-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 transition">
+          <button type="button" id="togglePassword" class="bg-gray-200 px-3 py-3 rounded-r-lg text-gray-700 ml-2 flex items-center justify-center hover:bg-gray-300 transition" aria-label="Show or hide password">
+            <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div id="loginError" class="text-red-700 bg-red-100 border border-red-200 rounded-lg px-4 py-2 text-center text-sm font-medium hidden transition-all duration-300"></div>
+      <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg shadow hover:bg-blue-700 transition">Login</button>
+      <div id="loginLoading" class="text-blue-600 mt-2 text-center hidden">Logging in...</div>
+      <a href="#" class="block text-blue-600 text-xs mt-2 hover:underline text-center">Forgot Password?</a>
+    </form>
+  </div>
+  <footer class="text-xs text-gray-400 mt-auto mb-4 text-center">
+    &copy; 2025 Central Philippine University | LILAC System
+  </footer>
+  <script>
+    // Show/hide password toggle
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+    const eyeIcon = document.getElementById('eyeIcon');
+    let passwordVisible = false;
+    togglePassword.addEventListener('click', function() {
+      passwordVisible = !passwordVisible;
+      passwordInput.type = passwordVisible ? 'text' : 'password';
+      eyeIcon.innerHTML = passwordVisible
+        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a9.956 9.956 0 012.042-3.368m3.087-2.742A9.956 9.956 0 0112 5c4.477 0 8.268 2.943 9.542 7a9.956 9.956 0 01-4.421 5.568M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18" />`
+        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />\n<path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z\" />`;
+    });
+
+    // Simple login logic
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const loginLoading = document.getElementById('loginLoading');
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      loginError.classList.add('hidden');
+      loginLoading.classList.remove('hidden');
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      setTimeout(() => {
+        loginLoading.classList.add('hidden');
+        if (username === 'admin' && password === 'admin') {
+          window.location.href = 'dashboard.php';
+        } else {
+          loginError.textContent = 'Invalid username or password.';
+          loginError.classList.remove('hidden');
+        }
+      }, 800);
+    });
+  </script>
+</body>
+</html>

@@ -3631,72 +3631,27 @@
             }
         });
     </script>
-</head>
+"</head>
 <body class="bg-gray-50 dark:bg-[#222831] transition-colors duration-200">
-    
+	<!-- Navigation Bar -->
+	<nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
+		<div class="flex items-center space-x-4">
+			<button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+				</svg>
+			</button>
+		</div>
+		<div class="absolute left-1/2 transform -translate-x-1/2">
+			<h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">LILAC System</h1>
+		</div>
+	</nav>
 
-
-    <!-- Sidebar -->
-    <div id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white dark:bg-[#2a2f3a] border-r border-gray-200 dark:border-gray-600 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-50">
-        <div class="p-6">
-            <!-- Mobile Menu Toggle -->
-            <button id="menu-toggle" onclick="toggleMenu()" class="md:hidden p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mb-4">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-            
-            <!-- Schedule Header -->
-            <div class="mb-6">
-                <a href="dashboard.php" class="scheduler-link text-xl font-bold text-gray-900 dark:text-white mb-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 ease-in-out focus:outline-none focus:ring-0 focus:ring-offset-0 focus:border-0 focus:shadow-none flex items-center gap-2" title="Click to return to Dashboard">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    Scheduler
-                </a>
-            </div>
-
-
-
-            <!-- Add Event Button -->
-            <button id="add-event-btn" class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors mb-6">
-                + Add Event
-            </button>
-
-            <!-- Calendar Widget -->
-            <div class="mb-6">
-                <div class="flex items-center justify-between mb-3">
-                    <button id="prev-month" class="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onclick="navigateMonth(-1)" title="Previous Month">
-                        <svg class="w-4 h-4 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                    </button>
-                    <h3 id="calendar-month-year" class="text-sm font-medium text-gray-900 dark:text-white">February 2025</h3>
-                    <button id="next-month" class="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onclick="navigateMonth(1)" title="Next Month">
-                        <svg class="w-4 h-4 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </button>
-                </div>
-                <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-xs bg-white dark:bg-[#222831] rounded-lg p-2">
-                    <!-- Calendar will be populated by JavaScript -->
-                </div>
-            </div>
-
-
-
-            <!-- Reminders -->
-            <div>
-                <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Reminder</h3>
-                <div id="reminders-list" class="space-y-2">
-                    <!-- Reminders will be populated by JavaScript -->
-                </div>
-            </div>
-        </div>
-    </div>
+	<!-- Sidebar -->
+	<?php include 'sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div class="ml-0 md:ml-64 p-6 pt-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-[#222831] dark:via-[#2a2f3a] dark:to-[#222831] transition-colors duration-200">
+    <div id="main-content" class="ml-64 p-6 pt-16 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-[#222831] dark:via-[#2a2f3a] dark:to-[#222831] transition-colors duration-200">
 
 
 

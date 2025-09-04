@@ -3026,7 +3026,7 @@
 <body class="bg-[#F8F8FF]">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
         <div class="flex items-center space-x-4">
             <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3039,7 +3039,7 @@
         </div>
 
         <div class="absolute left-1/2 transform -translate-x-1/2">
-            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Documents</h1>
+            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">LILAC Documents</h1>
         </div>
 
         <div class="text-sm flex items-center space-x-4">
@@ -3085,7 +3085,7 @@
     <?php include 'sidebar.php'; ?>
 
         	<!-- Main Content -->
-	<div id="main-content" class="ml-64 p-4 pt-3 min-h-screen bg-[#F8F8FF]">
+	<div id="main-content" class="ml-64 p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
 		<!-- Content Area -->
 		<div class="">
             <!-- Documents Container -->

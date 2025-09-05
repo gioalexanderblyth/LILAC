@@ -61,20 +61,9 @@
             background-image: repeating-linear-gradient(to bottom, rgba(255,255,255,0.06), rgba(255,255,255,0.06) 1px, transparent 1px, transparent 40px);
         }
 
-        /* FAB label reveal on hover */
-        #view-switch-btn span {
-            max-width: 0;
-            opacity: 0;
-            transform: translateX(6px);
-            transition: all 200ms ease;
-            overflow: hidden;
-            display: inline-block;
-        }
-        #view-switch-btn:hover span, #view-switch-btn:focus span {
-            max-width: 200px;
-            opacity: 1;
-            transform: translateX(0);
-        }
+        /* FAB label hidden (disable reveal) */
+        #view-switch-btn span { display: none !important; }
+        #view-switch-btn:hover span, #view-switch-btn:focus span { display: none !important; }
 
         /* Toggle switch */
         .switch {
@@ -835,7 +824,8 @@
                             color: meeting.color || 'blue', // Use the actual color from database
                             startTime: meeting.meeting_time,
                             endTime: meeting.end_time || calculateEndTime(meeting.meeting_time, 60), // Use end_time if available
-                            date: meeting.meeting_date
+                            date: meeting.meeting_date,
+                            dateEnd: meeting.end_date || meeting.meeting_date
                         }));
                         console.log('Meetings with colors:', currentMeetings.map(m => ({ id: m.id, title: m.title, color: m.color, description: m.description })));
                         console.log('Processed meetings:', currentMeetings);
@@ -966,7 +956,11 @@
                 }
 
                 // Build event chips for this date (limit to 2)
-                const meetingsForDay = (meetings || []).filter(m => m.meeting_date === currentDateString);
+                const meetingsForDay = (meetings || []).filter(m => {
+                    const start = m.meeting_date;
+                    const end = m.end_date || m.meeting_date;
+                    return start <= currentDateString && end >= currentDateString;
+                });
                 let chipsHTML = '';
                 if (meetingsForDay.length > 0) {
                     const toShow = meetingsForDay.slice(0, 2);
@@ -1131,8 +1125,11 @@
                 const dayString = dayDate.toISOString().split('T')[0];
                 
                 const dayEvents = filteredMeetings.filter(meeting => {
-                    console.log('Comparing meeting date:', meeting.date, 'with day string:', dayString, 'match:', meeting.date === dayString);
-                    return meeting.date === dayString;
+                    const start = meeting.date;
+                    const end = meeting.dateEnd || meeting.date;
+                    const match = start <= dayString && end >= dayString;
+                    console.log('Comparing range:', {start, end, dayString, match});
+                    return match;
                 });
                 
                 console.log('Events for day', dayString, ':', dayEvents.length, dayEvents.map(e => e.title));
@@ -3866,10 +3863,10 @@
 </head>
 <body class="bg-gray-50 dark:bg-[#222831] transition-colors duration-200">
 	<!-- Navigation Bar -->
-	<nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
+	<nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-3 h-14 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
 		<div class="flex items-center space-x-4">
-			<button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
-				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-1/2 -translate-y-1/2 left-4 z-[70]" title="Toggle sidebar">
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
 				</svg>
 			</button>
@@ -3877,8 +3874,8 @@
 		<div class="absolute left-1/2 transform -translate-x-1/2">
 			<h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Scheduler</h1>
 		</div>
-		<div class="absolute right-4 flex items-center space-x-4">
-			<label class="switch" title="Toggle dark mode">
+		<div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center space-x-4">
+			<label class="switch scale-90" title="Toggle dark mode">
 				<input type="checkbox" id="dark-mode-toggle">
 				<span class="slider"></span>
 			</label>
@@ -3921,7 +3918,7 @@
             <!-- Schedule Grid -->
             <div class="flex space-x-6">
                 <!-- Left column: Reminders -->
-                <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4 w-72 flex-shrink-0">
+                <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4 w-72 flex-shrink-0 -mt-4">
                     <button id="quick-reminder-btn" class="w-full mb-3 px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors">+ Quick Reminder</button>
                     <div class="mb-4">
                         <div class="flex items-center justify-between mb-2">
@@ -3944,10 +3941,18 @@
                 </div>
 
                 <!-- Right column: Month grid + Schedule stacked -->
-                <div class="flex-1 space-y-4">
+                <div class="flex-1 space-y-4 -mt-4">
 
                     <!-- Date range sub-header -->
-                    <div class="w-full text-center">
+                    <div class="w-full flex items-center justify-between px-2">
+                        <div class="flex items-center space-x-1">
+                            <button id="prev-week-small" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Previous week" onclick="navigateWeek(-1)">
+                                <svg class="w-4 h-4 text-gray-600 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <button id="next-week-small" class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title="Next week" onclick="navigateWeek(1)">
+                                <svg class="w-4 h-4 text-gray-600 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
                         <span id="date-range" class="text-base font-semibold text-gray-700 dark:text-gray-200"></span>
                     </div>
 
@@ -4105,23 +4110,23 @@
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
     <!-- Floating View Switch Button -->
-    <div class="fixed bottom-6 right-6 z-50">
-        <button id="view-switch-btn" class="bg-purple-600 text-white px-4 py-3 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center space-x-2">
+    <div class="fixed bottom-4 right-4 z-50">
+        <button id="view-switch-btn" aria-label="Schedule a Meeting" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center">
             <svg id="calendar-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
             <svg id="meetings-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
             </svg>
-            <span id="view-switch-text">Schedule a Meeting</span>
+            <span id="view-switch-text" class="hidden">Schedule a Meeting</span>
         </button>
     </div>
 
     <!-- Add Event Modal -->
-    <div id="add-event-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div id="add-event-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 z-50 hidden">
+        <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-xl max-w-sm w-full mx-4 max-h-[80vh] overflow-y-auto">
             <!-- Modal Header -->
-            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600">
                 <h3 id="add-event-modal-title" class="text-lg font-semibold text-gray-900 dark:text-white">Add Event</h3>
                 <button onclick="closeAddEventModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4131,7 +4136,7 @@
             </div>
 
             <!-- Modal Body -->
-            <form id="add-event-form" onsubmit="handleAddEventSubmit(event)" class="p-6 space-y-6">
+            <form id="add-event-form" onsubmit="handleAddEventSubmit(event)" class="p-4 space-y-4">
                 <!-- Event Name -->
                 <div>
                     <label for="event-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

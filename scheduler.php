@@ -348,27 +348,9 @@
                 });
             }
 
-            // Dark mode toggle
-            const darkToggle = document.getElementById('dark-mode-toggle');
-            if (darkToggle) {
-                try {
-                    const isDark = localStorage.getItem('darkMode') === 'true';
-                    if (isDark) document.documentElement.classList.add('dark');
-                    darkToggle.checked = document.documentElement.classList.contains('dark');
-                } catch (e) {}
-                darkToggle.addEventListener('change', function() {
-                    if (this.checked) {
-                        document.documentElement.classList.add('dark');
-                        try { localStorage.setItem('darkMode', 'true'); } catch (e) {}
-                    } else {
-                        document.documentElement.classList.remove('dark');
-                        try { localStorage.setItem('darkMode', 'false'); } catch (e) {}
-                    }
-                    renderCalendar();
-                    renderMiniCalendar();
-                    renderSchedule();
-                });
-            }
+            // Dark mode disabled: Always use light theme
+            try { localStorage.setItem('darkMode', 'false'); } catch (e) {}
+            document.documentElement.classList.remove('dark');
         }
 
         // Function to handle date selection
@@ -3874,19 +3856,14 @@
 		<div class="absolute left-1/2 transform -translate-x-1/2">
 			<h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Scheduler</h1>
 		</div>
-		<div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center space-x-4">
-			<label class="switch scale-90" title="Toggle dark mode">
-				<input type="checkbox" id="dark-mode-toggle">
-				<span class="slider"></span>
-			</label>
-		</div>
+		<div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center space-x-4"></div>
 	</nav>
 
 	<!-- Sidebar -->
 	<?php include 'sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 px-6 pt-2 pb-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-[#222831] dark:via-[#2a2f3a] dark:to-[#222831] transition-colors duration-200">
+    <div id="main-content" class="ml-64 px-6 pt-2 pb-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-colors duration-200">
 
 
 

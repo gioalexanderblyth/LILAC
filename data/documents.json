@@ -2,28 +2,6 @@
     "auto_id": 11,
     "documents": [
         {
-            "id": 7,
-            "document_name": "sample-form-for-Active-MOU-and-MOA",
-            "filename": "doc_68bb26293564b1.00812039.docx",
-            "original_filename": "sample-form-for-Active-MOU-and-MOA.docx",
-            "file_size": 31574,
-            "category": "",
-            "description": "",
-            "upload_date": "2025-09-05 20:04:25",
-            "status": "Active"
-        },
-        {
-            "id": 8,
-            "document_name": "PERSONAL-HISTORY-STATEMENT-2",
-            "filename": "doc_68bb2629387755.88002726.pdf",
-            "original_filename": "PERSONAL-HISTORY-STATEMENT-2.pdf",
-            "file_size": 120701,
-            "category": "",
-            "description": "",
-            "upload_date": "2025-09-05 20:04:25",
-            "status": "Active"
-        },
-        {
             "id": 9,
             "document_name": "ADMISSION-FORM-FOR-FOREIGN-STUDENT-2024-2",
             "filename": "doc_68bb2629426244.87219664.pdf",

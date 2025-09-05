@@ -857,14 +857,16 @@ Approved by: ________________
 <body class="bg-gray-50">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between">
-        <button id="menu-toggle" onclick="toggleMenu()" class="md:hidden p-2 rounded-lg hover:bg-gray-700 transition-colors">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
+        <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
             </button>
-        <h1 class="text-xl font-bold">LILAC Templates</h1>
-        <div class="text-sm flex items-center space-x-2">
+        <div class="absolute left-1/2 transform -translate-x-1/2">
+            <h1 class="text-xl font-bold text-gray-800">LILAC Templates</h1>
+        </div>
+        <div class="absolute right-4 top-4 z-[90] text-sm flex items-center space-x-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
@@ -875,8 +877,36 @@ Approved by: ________________
     <!-- Sidebar -->
     <?php include 'sidebar.php'; ?>
 
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var hamburger = document.getElementById('hamburger-toggle');
+        if (hamburger) {
+            hamburger.addEventListener('click', function() {
+                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
+            });
+        }
+        var desktopToggle = document.getElementById('desktop-menu-toggle');
+        if (desktopToggle) {
+            desktopToggle.addEventListener('click', function() {
+                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
+            });
+        }
+
+        // Update date in top-right
+        function updateCurrentDate() {
+            var el = document.getElementById('current-date');
+            if (el) {
+                var now = new Date();
+                el.textContent = now.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+            }
+        }
+        updateCurrentDate();
+        setInterval(updateCurrentDate, 60000);
+    });
+    </script>
+
     <!-- Main Content -->
-    <div class="ml-0 md:ml-64 p-6 pt-20 min-h-screen bg-white">
+    <div id="main-content" class="ml-64 p-6 pt-20 min-h-screen bg-white transition-all duration-300 ease-in-out">
         <!-- Top Actions Row -->
         <div class="flex flex-wrap gap-3 mb-6">
             <button id="create-document-btn" onclick="goToDocumentEditor()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-full shadow hover:bg-blue-700 hover:shadow-md active:translate-y-px focus:outline-none focus:ring-2 focus:ring-blue-300">

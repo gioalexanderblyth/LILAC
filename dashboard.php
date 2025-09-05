@@ -533,31 +533,27 @@ window.addEventListener('sidebar:state', function (e) {
             const startDate = new Date(firstDay);
             startDate.setDate(startDate.getDate() - firstDay.getDay());
 
-            // Generate exactly 6 weeks (42 days) for consistent grid
             for (let i = 0; i < 42; i++) {
                 const currentDate = new Date(startDate);
                 currentDate.setDate(startDate.getDate() + i);
                 
                 const dayEl = document.createElement('div');
-                dayEl.className = 'h-8 w-8 flex items-center justify-center text-xs cursor-pointer rounded-lg transition-all duration-200 font-medium mx-auto';
+                dayEl.className = 'h-10 flex items-center justify-center text-sm cursor-pointer rounded-xl transition-all duration-200 font-medium';
                 dayEl.textContent = currentDate.getDate();
                 
-                // Check if it's current month
                 if (currentDate.getMonth() === date.getMonth()) {
-                    dayEl.className += ' text-gray-800 hover:bg-gray-100 hover:shadow-sm';
+                    dayEl.className += ' text-gray-800 hover:bg-gray-100 hover:shadow-md';
                 } else {
-                    dayEl.className += ' text-gray-300';
+                    dayEl.className += ' text-gray-400';
                 }
                 
-                // Check if it's today
                 const today = new Date();
                 if (currentDate.toDateString() === today.toDateString()) {
-                    dayEl.className = 'h-8 w-8 flex items-center justify-center text-xs cursor-pointer rounded-lg transition-all duration-200 font-bold mx-auto bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transform hover:scale-110';
+                    dayEl.className += ' bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold shadow-lg hover:shadow-xl transform hover:scale-105';
                 }
                 
-                // Check if it's selected date (but not today)
                 if (currentDate.toDateString() === selectedDate.toDateString() && currentDate.toDateString() !== today.toDateString()) {
-                    dayEl.className += ' bg-indigo-100 border border-indigo-300 text-indigo-800';
+                    dayEl.className += ' bg-indigo-100 border-2 border-indigo-300 text-indigo-800';
                 }
                 
                 dayEl.addEventListener('click', () => {
@@ -579,29 +575,14 @@ window.addEventListener('sidebar:state', function (e) {
             
             if (!selectedDateEl || !dayEventsEl) return;
 
-            const today = new Date();
-            const isToday = date.toDateString() === today.toDateString();
-            
-            if (isToday) {
-                selectedDateEl.textContent = "Today's Events";
-            } else {
-                const formattedDate = date.toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'short',
-                    day: 'numeric'
-                });
-                selectedDateEl.textContent = `Events for ${formattedDate}`;
-            }
-            
-            // For now, show no events message
-            dayEventsEl.innerHTML = `
-                <div class="text-center py-4 text-gray-500">
-                    <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    <p class="text-sm">No events scheduled</p>
-                </div>
-            `;
+            const formattedDate = date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            selectedDateEl.textContent = `Events for ${formattedDate}`;
+            dayEventsEl.innerHTML = '<p class="text-gray-500 text-xs">No events scheduled</p>';
         }
 
         function changeMonth(direction) {
@@ -1277,9 +1258,9 @@ window.addEventListener('sidebar:state', function (e) {
     </script>
 </head>
 
-<body class="bg-[#F8F8FF]">
+<body class="bg-gray-50">
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
         <div class="flex items-center space-x-4">
             <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1419,12 +1400,6 @@ window.addEventListener('sidebar:state', function (e) {
                             </svg>
                             <span>Notifications</span>
                         </a>
-                        <a href="#" onclick="logoutLILAC()" class="flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100">
-                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1"/>
-                            </svg>
-                            <span>Logout</span>
-                        </a>
                     </div>
                 </div>
             </div>
@@ -1435,10 +1410,10 @@ window.addEventListener('sidebar:state', function (e) {
     <?php include 'sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 p-4 pt-3 min-h-screen bg-[#F8F8FF]">
+    <div id="main-content" class="ml-64 p-4 pt-16 min-h-screen bg-muted transition-all duration-300 ease-in-out">
                 <!-- Welcome Section -->
         <!-- Stats Cards -->
-        <div class="grid grid-cols-4 gap-4 mb-6 mt-0">
+        <div class="grid grid-cols-4 gap-4 mb-6 mt-4">
             <!-- MOUs Card -->
             <a href="mou-moa.php" class="stats-card group cursor-pointer" style="text-decoration: none;">
                 <div class="flex items-center justify-between mb-4"></div>
@@ -1637,7 +1612,7 @@ window.addEventListener('sidebar:state', function (e) {
                                 <div class="p-2 text-center">Fr</div>
                                 <div class="p-2 text-center">Sa</div>
                             </div>
-                            <div id="calendar-days" class="grid grid-cols-7 gap-1 text-xs">
+                            <div id="calendar-days" class="grid grid-cols-7 gap-1 text-sm">
                                 <!-- Calendar days will be generated here -->
                             </div>
                         </div>
@@ -1738,36 +1713,14 @@ window.addEventListener('sidebar:state', function (e) {
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // User profile dropdown functionality - Hover based
+            // User profile dropdown functionality
             const userProfileBtn = document.getElementById('user-profile-btn');
             const userDropdown = document.getElementById('user-dropdown');
             
             if (userProfileBtn && userDropdown) {
-                let hoverTimeout;
-                
-                // Show dropdown on hover
-                userProfileBtn.addEventListener('mouseenter', function() {
-                    clearTimeout(hoverTimeout);
-                    userDropdown.classList.remove('hidden');
-                });
-                
-                // Hide dropdown when mouse leaves the button
-                userProfileBtn.addEventListener('mouseleave', function() {
-                    hoverTimeout = setTimeout(() => {
-                        userDropdown.classList.add('hidden');
-                    }, 100); // Small delay to prevent flickering
-                });
-                
-                // Keep dropdown open when hovering over the dropdown itself
-                userDropdown.addEventListener('mouseenter', function() {
-                    clearTimeout(hoverTimeout);
-                });
-                
-                // Hide dropdown when mouse leaves the dropdown
-                userDropdown.addEventListener('mouseleave', function() {
-                    hoverTimeout = setTimeout(() => {
-                        userDropdown.classList.add('hidden');
-                    }, 100);
+                userProfileBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('hidden');
                 });
                 
                 // Close dropdown when clicking outside

@@ -3039,7 +3039,7 @@
         </div>
 
         <div class="absolute left-1/2 transform -translate-x-1/2">
-            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">LILAC Documents</h1>
+            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Documents</h1>
         </div>
 
         <div class="text-sm flex items-center space-x-4">

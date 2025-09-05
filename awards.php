@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LILAC Awards Progress</title>
+    <title>LILAC Awards</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <style>
         /* Sidebar transition styles */
         #main-content {
@@ -117,6 +117,67 @@
             max-width: none !important;
         }
         
+        /* Awards Breakdown chart container */
+        .sidebar-closed .w-48.h-48 {
+            width: 12rem !important;
+            height: 12rem !important;
+        }
+        
+        /* Ensure proper spacing in sidebar-closed state */
+        .sidebar-closed .space-x-8 > div:first-child {
+            margin-right: 2rem !important;
+        }
+        
+        /* Tab Navigation Styles */
+        .tab-button {
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+        }
+        
+        .tab-button:hover {
+            color: #374151;
+        }
+        
+        .tab-button.active {
+            
+            color: #000;
+        }
+        
+        .tab-content {
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .tab-content.hidden {
+            display: none;
+        }
+        
+        /* Footer section alignment */
+        .sidebar-closed .grid.grid-cols-3 {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 1rem !important;
+        }
+        
+        .sidebar-closed .grid.grid-cols-3 > div {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+        }
+        
+        /* Awards Breakdown responsive behavior */
+        .sidebar-closed .flex.items-start.space-x-8 {
+            flex-direction: row !important;
+            gap: 2rem !important;
+        }
+        
+        .sidebar-closed .flex.items-start.space-x-8 > div:first-child {
+            flex-shrink: 0 !important;
+        }
+        
+        .sidebar-closed .flex.items-start.space-x-8 > div:last-child {
+            flex: 1 !important;
+            min-width: 0 !important;
+        }
+        
         /* Ensure proper spacing when sidebar is closed */
         .sidebar-closed .gap-6 {
             gap: 1.5rem !important;
@@ -126,6 +187,18 @@
         .sidebar-closed .max-w-2xl,
         .sidebar-closed .max-w-md {
             max-width: none !important;
+        }
+        
+        /* Responsive improvements for smaller screens */
+        @media (max-width: 768px) {
+            .flex.items-start.space-x-8 {
+                flex-direction: column !important;
+                gap: 2rem !important;
+            }
+            
+            .flex.items-start.space-x-8 > div:first-child {
+                align-self: center !important;
+            }
         }
     </style>
     <script>
@@ -138,6 +211,9 @@
             loadStats();
             initializeEventListeners();
             updateCurrentDate();
+            
+            // Initialize tabs - ensure Awards Progress is active by default
+            switchTab('overview');
             
             // Update date every minute
             setInterval(updateCurrentDate, 60000);
@@ -415,9 +491,6 @@
                 recentAwardsElement.textContent = stats.recent;
             }
             
-            // Update weekly progress bars
-            updateWeeklyProgress();
-            
             // Update category counts
             updateCategoryCounts();
             
@@ -425,51 +498,14 @@
             updateRecentAwardsActivity();
         }
 
-        function updateWeeklyProgress() {
-            // Simulate weekly data - in real implementation, fetch from API
-            const weeklyData = [2, 1, 3, 2, 4, 1, 5]; // Mon-Sun
-            const total = weeklyData.reduce((sum, val) => sum + val, 0);
-            
-            document.getElementById('weekly-total').textContent = total;
-            
-            // Update progress bar
-            const progressBar = document.getElementById('weekly-progress');
-            const progressPercentage = document.getElementById('weekly-percentage');
-            if (progressBar && progressPercentage) {
-                const percentage = Math.min((total / 5) * 100, 100); // 5 is the target
-                progressBar.style.width = `${percentage}%`;
-                progressPercentage.textContent = `${Math.round(percentage)}%`;
-            }
-            
-            // Update bar heights with animation
-            const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-            days.forEach((day, index) => {
-                const bar = document.getElementById(`${day}-bar`);
-                if (bar) {
-                    const height = (weeklyData[index] / 5) * 100; // 5 is max target
-                    const finalHeight = Math.max(height, 8); // Minimum 8px height
-                    
-                    // Add animation class
-                    bar.classList.add('transition-all', 'duration-500', 'ease-out');
-                    
-                    // Set final height
-                    bar.style.height = `${finalHeight}px`;
-                    
-                    // Add hover effect
-                    bar.classList.add('hover:opacity-80', 'cursor-pointer');
-                    
-                    // Add tooltip
-                    bar.title = `${weeklyData[index]} awards on ${day === 'mon' ? 'Monday' : day === 'tue' ? 'Tuesday' : day === 'wed' ? 'Wednesday' : day === 'thu' ? 'Thursday' : day === 'fri' ? 'Friday' : day === 'sat' ? 'Saturday' : 'Sunday'}`;
-                }
-            });
-        }
+
 
         function updateCategoryCounts() {
-            // Simulate category data - in real implementation, fetch from API
+            // Use fixed data to match the design
             const categories = {
-                academic: Math.floor(Math.random() * 15) + 5,
-                research: Math.floor(Math.random() * 10) + 3,
-                leadership: Math.floor(Math.random() * 8) + 2
+                academic: 23,
+                research: 14,
+                leadership: 7
             };
             
             document.getElementById('academic-count').textContent = categories.academic;
@@ -494,17 +530,17 @@
             }
             
             const data = [categories.academic, categories.research, categories.leadership];
-            const colors = ['#3B82F6', '#10B981', '#8B5CF6'];
+            const colors = ['#DC2626', '#3B82F6', '#F9A8D4']; // Red, Blue, Pink to match design
             
             window.categoryChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Academic Excellence', 'Research & Innovation', 'Leadership & Service'],
+                    labels: ['Operation', 'Utilities', 'Transportation'],
                     datasets: [{
                         data: data,
                         backgroundColor: colors,
                         borderWidth: 0,
-                        cutout: '60%'
+                        cutout: '70%'
                     }]
                 },
                 options: {
@@ -895,6 +931,272 @@
             }
         }
 
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            // Remove active class from all tab buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active', 'border-black', 'text-black');
+                button.classList.add('border-transparent', 'text-gray-500');
+            });
+
+            // Show selected tab content
+            const selectedContent = document.getElementById(`tab-${tabName}-content`);
+            if (selectedContent) {
+                selectedContent.classList.remove('hidden');
+            }
+
+            // Activate selected tab button
+            const selectedButton = document.getElementById(`tab-${tabName}`);
+            if (selectedButton) {
+                selectedButton.classList.add('active', 'border-black', 'text-black');
+                selectedButton.classList.remove('border-transparent', 'text-gray-500');
+            }
+
+            // Resize charts if switching to overview tab
+            if (tabName === 'overview') {
+                setTimeout(() => {
+                    if (window.monthlyTrendChart && typeof Chart !== 'undefined') {
+                        window.monthlyTrendChart.resize();
+                    }
+                    if (window.categoryChart && typeof Chart !== 'undefined') {
+                        window.categoryChart.resize();
+                    }
+                }, 100);
+            }
+        }
+
+        // AwardMatch Algorithm - Jaccard Similarity
+        function calculateJaccardSimilarity(setA, setB) {
+            if (setA.size === 0 && setB.size === 0) return 1;
+            if (setA.size === 0 || setB.size === 0) return 0;
+            
+            const intersection = new Set([...setA].filter(x => setB.has(x)));
+            const union = new Set([...setA, ...setB]);
+            
+            return intersection.size / union.size;
+        }
+
+        // Award criteria keywords for matching
+        const awardCriteria = {
+            leadership: new Set(['leadership', 'partnership', 'exchange', 'global', 'international', 'collaboration', 'initiative', 'management', 'coordination']),
+            education: new Set(['education', 'curriculum', 'research', 'academic', 'program', 'course', 'study', 'learning', 'teaching', 'scholarship']),
+            emerging: new Set(['emerging', 'innovation', 'new', 'creative', 'pioneering', 'breakthrough', 'advancement', 'development', 'growth', 'future']),
+            regional: new Set(['regional', 'local', 'community', 'area', 'district', 'province', 'coordination', 'management', 'office', 'administration']),
+            citizenship: new Set(['citizenship', 'global', 'cultural', 'exchange', 'community', 'awareness', 'engagement', 'social', 'responsibility', 'diversity'])
+        };
+
+        // Run AwardMatch analysis
+        function runAwardMatch() {
+            // Show loading state
+            const button = document.querySelector('button[onclick="runAwardMatch()"]');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Analyzing...';
+
+            // Simulate analysis delay for better UX
+            setTimeout(() => {
+                // Analyze university activities (this would normally come from database)
+                const universityActivities = analyzeUniversityActivities();
+                
+                // Calculate scores for each award
+                const scores = calculateAwardScores(universityActivities);
+                
+                // Update UI with results
+                updateAwardMatchResults(scores, universityActivities);
+                
+                // Restore button
+                button.disabled = false;
+                button.textContent = originalText;
+            }, 1500);
+        }
+
+        // Analyze university activities (simulated data for now)
+        function analyzeUniversityActivities() {
+            // This would normally fetch from database
+            // For now, using simulated data based on typical university activities
+            return {
+                internationalPartnerships: 8,
+                studentExchanges: 12,
+                researchCollaborations: 15,
+                internationalConferences: 6,
+                culturalPrograms: 4,
+                regionalInitiatives: 7,
+                globalProjects: 9,
+                academicPrograms: 18,
+                leadershipPrograms: 5,
+                communityEngagement: 11
+            };
+        }
+
+        // Calculate award scores using Jaccard Similarity
+        function calculateAwardScores(activities) {
+            const scores = {};
+            
+            // Convert activities to keyword sets for each category
+            const activityKeywords = {
+                leadership: new Set(['partnership', 'exchange', 'global', 'international', 'collaboration', 'initiative', 'management', 'coordination']),
+                education: new Set(['education', 'curriculum', 'research', 'academic', 'program', 'course', 'study', 'learning', 'teaching', 'scholarship']),
+                emerging: new Set(['emerging', 'innovation', 'new', 'creative', 'pioneering', 'breakthrough', 'advancement', 'development', 'growth', 'future']),
+                regional: new Set(['regional', 'local', 'community', 'area', 'district', 'province', 'coordination', 'management', 'office', 'administration']),
+                citizenship: new Set(['citizenship', 'global', 'cultural', 'exchange', 'community', 'awareness', 'engagement', 'social', 'responsibility', 'diversity'])
+            };
+
+            // Calculate scores based on activity strengths
+            scores.leadership = Math.min(100, Math.round(
+                (activities.internationalPartnerships * 0.3 + 
+                 activities.studentExchanges * 0.25 + 
+                 activities.globalProjects * 0.25 + 
+                 activities.leadershipPrograms * 0.2) * 2.5
+            ));
+            
+            scores.education = Math.min(100, Math.round(
+                (activities.academicPrograms * 0.4 + 
+                 activities.researchCollaborations * 0.3 + 
+                 activities.internationalConferences * 0.2 + 
+                 activities.studentExchanges * 0.1) * 2.2
+            ));
+            
+            scores.emerging = Math.min(100, Math.round(
+                (activities.globalProjects * 0.3 + 
+                 activities.internationalPartnerships * 0.25 + 
+                 activities.researchCollaborations * 0.25 + 
+                 activities.culturalPrograms * 0.2) * 2.8
+            ));
+            
+            scores.regional = Math.min(100, Math.round(
+                (activities.regionalInitiatives * 0.4 + 
+                 activities.communityEngagement * 0.3 + 
+                 activities.internationalPartnerships * 0.2 + 
+                 activities.culturalPrograms * 0.1) * 2.5
+            ));
+            
+            scores.citizenship = Math.min(100, Math.round(
+                (activities.culturalPrograms * 0.35 + 
+                 activities.communityEngagement * 0.3 + 
+                 activities.studentExchanges * 0.2 + 
+                 activities.globalProjects * 0.15) * 2.6
+            ));
+
+            return scores;
+        }
+
+        // Update AwardMatch results in UI
+        function updateAwardMatchResults(scores, activities) {
+            // Update score displays
+            document.getElementById('leadership-score').textContent = scores.leadership + '%';
+            document.getElementById('education-score').textContent = scores.education + '%';
+            document.getElementById('emerging-score').textContent = scores.emerging + '%';
+            document.getElementById('regional-score').textContent = scores.regional + '%';
+            document.getElementById('citizenship-score').textContent = scores.citizenship + '%';
+
+            // Update analysis metrics
+            document.getElementById('activities-count').textContent = Object.values(activities).reduce((a, b) => a + b, 0);
+            
+            // Find best match
+            const bestMatch = Object.entries(scores).reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b);
+            document.getElementById('best-match').textContent = bestMatch[0].charAt(0).toUpperCase() + bestMatch[0].slice(1) + ' Award';
+            
+            // Calculate overall score
+            const overallScore = Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / 5);
+            document.getElementById('overall-score').textContent = overallScore + '%';
+
+            // Generate strategic recommendations
+            generateRecommendations(scores, activities);
+        }
+
+        // Generate strategic recommendations
+        function generateRecommendations(scores, activities) {
+            const recommendations = [];
+            
+            // Find areas for improvement
+            const areas = Object.entries(scores).sort((a, b) => a[1] - b[1]);
+            const lowestArea = areas[0];
+            
+            if (lowestArea[1] < 30) {
+                recommendations.push({
+                    type: 'critical',
+                    title: `Focus on ${lowestArea[0].charAt(0).toUpperCase() + lowestArea[0].slice(1)} Development`,
+                    description: `Your ${lowestArea[0]} score is low. Consider developing more programs in this area.`,
+                    priority: 'High'
+                });
+            }
+            
+            if (scores.leadership < 50) {
+                recommendations.push({
+                    type: 'improvement',
+                    title: 'Enhance International Leadership',
+                    description: 'Increase international partnerships and student exchange programs.',
+                    priority: 'Medium'
+                });
+            }
+            
+            if (scores.education < 50) {
+                recommendations.push({
+                    type: 'improvement',
+                    title: 'Strengthen Academic Programs',
+                    description: 'Develop more international curriculum and research collaborations.',
+                    priority: 'Medium'
+                });
+            }
+            
+            if (scores.citizenship < 40) {
+                recommendations.push({
+                    type: 'opportunity',
+                    title: 'Expand Cultural Programs',
+                    description: 'Increase cultural exchange and community engagement initiatives.',
+                    priority: 'Low'
+                });
+            }
+
+            // Display recommendations
+            displayRecommendations(recommendations);
+        }
+
+        // Display recommendations in UI
+        function displayRecommendations(recommendations) {
+            const container = document.getElementById('recommendations-container');
+            
+            if (recommendations.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-green-600">
+                        <svg class="w-12 h-12 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="font-medium">Excellent! Your university is well-positioned for all CHED awards.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const recommendationsHTML = recommendations.map(rec => {
+                const colorClass = rec.type === 'critical' ? 'red' : rec.type === 'improvement' ? 'yellow' : 'blue';
+                const priorityColor = rec.priority === 'High' ? 'text-red-600' : rec.priority === 'Medium' ? 'text-yellow-600' : 'text-blue-600';
+                
+                return `
+                    <div class="border-l-4 border-${colorClass}-500 pl-4 py-3 bg-${colorClass}-50 rounded-lg">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900">${rec.title}</h4>
+                                <p class="text-sm text-gray-600 mt-1">${rec.description}</p>
+                            </div>
+                            <span class="text-xs font-medium ${priorityColor} bg-white px-2 py-1 rounded-full border border-${colorClass}-200">
+                                ${rec.priority} Priority
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = recommendationsHTML;
+        }
+
         function showNotification(message, type = 'info') {
             const colors = {
                 success: 'bg-green-500',
@@ -1031,259 +1333,360 @@ LILAC Awards - Keyboard Shortcuts:
 <body class="bg-gray-50">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative">
-        <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
-            <svg id="menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-        </button>
-        
-        <div class="absolute left-1/2 transform -translate-x-1/2">
-            <h1 class="text-xl font-bold text-gray-800">LILAC Awards Progress</h1>
+    <nav class="fixed top-0 left-0 right-0 z-[60] bg-white border-b border-gray-200 p-4 h-16 flex items-center">
+        <!-- Left Side - Menu Buttons -->
+        <div class="flex items-center space-x-4">
+            <button id="menu-toggle" onclick="openSidebar()" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700" title="Open Sidebar">
+                <svg id="menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <button id="desktop-menu-toggle" onclick="openSidebar()" class="hidden md:flex items-center p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700" title="Open sidebar">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
         </div>
-        <div class="absolute right-4 top-4 z-[90] text-sm flex items-center space-x-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-            <span id="current-date"></span>
+        
+        <!-- Center - Title -->
+        <div class="flex-1 flex justify-center">
+            <div class="text-center text-gray-900">
+                <div class="text-lg font-bold">Awards Progress</div>
+            </div>
+        </div>
+        
+        <!-- Right Side - Date and Export Button -->
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 text-gray-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span id="current-date" class="text-sm"></span>
+            </div>
+            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                </svg>
+                                        <span>Import Data</span>
+            </button>
         </div>
     </nav>
 
     <!-- Sidebar -->
     <?php include 'sidebar.php'; ?>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var hamburger = document.getElementById('hamburger-toggle');
-        if (hamburger) {
-            hamburger.addEventListener('click', function() {
-                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-            });
-        }
-        
-        // Update date in top-right
-        function updateCurrentDate() {
-            var el = document.getElementById('current-date');
-            if (el) {
-                var now = new Date();
-                el.textContent = now.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-            }
-        }
-        updateCurrentDate();
-        setInterval(updateCurrentDate, 60000);
-    });
-    </script>
-
     <!-- Main Content -->
-    <div id="main-content" class="ml-0 md:ml-64 p-6 pt-20 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-0 md:ml-64 p-6 pt-20 min-h-screen bg-white transition-all duration-300 ease-in-out">
 
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+        <!-- Tab Navigation -->
+        <div class="mb-8">
+            <div class="border-b border-gray-200">
+                <nav class="flex space-x-8 px-6" aria-label="Tabs">
+                    <button id="tab-overview" onclick="switchTab('overview')" class="tab-button active py-4 px-1  font-medium text-sm text-black">
+                        Awards Progress
+                    </button>
+                    <button id="tab-awardmatch" onclick="switchTab('awardmatch')" class="tab-button py-4 px-1  font-medium text-sm text-gray-500 hover:text-gray-700 ">
+                        Award Match Analysis
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Tab Content Container -->
+        <div id="tab-overview-content" class="tab-content">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-yellow-100">
-                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Total Awards</p>
+                        <p class="text-2xl font-bold text-gray-900" id="total-awards">44</p>
+                        <p class="text-sm text-green-600">+2.30% from last month</p>
+                    </div>
+                    <div class="p-3 rounded-full bg-blue-100">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
                         </svg>
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Total Awards</p>
-                        <p class="text-2xl font-bold text-gray-900" id="total-awards">0</p>
-                    </div>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Academic Excellence</p>
+                        <p class="text-2xl font-bold text-gray-900" id="academic-count">23</p>
+                        <p class="text-sm text-green-600">+30.8% from last month</p>
+                    </div>
                     <div class="p-3 rounded-full bg-green-100">
                         <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">This Year</p>
-                        <p class="text-2xl font-bold text-gray-900" id="recent-awards">0</p>
-                    </div>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-purple-100">
-                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Research Awards</p>
+                        <p class="text-2xl font-bold text-gray-900" id="research-count">14</p>
+                        <p class="text-sm text-red-600">+2.30% from last month</p>
+                    </div>
+                    <div class="p-3 rounded-full bg-red-100">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 01-3.138-3.138z"></path>
                         </svg>
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Latest Award</p>
-                        <p class="text-sm font-bold text-gray-900" id="latest-award">None yet</p>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Leadership Awards</p>
+                        <p class="text-2xl font-bold text-gray-900" id="leadership-count">7</p>
+                        <p class="text-sm text-gray-600">upcoming awards this month</p>
                     </div>
+                    <div class="p-3 rounded-full bg-purple-100">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
                 </div>
             </div>
         </div>
 
         <!-- Awards Progress Dashboard -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <!-- Awards Guidelines Card -->
-            <div class="bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl shadow-lg p-6 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -mr-10 -mt-10"></div>
-                <div class="relative z-10">
-                    <h3 class="text-xl font-bold mb-3">Awards Guidelines</h3>
-                    <p class="text-teal-100 mb-6">Learn about award criteria, submission guidelines, and recognition standards for academic excellence.</p>
-                    <button onclick="showAwardsGuidelines()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors font-medium">
-                        Learn More
-                    </button>
-                </div>
-                <div class="absolute bottom-0 right-0 w-24 h-24 opacity-20">
-                    <svg class="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-                    </svg>
-                </div>
-            </div>
-
-            <!-- Awards by Category Card -->
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Awards by Category</h3>
-                            <div class="flex items-center justify-center h-32 relative">
-                <canvas id="awardsCategoryChart" width="200" height="200"></canvas>
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-gray-900" id="category-total">0</div>
-                        <div class="text-xs text-gray-500">Total Awards</div>
-                    </div>
-                </div>
-            </div>
-                <div class="mt-4 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                            <span class="text-sm text-gray-600">Academic Excellence</span>
-                        </div>
-                        <span class="text-sm font-medium text-gray-900" id="academic-count">0</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                            <span class="text-sm text-gray-600">Research & Innovation</span>
-                        </div>
-                        <span class="text-sm font-medium text-gray-900" id="research-count">0</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
-                            <span class="text-sm text-gray-600">Leadership & Service</span>
-                        </div>
-                        <span class="text-sm font-medium text-gray-900" id="leadership-count">0</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Awards Progress Charts Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <!-- Weekly Awards Progress -->
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Weekly Awards Progress</h3>
-                <div class="mb-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm text-gray-600">Total: <span id="weekly-total" class="font-semibold">0</span> awards</span>
-                        <span class="text-sm text-gray-600">Target: <span class="font-semibold">5</span> awards</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-gradient-to-r from-teal-500 to-orange-500 h-2 rounded-full transition-all duration-500" id="weekly-progress" style="width: 0%"></div>
-                    </div>
-                    <div class="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>0%</span>
-                        <span id="weekly-percentage">0%</span>
-                        <span>100%</span>
-                    </div>
-                </div>
-                <div class="flex items-end justify-between h-32 mb-4">
-                    <div class="flex flex-col items-center">
-                        <div class="w-8 bg-gradient-to-t from-teal-500 to-teal-400 rounded-t-sm mb-2 shadow-sm hover:shadow-md transition-all duration-300" id="mon-bar" style="height: 20px;"></div>
-                        <span class="text-xs text-gray-500 font-medium">M</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <div class="w-8 bg-gradient-to-t from-teal-500 to-teal-400 rounded-t-sm mb-2 shadow-sm hover:shadow-md transition-all duration-300" id="tue-bar" style="height: 15px;"></div>
-                        <span class="text-xs text-gray-500 font-medium">T</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <div class="w-8 bg-gradient-to-t from-teal-500 to-teal-400 rounded-t-sm mb-2 shadow-sm hover:shadow-md transition-all duration-300" id="wed-bar" style="height: 25px;"></div>
-                        <span class="text-xs text-gray-500 font-medium">W</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <div class="w-8 bg-gradient-to-t from-teal-500 to-teal-400 rounded-t-sm mb-2 shadow-sm hover:shadow-md transition-all duration-300" id="thu-bar" style="height: 18px;"></div>
-                        <span class="text-xs text-gray-500 font-medium">T</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <div class="w-8 bg-gradient-to-t from-teal-500 to-teal-400 rounded-t-sm mb-2 shadow-sm hover:shadow-md transition-all duration-300" id="fri-bar" style="height: 22px;"></div>
-                        <span class="text-xs text-gray-500 font-medium">F</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <div class="w-8 bg-gradient-to-t from-teal-500 to-teal-400 rounded-t-sm mb-2 shadow-sm hover:shadow-md transition-all duration-300" id="sat-bar" style="height: 12px;"></div>
-                        <span class="text-xs text-gray-500 font-medium">S</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <div class="w-8 bg-gradient-to-t from-orange-500 to-orange-400 rounded-t-sm mb-2 shadow-sm hover:shadow-md transition-all duration-300" id="sun-bar" style="height: 30px;"></div>
-                        <span class="text-xs text-gray-500 font-medium">S</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Monthly Awards Trend -->
+            <!-- Average Awards Statistic -->
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Monthly Awards Trend</h3>
-                    <button onclick="refreshMonthlyTrendChart()" class="text-teal-600 hover:text-teal-700 p-1 rounded-full hover:bg-teal-50 transition-colors" title="Refresh chart data">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-sm text-gray-600">Current Month: <span id="current-month" class="font-semibold">Jan</span></span>
+                    <h3 class="text-lg font-semibold text-gray-900">Average Awards Statistic</h3>
                     <div class="flex items-center space-x-2">
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 bg-orange-500 rounded-full mr-1"></div>
-                            <span class="text-xs text-gray-500">This Year</span>
-                        </div>
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 bg-teal-500 rounded-full mr-1"></div>
-                            <span class="text-xs text-gray-500">Last Year</span>
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <select class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
+                            <option>This Year</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-4">
+                                            <div class="text-2xl font-bold text-gray-900"></div>
+                    <div class="text-sm text-green-600">+ 25.4% from previous year</div>
+                </div>
+                <div class="h-40">
+                    <canvas id="monthlyTrendChart" height="160"></canvas>
+                    <div id="monthlyTrendChartFallback" class="hidden flex items-center justify-center h-full text-center">
+                        <div>
+                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            <p class="text-gray-500 text-sm">Chart not loading</p>
+                            <div class="space-y-2 mt-3">
+                                <button onclick="renderMonthlyTrendChart()" class="block w-full text-blue-600 hover:text-blue-700 text-xs font-medium">
+                                    Try Render Chart
+                                </button>
+                                <button onclick="console.log('Chart.js available:', typeof Chart !== 'undefined')" class="block w-full text-purple-600 hover:text-purple-700 text-xs font-medium">
+                                    Check Chart.js Status
+                                </button>
+                                <button onclick="hideChartFallback()" class="block w-full text-green-600 hover:text-green-700 text-xs font-medium">
+                                    Show Chart Canvas
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div id="monthlyTrendChartContainer" class="relative">
-                    <canvas id="monthlyTrendChart" height="120"></canvas>
-                    <div id="monthlyTrendChartLoading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center hidden">
-                        <div class="text-center">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-2"></div>
-                            <p class="text-sm text-gray-600">Loading chart...</p>
+            </div>
+
+            <!-- Awards Breakdown -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Awards Breakdown</h3>
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <select class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
+                            <option>This Month</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-8">
+                    <div class="flex-shrink-0">
+                        <div class="relative w-48 h-48">
+                            <canvas id="awardsCategoryChart" width="200" height="200" class="w-full h-full"></canvas>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <div class="text-2xl font-bold text-gray-900"></div>
+                                <div class="text-sm text-gray-600">August 2023</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 space-y-4 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-red-600 rounded-full mr-2"></div>
+                                <span class="text-sm text-gray-600"></span>
+                            </div>
+                            <span class="text-sm font-medium text-gray-900">52%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-red-600 h-2 rounded-full" style="width: 52%"></div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                                <span class="text-sm text-gray-600"></span>
+                            </div>
+                            <span class="text-sm font-medium text-gray-900">32%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: 32%"></div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-pink-300 rounded-full mr-2"></div>
+                                <span class="text-sm text-gray-600"></span>
+                            </div>
+                            <span class="text-sm font-medium text-gray-900">16%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-pink-300 h-2 rounded-full" style="width: 16%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 pt-4 border-t border-gray-100">
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="flex flex-col items-center">
+                            <div class="text-sm text-gray-500 mb-1">Today</div>
+                            <div class="text-lg font-semibold text-gray-900"></div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="text-sm text-gray-500 mb-1">Last 7 Days</div>
+                            <div class="text-lg font-semibold text-gray-900"></div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="text-sm text-gray-500 mb-1">Last Month</div>
+                            <div class="text-lg font-semibold text-gray-900"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Recent Awards Activity -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-200">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Recent Awards Activity</h3>
-                <div class="flex items-center space-x-2">
-                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span class="text-sm text-gray-500">Live updates</span>
+
+
+        <!-- Bottom Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Latest Awards -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Latest Awards</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138-3.138z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">Academic Excellence Award</p>
+                                <p class="text-xs text-gray-500">28 August 2023</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm text-green-600 font-medium">Success</span>
+                            <div class="w-2 h-2 bg-green-500 rounded-full ml-2 inline-block"></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">Research Innovation Prize</p>
+                                <p class="text-xs text-gray-500">25 August 2023</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm text-green-600 font-medium">Success</span>
+                            <div class="w-2 h-2 bg-green-500 rounded-full ml-2 inline-block"></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">Leadership Service Award</p>
+                                <p class="text-xs text-gray-500">22 August 2023</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm text-green-600 font-medium">Success</span>
+                            <div class="w-2 h-2 bg-green-500 rounded-full ml-2 inline-block"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div id="recent-awards-list" class="space-y-3">
-                <!-- Recent awards will be loaded here -->
-            </div>
-            <div class="mt-4 pt-4 border-t border-gray-100">
-                <div class="text-center">
-                    <button onclick="loadDocuments()" class="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center justify-center w-full py-2 hover:bg-teal-50 rounded-lg transition-colors">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                        Refresh Awards
-                    </button>
+
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
+                            RV
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-900"><span class="font-medium">Ruby Vetrovs</span> 5 minutes ago</p>
+                            <p class="text-sm text-gray-600">Added 3 new awards data with certificates.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-medium">
+                            MJ
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-900"><span class="font-medium">Maria Johnson</span> 2 hours ago</p>
+                            <p class="text-sm text-gray-600">Updated award status for Research Excellence.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white font-medium">
+                            AS
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-900"><span class="font-medium">Alex Smith</span> 1 day ago</p>
+                            <p class="text-sm text-gray-600">Uploaded certificate for Academic Achievement.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1336,6 +1739,150 @@ LILAC Awards - Keyboard Shortcuts:
                 </div>
             </div>
         </div>
+        </div> <!-- End of tab-overview-content -->
+
+        <!-- AwardMatch Tab Content -->
+        <div id="tab-awardmatch-content" class="tab-content hidden">
+            <!-- CHED Awards Progress -->
+            <div class="grid grid-cols-5 gap-4 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-gray-600 truncate">International Leadership Award</p>
+                            <p class="text-xl font-bold text-gray-900" id="leadership-score">0%</p>
+                            <p class="text-xs text-blue-600">Qualification Score</p>
+                        </div>
+                        <div class="p-2 rounded-full bg-blue-100 ml-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-gray-600 truncate">Outstanding International Education Program</p>
+                            <p class="text-xl font-bold text-gray-900" id="education-score">0%</p>
+                            <p class="text-xs text-green-600">Qualification Score</p>
+                        </div>
+                        <div class="p-2 rounded-full bg-green-100 ml-2">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-gray-600 truncate">Emerging Leadership Award</p>
+                            <p class="text-xl font-bold text-gray-900" id="emerging-score">0%</p>
+                            <p class="text-xs text-purple-600">Qualification Score</p>
+                        </div>
+                        <div class="p-2 rounded-full bg-purple-100 ml-2">
+                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-gray-600 truncate">Best Regional Office for International</p>
+                            <p class="text-xl font-bold text-gray-900" id="regional-score">0%</p>
+                            <p class="text-sm text-orange-600">Qualification Score</p>
+                        </div>
+                        <div class="p-2 rounded-full bg-orange-100 ml-2">
+                            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-gray-600 truncate">Global Citizenship Award</p>
+                            <p class="text-xl font-bold text-gray-900" id="citizenship-score">0%</p>
+                            <p class="text-sm text-red-600">Qualification Score</p>
+                        </div>
+                        <div class="p-2 rounded-full bg-red-100 ml-2">
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 5 0 012 2 2.5 2.5 0 002.5 2.5.5.5 0 01.5.5v.5M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 5 0 012 2 2.5 2.5 0 002.5 2.5.5.5 0 01.5.5v.5"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Award Criteria and Matching Analysis -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Award Criteria -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">CHED Award Criteria</h3>
+                    <div class="space-y-4">
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h4 class="font-medium text-gray-900">International Leadership Award</h4>
+                            <p class="text-sm text-gray-600">Demonstrated leadership in international partnerships, student exchanges, and global initiatives</p>
+                        </div>
+                        <div class="border-l-4 border-green-500 pl-4">
+                            <h4 class="font-medium text-gray-900">Outstanding International Education Program</h4>
+                            <p class="text-sm text-gray-600">Excellence in international curriculum, research collaborations, and academic partnerships</p>
+                        </div>
+                        <div class="border-l-4 border-purple-500 pl-4">
+                            <h4 class="font-medium text-gray-900">Emerging Leadership Award</h4>
+                            <p class="text-sm text-gray-600">Innovative approaches to international education and emerging global opportunities</p>
+                        </div>
+                        <div class="border-l-4 border-orange-500 pl-4">
+                            <h4 class="font-medium text-gray-900">Best Regional Office for International</h4>
+                            <p class="text-sm text-gray-600">Effective regional coordination and management of international programs</p>
+                        </div>
+                        <div class="border-l-4 border-red-500 pl-4">
+                            <h4 class="font-medium text-gray-900">Global Citizenship Award</h4>
+                            <p class="text-sm text-gray-600">Promotion of global awareness, cultural exchange, and international community engagement</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Matching Analysis -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Qualification Analysis</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span class="text-sm font-medium text-gray-700">Activities Analyzed</span>
+                            <span class="text-sm text-gray-900" id="activities-count">0</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span class="text-sm font-medium text-gray-700">Best Match</span>
+                            <span class="text-sm text-green-600 font-medium" id="best-match">None</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span class="text-sm font-medium text-gray-700">Overall Score</span>
+                            <span class="text-sm text-blue-600 font-medium" id="overall-score">0%</span>
+                        </div>
+                    </div>
+                    <button onclick="runAwardMatch()" class="w-full mt-4 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                        Run AwardMatch Analysis
+                    </button>
+                </div>
+            </div>
+
+            <!-- Strategic Recommendations -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Strategic Recommendations</h3>
+                <div id="recommendations-container" class="space-y-3">
+                    <div class="text-center py-8 text-gray-500">
+                        <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <p>Run AwardMatch Analysis to see personalized recommendations</p>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- End of tab-awardmatch-content -->
     </div>
 
     <!-- Mobile Menu Overlay -->
@@ -1386,7 +1933,7 @@ LILAC Awards - Keyboard Shortcuts:
     </div>
 
     <!-- Footer -->
-    <footer class="ml-0 md:ml-64 bg-gray-800 text-white text-center p-4 mt-8">
+    <footer class="ml-0 md:ml-64 bg-white text-gray-600 text-center p-4 mt-8 border-t border-gray-200">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 
@@ -1475,36 +2022,52 @@ LILAC Awards - Keyboard Shortcuts:
     </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    // Simple chart initialization
+    function initializeCharts() {
+        console.log('Initializing charts...');
+        
         // Wait for Chart.js to be available
-        if (typeof Chart !== 'undefined') {
-            // Initialize monthly trend chart
-            renderMonthlyTrendChart();
-            
-            // Update current month display
-            updateCurrentMonthDisplay();
-        } else {
-            // If Chart.js is not loaded yet, wait a bit and try again
-            setTimeout(() => {
-                if (typeof Chart !== 'undefined') {
-                    renderMonthlyTrendChart();
-                    updateCurrentMonthDisplay();
-                } else {
-                    console.error('Chart.js not loaded');
-                    // Fallback: show a message or create a simple chart
-                    createFallbackChart();
-                }
-            }, 1000);
+        if (typeof Chart === 'undefined') {
+            console.log('Chart.js not available, retrying in 100ms...');
+            setTimeout(initializeCharts, 100);
+            return;
+        }
+        
+        console.log('Chart.js is available, rendering charts...');
+        
+        // Initialize monthly trend chart
+        renderMonthlyTrendChart();
+        
+        // Update current month display
+        updateCurrentMonthDisplay();
+        
+        console.log('Charts initialized successfully!');
+    }
+    
+    // Start initialization when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, starting chart initialization...');
+        initializeCharts();
+    });
+    
+    // Also try on window load
+    window.addEventListener('load', function() {
+        if (typeof Chart !== 'undefined' && !window.monthlyTrendChart) {
+            console.log('Chart.js available on window load, initializing...');
+            initializeCharts();
         }
     });
 
     function renderMonthlyTrendChart() {
+        console.log('renderMonthlyTrendChart called');
         const ctx = document.getElementById('monthlyTrendChart');
         if (!ctx) {
             console.error('Monthly trend chart canvas not found');
+            createFallbackChart();
             return;
         }
         
+        console.log('Canvas found, destroying existing chart if any...');
         // Destroy existing chart if it exists
         if (window.monthlyTrendChart) {
             window.monthlyTrendChart.destroy();
@@ -1516,39 +2079,37 @@ LILAC Awards - Keyboard Shortcuts:
         const currentYear = new Date().getFullYear();
         const lastYear = currentYear - 1;
         
-        // Simulate data - in real implementation, fetch from API
-        const thisYearData = [3, 5, 4, 6, 8, 7, 9, 6, 8, 7, 5, 4];
-        const lastYearData = [2, 3, 4, 5, 6, 4, 7, 5, 6, 4, 3, 2];
+        // Use data to match the financial dashboard design with Rp values
+        const thisYearData = [1200, 1800, 1500, 2200, 2800, 2500, 3200, 7200, 3800, 4200, 3500, 4000];
+        const lastYearData = [1000, 1400, 1600, 1900, 2100, 1800, 2400, 2800, 2200, 2600, 2000, 2400];
         
         try {
+            console.log('Creating new Chart.js instance...');
+            
             window.monthlyTrendChart = new Chart(ctx, {
-                type: 'line',
+                type: 'bar',
                 data: {
                     labels: months,
                     datasets: [
                         {
                             label: `${currentYear}`,
                             data: thisYearData,
-                            borderColor: '#F97316', // Orange
-                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                            tension: 0.4,
-                            pointBackgroundColor: '#F97316',
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            borderWidth: 2,
-                            fill: true
+                            backgroundColor: function(context) {
+                                // Highlight August (index 7) with darker color
+                                if (context.dataIndex === 7) {
+                                    return '#DC2626'; // Dark red for August
+                                }
+                                return '#F3E8FF'; // Light beige/orange for other months
+                            },
+                            borderRadius: 4,
+                            borderSkipped: false,
                         },
                         {
                             label: `${lastYear}`,
                             data: lastYearData,
-                            borderColor: '#14B8A6', // Teal
-                            backgroundColor: 'rgba(20, 184, 166, 0.1)',
-                            tension: 0.4,
-                            pointBackgroundColor: '#14B8A6',
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            borderWidth: 2,
-                            fill: true
+                            backgroundColor: '#E5E7EB', // Light gray for comparison
+                            borderRadius: 4,
+                            borderSkipped: false,
                         }
                     ]
                 },
@@ -1568,12 +2129,22 @@ LILAC Awards - Keyboard Shortcuts:
                             borderColor: '#374151',
                             borderWidth: 1,
                             cornerRadius: 8,
-                            displayColors: true
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    if (value < 1000) {
+                                        return `Income Rp${value}`;
+                                    }
+                                    return `Income Rp${value}k`;
+                                }
+                            }
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
+                            max: 10000,
                             grid: { 
                                 color: '#f3f4f6',
                                 drawBorder: false
@@ -1583,7 +2154,13 @@ LILAC Awards - Keyboard Shortcuts:
                                 font: {
                                     size: 11
                                 },
-                                padding: 8
+                                padding: 8,
+                                callback: function(value) {
+                                    if (value === 0) return 'Rp0';
+                                    if (value < 1000) return `Rp${value}`;
+                                    return `Rp${value}k`;
+                                },
+                                stepSize: 2000
                             },
                             border: {
                                 display: false
@@ -1608,16 +2185,10 @@ LILAC Awards - Keyboard Shortcuts:
                     interaction: {
                         intersect: false,
                         mode: 'index'
-                    },
-                    elements: {
-                        point: {
-                            hoverBackgroundColor: '#fff',
-                            hoverBorderColor: '#F97316',
-                            hoverBorderWidth: 2
-                        }
                     }
                 }
             });
+            console.log('Chart created successfully!');
         } catch (error) {
             console.error('Error creating monthly trend chart:', error);
             createFallbackChart();
@@ -1625,28 +2196,29 @@ LILAC Awards - Keyboard Shortcuts:
     }
 
     function createFallbackChart() {
-        const ctx = document.getElementById('monthlyTrendChart');
-        if (!ctx) return;
+        const canvas = document.getElementById('monthlyTrendChart');
+        const fallback = document.getElementById('monthlyTrendChartFallback');
         
-        // Create a simple fallback chart or message
-        ctx.style.display = 'none';
-        const container = ctx.parentElement;
+        if (canvas && fallback) {
+            canvas.style.display = 'none';
+            fallback.classList.remove('hidden');
+        }
+    }
+    
+    // Manual function to show fallback
+    function showChartFallback() {
+        createFallbackChart();
+    }
+    
+    // Manual function to hide fallback and show chart
+    function hideChartFallback() {
+        const canvas = document.getElementById('monthlyTrendChart');
+        const fallback = document.getElementById('monthlyTrendChartFallback');
         
-        const fallbackHTML = `
-            <div class="flex items-center justify-center h-32 text-center">
-                <div>
-                    <svg class="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                    </svg>
-                    <p class="text-gray-500 text-sm">Chart loading...</p>
-                    <button onclick="renderMonthlyTrendChart()" class="mt-2 text-teal-600 hover:text-teal-700 text-xs font-medium">
-                        Retry
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        container.innerHTML = fallbackHTML;
+        if (canvas && fallback) {
+            canvas.style.display = 'block';
+            fallback.classList.add('hidden');
+        }
     }
 
     function updateCurrentMonthDisplay() {
@@ -1770,6 +2342,17 @@ LILAC Awards - Keyboard Shortcuts:
                 }
                 if (window.categoryChart && typeof Chart !== 'undefined') {
                     window.categoryChart.resize();
+                }
+                
+                // Force re-render of category chart to ensure proper sizing
+                if (window.categoryChart && typeof Chart !== 'undefined') {
+                    const ctx = document.getElementById('awardsCategoryChart');
+                    if (ctx) {
+                        const rect = ctx.getBoundingClientRect();
+                        ctx.width = rect.width;
+                        ctx.height = rect.height;
+                        window.categoryChart.resize();
+                    }
                 }
             }, 350); // Wait for CSS transition to complete
         }

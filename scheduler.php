@@ -67,8 +67,13 @@
             initializeEventListeners();
             updateCurrentDate();
             
+            // Prefetch table data so the meetings table is ready on refresh
+            try { loadDocuments(); } catch (e) { /* ignore */ }
+            
             // Set default view to calendar
             setActiveView('calendar');
+            // Show month date grid by default
+            setView('month');
             
             // Load trash count
             loadTrashCount();
@@ -790,7 +795,8 @@
                 })
                 .catch(error => {
                     console.error('Error fetching meetings for calendar:', error);
-                    renderCalendarDays(new Set());
+                    // Render calendar with no event markers when API/database is unavailable
+                    renderCalendarDays(new Map());
                 });
         }
 
@@ -810,7 +816,7 @@
             // Days of week header
             const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
             daysOfWeek.forEach(day => {
-                calendarHTML += `<div class="text-xs font-medium text-gray-500 dark:text-gray-300 text-center py-1">${day}</div>`;
+                calendarHTML += `<div class="text-[11px] font-medium text-gray-500 dark:text-gray-300 text-center py-0.5">${day}</div>`;
             });
 
             // Calendar days
@@ -835,7 +841,7 @@
                     console.log('Day has event:', currentDateString, 'Date:', currentDate.getDate(), 'Count:', eventCount);
                 }
                 
-                let dayClass = 'calendar-day text-xs p-1 text-center cursor-pointer hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-700 dark:hover:text-red-300 rounded text-blue-600 dark:text-blue-300 font-medium relative';
+                let dayClass = 'calendar-day text-xs p-0.5 h-16 flex items-start justify-start text-center cursor-pointer hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-700 dark:hover:text-red-300 rounded text-blue-600 dark:text-blue-300 font-medium relative';
                 if (!isCurrentMonth) dayClass += ' text-gray-300 dark:text-gray-500';
                 if (isSelected) {
                     dayClass += ' bg-red-600 text-white font-bold shadow-lg border-2 border-red-700';
@@ -886,6 +892,20 @@
                 activeBtn.classList.add('bg-purple-600', 'text-white');
             }
             
+            // Toggle containers
+            const monthContainer = document.getElementById('month-container');
+            const scheduleContainer = document.getElementById('schedule-grid');
+            if (monthContainer && scheduleContainer) {
+                if (view === 'month') {
+                    monthContainer.style.display = 'block';
+                    scheduleContainer.style.display = 'none';
+                    renderCalendar();
+                } else {
+                    monthContainer.style.display = 'none';
+                    scheduleContainer.style.display = 'block';
+                }
+            }
+            
             renderSchedule();
         }
 
@@ -900,6 +920,16 @@
             renderSchedule();
         }
 
+        // Jump to today's date in both the calendar and schedule views
+        function goToToday() {
+            const today = new Date();
+            selectedDate = new Date(today);
+            currentWeek = new Date(today);
+            clickedDateString = today.toISOString().split('T')[0];
+            renderCalendar();
+            renderSchedule();
+        }
+        
         function renderSchedule() {
             const scheduleContainer = document.getElementById('schedule-grid');
             if (!scheduleContainer) return;
@@ -949,13 +979,13 @@
                 const dayString = dayDate.toISOString().split('T')[0];
                 
                 scheduleHTML += `
-                    <div class="p-3 border-b bg-gray-50 dark:bg-gray-700 text-center ${isToday ? 'bg-purple-50 dark:bg-purple-900 border-purple-200 dark:border-purple-600' : ''} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors" 
+                    <div class="p-2 border-b bg-gray-50 dark:bg-gray-700 text-center ${isToday ? 'bg-purple-50 dark:bg-purple-900 border-purple-200 dark:border-purple-600' : ''} cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors" 
                          onclick="selectDate('${dayString}')" 
                          data-date="${dayString}">
-                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                        <div class="text-xs font-medium text-gray-900 dark:text-white">
                             ${dayDate.toLocaleDateString('en-US', { weekday: 'short' })}
                         </div>
-                        <div class="text-xs text-gray-500 dark:text-gray-300 ${isToday ? 'text-purple-600 dark:text-purple-300 font-semibold' : ''}">
+                        <div class="text-[10px] text-gray-500 dark:text-gray-300 ${isToday ? 'text-purple-600 dark:text-purple-300 font-semibold' : ''}">
                             ${dayDate.getDate()}
                         </div>
                     </div>
@@ -3615,23 +3645,38 @@
         document.addEventListener('DOMContentLoaded', function() {
             const menuToggle = document.getElementById('menu-toggle');
             const overlay = document.getElementById('menu-overlay');
-            
+            const hamburgerToggle = document.getElementById('hamburger-toggle');
+             
             if (menuToggle) {
                 menuToggle.addEventListener('click', toggleMenu);
             }
             
-            if (overlay) {
-                overlay.addEventListener('click', function() {
-                    const sidebar = document.getElementById('sidebar');
-                    if (sidebar) {
-                        sidebar.classList.add('-translate-x-full');
-                        overlay.classList.add('hidden');
-                    }
+            if (hamburgerToggle) {
+                hamburgerToggle.addEventListener('click', function() {
+                    try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
                 });
             }
+
+            if (overlay) {
+                overlay.addEventListener('click', function() {
+                    try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
+                    overlay.classList.add('hidden');
+                });
+            }
+
+            // Keep overlay visibility in sync with sidebar open/close state
+            window.addEventListener('sidebar:state', function(e) {
+                const o = document.getElementById('menu-overlay');
+                if (!o) return;
+                if (e && e.detail && e.detail.open) {
+                    o.classList.remove('hidden');
+                } else {
+                    o.classList.add('hidden');
+                }
+            });
         });
     </script>
-"</head>
+</head>
 <body class="bg-gray-50 dark:bg-[#222831] transition-colors duration-200">
 	<!-- Navigation Bar -->
 	<nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
@@ -3679,14 +3724,78 @@
                             </svg>
                         </button>
                     </div>
-                    
-
+                    <button id="today-btn" onclick="goToToday()" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Today</button>
+                    <div class="hidden md:flex items-center space-x-2">
+                        <button data-view="day" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">Day</button>
+                        <button data-view="week" class="px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors">Week</button>
+                        <button data-view="month" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">Month</button>
+                    </div>
+                    <button id="add-event-btn" class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">Add Event</button>
                 </div>
             </div>
 
+            <!-- Month Calendar Header + Grid -->
+            <div id="month-container-hidden" class="hidden bg-white dark:bg-[#2a2f3a] rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 overflow-hidden">
+                 <div class="flex items-center justify-between px-2 py-1 border-b border-gray-200 dark:border-gray-600">
+                     <div class="flex items-center space-x-2">
+                         <button id="prev-month" onclick="navigateMonth(-1)" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                             <svg class="w-5 h-5 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                             </svg>
+                         </button>
+                         <button id="next-month" onclick="navigateMonth(1)" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                             <svg class="w-5 h-5 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                             </svg>
+                         </button>
+                         <span id="calendar-month-year" class="ml-2 text-sm text-gray-700 dark:text-gray-300"></span>
+                     </div>
+                 </div>
+                 <div id="calendar-grid-hidden" class="grid grid-cols-7 gap-0.5 p-1"></div>
+             </div>
+            
             <!-- Schedule Grid -->
-            <div id="schedule-grid" class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 overflow-hidden">
-                <!-- Schedule will be populated by JavaScript -->
+            <div class="flex space-x-6">
+                <!-- Left column: Reminders -->
+                <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4 w-72 flex-shrink-0">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Scheduler</h3>
+                    </div>
+                    <button id="add-event-btn" class="w-full mb-3 px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors">+ Add Event</button>
+                    <div class="border-t border-gray-200 dark:border-gray-600 pt-3 mt-2"></div>
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reminders</h4>
+                    <div id="reminders-list" class="space-y-1">
+                        <!-- Reminder items will be inserted here by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Right column: Month grid + Schedule stacked -->
+                <div class="flex-1 space-y-6">
+                    <!-- Month Calendar Header + Grid -->
+                    <div id="month-container-hidden" class="hidden bg-white dark:bg-[#2a2f3a] rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 overflow-hidden">
+                        <div class="flex items-center justify-between px-2 py-1 border-b border-gray-200 dark:border-gray-600">
+                            <div class="flex items-center space-x-2">
+                                <button id="prev-month" onclick="navigateMonth(-1)" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                                    <svg class="w-5 h-5 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                    </svg>
+                                </button>
+                                <button id="next-month" onclick="navigateMonth(1)" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                                    <svg class="w-5 h-5 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </button>
+                                <span id="calendar-month-year" class="ml-2 text-sm text-gray-700 dark:text-gray-300"></span>
+                            </div>
+                        </div>
+                        <div id="calendar-grid-hidden" class="grid grid-cols-7 gap-0.5 p-1"></div>
+                    </div>
+
+                    <!-- Schedule Grid -->
+                    <div id="schedule-grid" class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
+                        <!-- Schedule will be populated by JavaScript -->
+                    </div>
+                </div>
             </div>
         </div>
 

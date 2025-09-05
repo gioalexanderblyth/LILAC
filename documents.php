@@ -543,29 +543,26 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap cursor-pointer" onclick="viewDocument(${doc.id})">
                         <div class="flex items-center">
-                            <div class="w-8 h-8 ${fileColor} rounded flex items-center justify-center mr-3">
-                                ${fileIcon}
+                            <div class="w-8 h-8 ${fileColor} rounded-lg flex items-center justify-center mr-3 flex-shrink-0 shadow-sm ring-1 ring-black/5">
+                                ${fileIcon.replace('w-4 h-4', 'w-5 h-5')}
                             </div>
                             <div class="text-sm font-medium text-gray-900">
                                 ${doc.document_name || doc.title || 'Untitled Document'}
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer" onclick="viewDocument(${doc.id})">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer w-[12%] text-center" onclick="viewDocument(${doc.id})">
                         ${fileSize.toLocaleString()} KB
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer" onclick="viewDocument(${doc.id})">
-                        ${sharedMembers} ${sharedMembers === 1 ? 'Member' : 'Members'}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer" onclick="viewDocument(${doc.id})">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer w-[12%] text-center" onclick="viewDocument(${doc.id})">
                         ${fileExtension.toUpperCase()}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer" onclick="viewDocument(${doc.id})">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer w-[24%] text-center" onclick="viewDocument(${doc.id})">
                         ${formattedDate}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium w-[12%] text-center">
                         <button onclick="event.stopPropagation(); deleteDocumentWithConfirmation(${doc.id})" 
-                                class="text-gray-400 hover:text-red-600 transition-colors" 
+                                class="text-gray-400 hover:text-red-600 transition-colors inline-flex items-center justify-center" 
                                 aria-label="Delete document">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -595,8 +592,8 @@
                 <div class="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer group" onclick="viewDocument(${doc.id})">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-3">
-                            <div class="w-8 h-8 ${fileColor} rounded flex items-center justify-center">
-                                ${fileIcon}
+                            <div class="w-8 h-8 ${fileColor} rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm ring-1 ring-black/5">
+                                ${fileIcon.replace('w-4 h-4', 'w-5 h-5')}
                             </div>
                             <div class="opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onclick="event.stopPropagation(); showDocumentMenu(${doc.id})" class="text-gray-400 hover:text-gray-600">
@@ -1313,7 +1310,7 @@
             modal.id = 'upload-modal';
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
             modal.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col">
                     <div class="flex items-center justify-between px-6 py-4 border-b">
                         <h3 class="text-lg font-semibold text-gray-900">File Upload</h3>
                         <button type="button" class="text-gray-400 hover:text-gray-600" onclick="document.getElementById('upload-modal').remove()">
@@ -1321,7 +1318,7 @@
                         </button>
                     </div>
 
-                    <div class="px-6 py-5 space-y-5">
+                    <div class="px-6 py-5 space-y-5 overflow-y-auto">
                         <div id="drop-zone" class="border-2 border-dashed rounded-xl p-8 text-center bg-purple-50/50 border-purple-300">
                                                          <div class="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center bg-white shadow">
                                  <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8"/></svg>
@@ -1365,11 +1362,11 @@
                 row.className = 'bg-gray-50 rounded-xl px-4 py-3';
                 row.innerHTML = `
                     <div class="flex items-start justify-between">
-                                                 <div class="flex items-center gap-3 min-w-0">
-                             <div class="min-w-0">
+                                                 <div class="flex items-center gap-3 min-w-0 flex-1">
+                             <div class="min-w-0 flex-1">
                                 <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
                                 <div class="mt-1">
-                                    <div class="w-56 h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-purple-500 rounded-full" style="width:${isDone?100:isFailed?0:60}%"></div></div>
+                                                                         <div class="w-[420px] max-w-full h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="progress-bar h-full bg-purple-500 rounded-full transition-all duration-700 ease-out" style="width:${isDone?100:isFailed?0:0}%"></div></div>
                                     <div class="flex items-center gap-2 mt-1 text-xs">
                                         <span class="text-gray-500">${Math.round(file.size/1024)}kb</span>
                                         <span class="text-gray-400">${isUploading? 'Uploading...' : isFailed? '<span class=\'text-red-600\'>Upload Failed</span>' : isDone? '<span class=\'text-green-600\'>Completed</span>' : ''}</span>
@@ -1410,8 +1407,16 @@
                 selectedFiles = Array.from(files);
                 resetList();
                 if (selectedFiles.length === 0) return;
-                selectedFiles.forEach(file => {
-                    list.appendChild(makeRow(file, 'idle'));
+                selectedFiles.forEach((file, index) => {
+                    const row = makeRow(file, 'idle');
+                    list.appendChild(row);
+                    const bar = row.querySelector('.progress-bar');
+                    if (bar) {
+                        bar.style.width = '0%';
+                        requestAnimationFrame(() => {
+                            bar.style.width = '100%';
+                        });
+                    }
                 });
                 uploadBtn.disabled = false;
             }
@@ -1444,6 +1449,21 @@
                     const row = makeRow(file, 'uploading');
                     row.id = `row-${index}`;
                     list.appendChild(row);
+                    // Animate progress bar while uploading
+                    const bar = row.querySelector('.progress-bar');
+                    if (bar) {
+                        bar.style.width = '0%';
+                        let progress = 0;
+                        const step = () => {
+                            if (!document.getElementById(`row-${index}`)) return; // row removed
+                            progress = Math.min(progress + 4, 80);
+                            bar.style.width = progress + '%';
+                            if (progress < 80) {
+                                requestAnimationFrame(step);
+                            }
+                        };
+                        requestAnimationFrame(step);
+                    }
                 });
 
                 // Upload all files
@@ -1455,7 +1475,20 @@
                         // success
                         const row = document.getElementById(`row-${index}`);
                         if (row) {
-                            row.innerHTML = makeRow(file, 'done').innerHTML;
+                            // Animate the violet progress bar to full
+                            const bar = row.querySelector('.progress-bar');
+                            if (bar) {
+                                requestAnimationFrame(() => {
+                                    bar.style.width = '100%';
+                                });
+                            }
+                            // Then switch row to completed state after animation
+                            bar.addEventListener('transitionend', () => {
+                                const currentRow = document.getElementById(`row-${index}`);
+                                if (currentRow) {
+                                    currentRow.innerHTML = makeRow(file, 'done').innerHTML;
+                                }
+                            }, { once: true });
                         }
                         completedCount++;
                         
@@ -2065,11 +2098,6 @@
             
             console.log('Updated recentUploads array:', recentUploads);
             console.log('Array length:', recentUploads.length);
-            
-            // Limit to 10 items (increased from 5)
-            if (recentUploads.length > 10) {
-                recentUploads = recentUploads.slice(0, 10);
-            }
             
             // Save to localStorage for persistence
             try {
@@ -3045,12 +3073,12 @@
         <div class="text-sm flex items-center space-x-4">
             <!-- View Toggle Buttons -->
             <div class="flex items-center bg-gray-100 rounded-lg p-1">
-                <button data-view="grid" class="p-2 rounded-md bg-gray-200 text-gray-700 transition-colors">
+                <button data-view="grid" class="p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z"></path>
                     </svg>
                 </button>
-                <button data-view="list" class="p-2 rounded-md text-gray-400 hover:text-gray-600 transition-colors">
+                <button data-view="list" class="p-2 rounded-md bg-gray-200 text-gray-700 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
                     </svg>
@@ -3117,11 +3145,11 @@
                                 <th class="w-16 px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <input type="checkbox" id="select-all-checkbox" onclick="toggleSelectAll()" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                                 </th>
-                                <th class="w-1/4 px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                <th class="w-1/4 px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
-                                <th class="w-1/4 px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                <th class="w-1/4 px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th class="w-1/4 px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="w-[40%] px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th class="w-[12%] px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+                                <th class="w-[12%] px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                <th class="w-[24%] px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="w-[12%] px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="documents-table-body" class="bg-white divide-y divide-gray-200 min-h-[400px]">

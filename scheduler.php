@@ -3945,29 +3945,6 @@
 
                 <!-- Right column: Month grid + Schedule stacked -->
                 <div class="flex-1 space-y-4">
-                    <!-- Toolbar above calendar -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2">
-                            <button id="prev-week" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Previous">
-                                <svg class="w-5 h-5 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                                </svg>
-                            </button>
-                            <button id="next-week" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Next">
-                                <svg class="w-5 h-5 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </button>
-                            <button id="today-btn" onclick="goToToday()" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Today</button>
-                            <input id="jump-date" type="date" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#222831] text-gray-800 dark:text-gray-200 hover:border-purple-500 focus:ring-2 focus:ring-purple-500" title="Jump to date">
-                        </div>
-                        <div class="hidden md:flex items-center space-x-2">
-                            <button data-view="day" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">Day</button>
-                            <button data-view="week" class="px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors">Week</button>
-                            <button data-view="month" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">Month</button>
-                            <button id="add-event-btn" class="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">Add Event</button>
-                        </div>
-                    </div>
 
                     <!-- Date range sub-header -->
                     <div class="w-full text-center">

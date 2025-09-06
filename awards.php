@@ -1904,6 +1904,7 @@ LILAC Awards - Keyboard Shortcuts:
         </div>
     </div>
 
+
     <!-- Floating Add Award Button Above Footer -->
     <div class="fixed bottom-20 right-4 z-50">
         <button id="view-switch-btn" aria-label="Add Award" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="showAddAwardModal()">
@@ -2493,6 +2494,7 @@ LILAC Awards - Keyboard Shortcuts:
     </script>
 
     <script>
+        function showAddAwardModal(){ openAddAwardModal(); }
         function openAddAwardModal(){
             document.getElementById('add-award-modal').classList.remove('hidden');
         }
@@ -2528,13 +2530,6 @@ LILAC Awards - Keyboard Shortcuts:
         });
     </script>
 
-    <!-- Floating Add Award Button -->
-    <button onclick="openAddAwardModal()" class="fixed bottom-6 right-6 z-40 bg-black text-white rounded-full w-14 h-14 shadow-xl hover:bg-gray-800 transition-colors flex items-center justify-center">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        <span class="sr-only">Add New Award</span>
-    </button>
 </body>
 
 </html>

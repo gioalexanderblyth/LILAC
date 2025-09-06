@@ -812,6 +812,7 @@
                         console.log('Meetings with colors:', currentMeetings.map(m => ({ id: m.id, title: m.title, color: m.color, description: m.description })));
                         console.log('Processed meetings:', currentMeetings);
                         renderSchedule();
+                        renderMiniCalendar();
                         updateReminders();
                         loadStats(); // Update statistics after loading meetings
                     } else {
@@ -1018,13 +1019,8 @@
         }
 
         function navigateWeek(direction) {
-            if (currentView === 'week') {
-                currentWeek.setDate(currentWeek.getDate() + (direction * 7));
-            } else if (currentView === 'day') {
-                currentWeek.setDate(currentWeek.getDate() + direction);
-            } else if (currentView === 'month') {
-                currentWeek.setMonth(currentWeek.getMonth() + direction);
-            }
+            // Always move by 7 days to show the next/previous week
+            currentWeek.setDate(currentWeek.getDate() + (direction * 7));
             renderSchedule();
         }
 
@@ -1171,7 +1167,10 @@
             const newDate = new Date(selectedDate);
             newDate.setMonth(newDate.getMonth() + direction);
             selectedDate = newDate;
+            // Sync weekly view with the newly selected month and refresh date range
+            currentWeek = new Date(newDate);
             renderCalendar();
+            renderSchedule();
             
             // Add visual feedback for button press
             const buttonId = direction > 0 ? 'next-month' : 'prev-month';
@@ -1331,7 +1330,11 @@
                 const dateStr = date.toISOString().split('T')[0];
                 const isToday = dateStr === new Date().toISOString().split('T')[0];
                 const isSelected = clickedDateString ? dateStr === clickedDateString : false;
-                const eventCount = currentMeetings.filter(m => (m.date || m.meeting_date) === dateStr).length;
+                const eventCount = currentMeetings.filter(m => {
+                    const start = m.date || m.meeting_date;
+                    const end = m.dateEnd || m.end_date || start;
+                    return start && end && start <= dateStr && end >= dateStr;
+                }).length;
                 const hasEvent = eventCount > 0;
                 let cls = 'text-[11px] h-6 flex items-center justify-center rounded cursor-pointer hover:bg-purple-100 dark:hover:bg-gray-700';
                 if (!isCurrMonth) cls += ' text-gray-300 dark:text-gray-500';
@@ -1347,8 +1350,8 @@
 
             const prev = document.getElementById('mini-prev-month');
             const next = document.getElementById('mini-next-month');
-            if (prev) prev.onclick = function(){ selectedDate = new Date(year, month - 1, 1); renderCalendar(); renderMiniCalendar(); };
-            if (next) next.onclick = function(){ selectedDate = new Date(year, month + 1, 1); renderCalendar(); renderMiniCalendar(); };
+            if (prev) prev.onclick = function(){ selectedDate = new Date(year, month - 1, 1); currentWeek = new Date(selectedDate); renderCalendar(); renderMiniCalendar(); renderSchedule(); };
+            if (next) next.onclick = function(){ selectedDate = new Date(year, month + 1, 1); currentWeek = new Date(selectedDate); renderCalendar(); renderMiniCalendar(); renderSchedule(); };
         }
 
         function handleQuickReminder() {

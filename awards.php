@@ -1493,15 +1493,15 @@ LILAC Awards - Keyboard Shortcuts:
     <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-0 md:ml-64 p-4 pt-6 min-h-screen bg-white transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-0 md:ml-64 p-4 pt-4 min-h-screen bg-white transition-all duration-300 ease-in-out">
 
         
 
 
 
         <!-- Tab Navigation -->
-        <div class="mb-6">
-            <div class="border-b border-gray-200 px-6">
+        <div class="mb-2">
+            <div class="border-b border-gray-200 px-4">
                 <div class="flex items-center justify-between">
                     <nav class="flex space-x-8" aria-label="Tabs">
                         <button id="tab-overview" onclick="switchTab('overview')" class="tab-button active py-4 px-1  font-medium text-sm text-black">
@@ -1519,13 +1519,12 @@ LILAC Awards - Keyboard Shortcuts:
         <!-- Tab Content Container -->
         <div id="tab-overview-content" class="tab-content">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Total Awards</p>
-                        <p class="text-2xl font-bold text-gray-900" id="total-awards">44</p>
-                        <p class="text-sm text-green-600">+2.30% from last month</p>
+                        <p class="text-xs font-medium text-gray-600">Total Awards</p>
+                        <p class="text-xl font-bold text-gray-900" id="total-awards">44</p>
                     </div>
                     <div class="p-3 rounded-full bg-blue-100">
                         <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1539,12 +1538,11 @@ LILAC Awards - Keyboard Shortcuts:
                     </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Academic Excellence</p>
-                        <p class="text-2xl font-bold text-gray-900" id="academic-count">23</p>
-                        <p class="text-sm text-green-600">+30.8% from last month</p>
+                        <p class="text-xs font-medium text-gray-600">Academic Excellence</p>
+                        <p class="text-xl font-bold text-gray-900" id="academic-count">23</p>
                     </div>
                     <div class="p-3 rounded-full bg-green-100">
                         <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1558,12 +1556,11 @@ LILAC Awards - Keyboard Shortcuts:
                     </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Research Awards</p>
-                        <p class="text-2xl font-bold text-gray-900" id="research-count">14</p>
-                        <p class="text-sm text-red-600">+2.30% from last month</p>
+                        <p class="text-xs font-medium text-gray-600">Research Awards</p>
+                        <p class="text-xl font-bold text-gray-900" id="research-count">14</p>
                     </div>
                     <div class="p-3 rounded-full bg-red-100">
                         <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1577,12 +1574,11 @@ LILAC Awards - Keyboard Shortcuts:
                     </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Leadership Awards</p>
-                        <p class="text-2xl font-bold text-gray-900" id="leadership-count">7</p>
-                        <p class="text-sm text-gray-600">upcoming awards this month</p>
+                        <p class="text-xs font-medium text-gray-600">Leadership Awards</p>
+                        <p class="text-xl font-bold text-gray-900" id="leadership-count">7</p>
                     </div>
                     <div class="p-3 rounded-full bg-purple-100">
                         <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

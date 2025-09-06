@@ -958,7 +958,7 @@ Approved by: ________________
 
     <!-- View Template Modal -->
     <div id="viewTemplateModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50">
-        <div class="relative p-6 bg-white w-full max-w-6xl m-auto flex-col flex rounded-xl shadow-2xl max-h-[95vh] overflow-y-auto">
+        <div class="relative p-4 bg-white w-full max-w-3xl m-auto flex-col flex rounded-lg shadow-xl max-h-[80vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6 sticky top-0 bg-white py-2">
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
                     <div class="p-2 bg-purple-100 rounded-lg">

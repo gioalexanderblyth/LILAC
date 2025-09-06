@@ -267,7 +267,7 @@
         }
         .awards-donut .donut-chart.gradient .portion-block { display: none;         }
         /* Chart container styles (match provided design but scoped) */
-        .awards-chart { background-color: #273241; border-radius: 8px; padding: 16px; }
+        .awards-chart { background-color: #ffffff; border-radius: 8px; padding: 16px; border: 1px solid #e5e7eb; }
         .awards-chart canvas { display: block; width: 100% !important; height: 300px !important; }
         /* Ensure chart canvas is visible and sized in the Average Awards Statistic card */
         #monthlyTrendChart { display: none; }
@@ -1493,7 +1493,7 @@ LILAC Awards - Keyboard Shortcuts:
     <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-0 md:ml-64 p-4 pt-4 min-h-screen bg-white transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-0 md:ml-64 p-4 pt-0 min-h-screen bg-white transition-all duration-300 ease-in-out">
 
         
 
@@ -1519,77 +1519,49 @@ LILAC Awards - Keyboard Shortcuts:
         <!-- Tab Content Container -->
         <div id="tab-overview-content" class="tab-content">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                <div class="flex items-center justify-between">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3 bg-gray-50 p-2 rounded-lg">
+            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
                     <div>
-                        <p class="text-xs font-medium text-gray-600">Total Awards</p>
-                        <p class="text-xl font-bold text-gray-900" id="total-awards">44</p>
+                        <div class="text-2xl font-extrabold text-gray-900" id="total-awards">0</div>
+                        <div class="text-sm text-gray-600">Total Awards</div>
                     </div>
-                    <div class="p-3 rounded-full bg-blue-100">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                        </svg>
+                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/></svg>
                     </div>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                <div class="flex items-center justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
                     <div>
-                        <p class="text-xs font-medium text-gray-600">Academic Excellence</p>
-                        <p class="text-xl font-bold text-gray-900" id="academic-count">23</p>
+                        <div class="text-2xl font-extrabold text-gray-900" id="academic-count">23</div>
+                        <div class="text-sm text-gray-600">Academic Excellence</div>
                     </div>
-                    <div class="p-3 rounded-full bg-green-100">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
+                    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     </div>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                <div class="flex items-center justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
                     <div>
-                        <p class="text-xs font-medium text-gray-600">Research Awards</p>
-                        <p class="text-xl font-bold text-gray-900" id="research-count">14</p>
+                        <div class="text-2xl font-extrabold text-gray-900" id="research-count">14</div>
+                        <div class="text-sm text-gray-600">Research Awards</div>
                     </div>
-                    <div class="p-3 rounded-full bg-red-100">
-                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
-                        </svg>
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
                     </div>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                <div class="flex items-center justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
                     <div>
-                        <p class="text-xs font-medium text-gray-600">Leadership Awards</p>
-                        <p class="text-xl font-bold text-gray-900" id="leadership-count">7</p>
+                        <div class="text-2xl font-extrabold text-gray-900" id="leadership-count">7</div>
+                        <div class="text-sm text-gray-600">Leadership Awards</div>
                     </div>
-                    <div class="p-3 rounded-full bg-purple-100">
-                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
+                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     </div>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
                 </div>
             </div>
         </div>
@@ -2689,9 +2661,7 @@ LILAC Awards - Keyboard Shortcuts:
                 scales: {
                     x: { grid: { display: false } },
                     y: {
-                        ticks: {
-                            callback: function(value) { return (value / 1000) + 'K'; }
-                        }
+                        display: false
                     }
                 }
             }

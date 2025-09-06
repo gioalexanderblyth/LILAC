@@ -1041,13 +1041,12 @@
         }
 
         function navigateWeek(direction) {
-            if (currentView === 'week') {
-                currentWeek.setDate(currentWeek.getDate() + (direction * 7));
-            } else if (currentView === 'day') {
-                currentWeek.setDate(currentWeek.getDate() + direction);
-            } else if (currentView === 'month') {
-                currentWeek.setMonth(currentWeek.getMonth() + direction);
-            }
+            // Always advance by one full week relative to the currently displayed week,
+            // regardless of the selected view, so the header moves from e.g. Sep 6 → Sep 7-13.
+            const start = getWeekStart(currentWeek);
+            const nextStart = new Date(start);
+            nextStart.setDate(start.getDate() + (direction * 7));
+            currentWeek = nextStart;
             renderSchedule();
         }
 

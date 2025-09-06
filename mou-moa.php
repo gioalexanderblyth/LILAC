@@ -749,7 +749,7 @@
     </nav>
 
     <!-- Sidebar -->
-    <?php include 'sidebar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -765,6 +765,29 @@
                 try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
             });
         }
+
+        // Responsive floating button on scroll
+        let lastScrollTop = 0;
+        const floatingBtn = document.getElementById('view-switch-btn');
+        const floatingBtnContainer = floatingBtn?.parentElement;
+        
+        window.addEventListener('scroll', function() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            if (floatingBtnContainer) {
+                if (scrollTop > lastScrollTop && scrollTop > 100) {
+                    // Scrolling down - move button up (current position above footer)
+                    floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
+                    floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                } else {
+                    // Scrolling up - move button down (old position at bottom)
+                    floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
+                    floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                }
+            }
+            
+            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+        });
 
         // Update date in top-right
         function updateCurrentDate() {
@@ -822,89 +845,6 @@
         <!-- Expiration Alerts Section -->
         <div id="expiration-alerts"></div>
 
-        <!-- Enhanced Create MOU Section -->
-        <div class="mb-8">
-            <div class="group relative">
-                <div class="absolute -inset-0.5 bg-gradient-to-r from-emerald-400 to-teal-600 rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                <div class="relative bg-white bg-opacity-80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white border-opacity-30">
-                    <div class="flex items-center justify-between mb-8">
-                        <div>
-                            <h2 class="text-3xl font-black text-gray-800">Create New MOU/MOA</h2>
-                            <p class="text-gray-600 font-medium mt-2">Establish new partnership agreements</p>
-                        </div>
-                        <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                        </div>
-                    </div>
-            <form id="mou-form" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="mou-organization" class="block text-sm font-bold text-gray-700 mb-3">Organization *</label>
-                        <input type="text" id="mou-organization" name="mou-organization" required
-                               class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-emerald-500 focus:ring-0 text-gray-900 font-medium placeholder-gray-500 transition-all duration-300"
-                               placeholder="Enter organization name">
-                    </div>
-                    <div>
-                        <label for="mou-type" class="block text-sm font-bold text-gray-700 mb-3">Type *</label>
-                        <select id="mou-type" name="mou-type" required
-                                class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-emerald-500 focus:ring-0 text-gray-900 font-medium transition-all duration-300">
-                            <option value="">Select Type</option>
-                            <option value="MOU">MOU (Memorandum of Understanding)</option>
-                            <option value="MOA">MOA (Memorandum of Agreement)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="mou-status" class="block text-sm font-bold text-gray-700 mb-3">Status *</label>
-                        <select id="mou-status" name="mou-status" required
-                                class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-emerald-500 focus:ring-0 text-gray-900 font-medium transition-all duration-300">
-                            <option value="Active">Active</option>
-                            <option value="Expired">Expired</option>
-                            <option value="Pending">Pending</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="signed-date" class="block text-sm font-bold text-gray-700 mb-3">Date Signed *</label>
-                        <input type="date" id="signed-date" name="signed-date" required
-                               class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-emerald-500 focus:ring-0 text-gray-900 font-medium transition-all duration-300">
-                    </div>
-                    <div>
-                        <label for="expiry-date" class="block text-sm font-bold text-gray-700 mb-3">End Date</label>
-                        <input type="date" id="expiry-date" name="expiry-date"
-                               class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-emerald-500 focus:ring-0 text-gray-900 font-medium transition-all duration-300">
-                        <p class="mt-2 text-sm text-gray-600 font-medium">Required for active MOUs</p>
-                    </div>
-                </div>
-                <div>
-                    <label for="mou-description" class="block text-sm font-bold text-gray-700 mb-3">Description</label>
-                    <textarea id="mou-description" name="mou-description" rows="4"
-                              class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-emerald-500 focus:ring-0 text-gray-900 font-medium placeholder-gray-500 transition-all duration-300 resize-none"
-                              placeholder="Enter MOU/MOA description and details"></textarea>
-                </div>
-                <div>
-                    <label for="mou-file" class="block text-sm font-bold text-gray-700 mb-3">Upload Document</label>
-                    <input type="file" id="mou-file" name="mou-file"
-                           accept=".pdf,.doc,.docx"
-                           class="w-full px-6 py-4 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:border-emerald-500 focus:ring-0 transition-all duration-300 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-gradient-to-r file:from-emerald-500 file:to-teal-600 file:text-white hover:file:from-emerald-600 hover:file:to-teal-700">
-                    <p class="mt-3 text-sm text-gray-600 font-medium">Supported formats: PDF, DOC, DOCX (Max 10MB)</p>
-                </div>
-                <div class="flex justify-end">
-                    <button type="submit"
-                            class="group relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 text-white px-10 py-4 rounded-2xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 font-bold text-lg">
-                        <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-                        <div class="relative flex items-center space-x-3">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                            <span>Create MOU/MOA</span>
-                        </div>
-                    </button>
-                </div>
-            </form>
-                </div>
-            </div>
-        </div>
 
         <!-- Enhanced Search and Filter Section -->
         <div class="mb-8">
@@ -1181,11 +1121,91 @@
         </div>
     </div>
 
+    <!-- Create MOU Modal -->
+    <div id="createMOUModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-[80]">
+        <div class="relative p-8 bg-white w-full max-w-2xl m-auto flex-col flex rounded-xl shadow-xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-semibold text-gray-900">Create New MOU/MOA</h2>
+                <button onclick="closeCreateMOUModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form id="mou-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="mou-organization" class="block text-sm font-medium text-gray-700 mb-2">Organization *</label>
+                        <input type="text" id="mou-organization" name="mou-organization" required class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="mou-type" class="block text-sm font-medium text-gray-700 mb-2">Type *</label>
+                        <select id="mou-type" name="mou-type" required class="w-full px-4 py-2 border rounded-lg">
+                            <option value="">Select Type</option>
+                            <option value="MOU">MOU</option>
+                            <option value="MOA">MOA</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="mou-status" class="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                        <select id="mou-status" name="mou-status" required class="w-full px-4 py-2 border rounded-lg">
+                            <option value="Active">Active</option>
+                            <option value="Expired">Expired</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="signed-date" class="block text-sm font-medium text-gray-700 mb-2">Date Signed *</label>
+                        <input type="date" id="signed-date" name="signed-date" required class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+                <div>
+                    <label for="mou-description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea id="mou-description" name="mou-description" rows="4" class="w-full px-4 py-2 border rounded-lg"></textarea>
+                </div>
+                <div>
+                    <label for="mou-file" class="block text-sm font-medium text-gray-700 mb-2">Upload Document</label>
+                    <input type="file" id="mou-file" name="mou-file" accept=".pdf,.doc,.docx" class="w-full">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeCreateMOUModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Create MOU/MOA</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openCreateMOUModal(){
+            document.getElementById('createMOUModal').classList.remove('hidden');
+        }
+        function closeCreateMOUModal(){
+            document.getElementById('createMOUModal').classList.add('hidden');
+        }
+        // Submit handler already wired to #mou-form (handleFormSubmit)
+        document.addEventListener('DOMContentLoaded', function(){
+            var form = document.getElementById('mou-form');
+            if (form) {
+                form.addEventListener('submit', function(e){
+                    handleFormSubmit(e);
+                    closeCreateMOUModal();
+                });
+            }
+        });
+    </script>
+
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
+    <!-- Floating Create MOU Button Above Footer -->
+    <div class="fixed bottom-20 right-4 z-50">
+        <button id="view-switch-btn" aria-label="Create MOU" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="openCreateMOUModal()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+        </button>
+    </div>
+
     <!-- Footer -->
-    <footer class="ml-0 md:ml-64 bg-gray-800 text-white text-center p-4 mt-8">
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 

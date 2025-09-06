@@ -1333,7 +1333,7 @@ LILAC Awards - Keyboard Shortcuts:
 <body class="bg-gray-50">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] bg-white border-b border-gray-200 p-4 h-16 flex items-center">
+    <nav class="fixed top-0 left-0 right-0 z-[60] bg-white border-b border-gray-200 p-4 h-14 flex items-center relative">
         <!-- Left Side - Menu Buttons -->
         <div class="flex items-center space-x-4">
             <button id="menu-toggle" onclick="openSidebar()" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700" title="Open Sidebar">
@@ -1349,48 +1349,55 @@ LILAC Awards - Keyboard Shortcuts:
         </div>
         
         <!-- Center - Title -->
-        <div class="flex-1 flex justify-center">
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div class="text-center text-gray-900">
                 <div class="text-lg font-bold">Awards Progress</div>
             </div>
         </div>
         
-        <!-- Right Side - Date and Export Button -->
-        <div class="flex items-center space-x-4">
+        <!-- Right Side - Date and Actions -->
+        <div class="flex items-center space-x-4 ml-auto">
             <div class="flex items-center space-x-2 text-gray-700">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
                 <span id="current-date" class="text-sm"></span>
             </div>
-            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-                </svg>
-                                        <span>Import Data</span>
-            </button>
+            
         </div>
     </nav>
 
+    
+
     <!-- Sidebar -->
-    <?php include 'sidebar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-0 md:ml-64 p-6 pt-20 min-h-screen bg-white transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-0 md:ml-64 p-6 pt-14 min-h-screen bg-white transition-all duration-300 ease-in-out">
+
+        
 
 
 
         <!-- Tab Navigation -->
-        <div class="mb-8">
-            <div class="border-b border-gray-200">
-                <nav class="flex space-x-8 px-6" aria-label="Tabs">
-                    <button id="tab-overview" onclick="switchTab('overview')" class="tab-button active py-4 px-1  font-medium text-sm text-black">
-                        Awards Progress
+        <div class="mb-6">
+            <div class="border-b border-gray-200 px-6">
+                <div class="flex items-center justify-between">
+                    <nav class="flex space-x-8" aria-label="Tabs">
+                        <button id="tab-overview" onclick="switchTab('overview')" class="tab-button active py-4 px-1  font-medium text-sm text-black">
+                            Awards Progress
+                        </button>
+                        <button id="tab-awardmatch" onclick="switchTab('awardmatch')" class="tab-button py-4 px-1  font-medium text-sm text-gray-500 hover:text-gray-700 ">
+                            Award Match Analysis
+                        </button>
+                    </nav>
+                    <button onclick="openImportDataModal()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                        </svg>
+                        <span>Import Data</span>
                     </button>
-                    <button id="tab-awardmatch" onclick="switchTab('awardmatch')" class="tab-button py-4 px-1  font-medium text-sm text-gray-500 hover:text-gray-700 ">
-                        Award Match Analysis
-                    </button>
-                </nav>
+                </div>
             </div>
         </div>
 
@@ -1445,7 +1452,7 @@ LILAC Awards - Keyboard Shortcuts:
                     </div>
                     <div class="p-3 rounded-full bg-red-100">
                         <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 01-3.138-3.138z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                         </svg>
                     </div>
                 </div>
@@ -1691,42 +1698,7 @@ LILAC Awards - Keyboard Shortcuts:
             </div>
         </div>
 
-        <!-- Add New Award Section -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6">Add New Award</h2>
-            <form id="award-form" class="space-y-6">
-                <div>
-                    <label for="award-title" class="block text-sm font-medium text-gray-700 mb-2">Award Title *</label>
-                    <input type="text" id="award-title" name="award-title" required
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                           placeholder="Enter award title">
-                </div>
-                <div>
-                    <label for="date-received" class="block text-sm font-medium text-gray-700 mb-2">Date Received *</label>
-                    <input type="date" id="date-received" name="date-received" required
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors">
-                </div>
-                <div>
-                    <label for="award-description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <textarea id="award-description" name="award-description" rows="3"
-                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                              placeholder="Enter award description and details"></textarea>
-                </div>
-                <div>
-                    <label for="award-file" class="block text-sm font-medium text-gray-700 mb-2">Upload Certificate</label>
-                    <input type="file" id="award-file" name="award-file"
-                           accept=".pdf,.jpg,.jpeg,.png"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-black file:text-white hover:file:bg-gray-800">
-                    <p class="mt-2 text-sm text-gray-500">Supported formats: PDF, JPG, PNG (Max 5MB)</p>
-                </div>
-                <div class="flex justify-end">
-                    <button type="submit"
-                            class="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors font-medium">
-                        Add Award
-                    </button>
-                </div>
-            </form>
-        </div>
+        
 
         <!-- Awards Grid -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -1932,8 +1904,17 @@ LILAC Awards - Keyboard Shortcuts:
         </div>
     </div>
 
+    <!-- Floating Add Award Button Above Footer -->
+    <div class="fixed bottom-20 right-4 z-50">
+        <button id="view-switch-btn" aria-label="Add Award" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="showAddAwardModal()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+            </svg>
+        </button>
+    </div>
+
     <!-- Footer -->
-    <footer class="ml-0 md:ml-64 bg-white text-gray-600 text-center p-4 mt-8 border-t border-gray-200">
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 
@@ -2017,6 +1998,74 @@ LILAC Awards - Keyboard Shortcuts:
                 <button onclick="closeViewAwardModal()" class="px-6 py-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-lg">
                     Close
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Award Modal -->
+    <div id="add-award-modal" class="fixed inset-0 bg-black/50 z-[70] hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <h3 class="text-lg font-semibold text-gray-900">Add New Award</h3>
+                    <button class="text-gray-400 hover:text-gray-600" onclick="closeAddAwardModal()">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <form id="award-modal-form" class="p-6 space-y-4">
+                    <div>
+                        <label for="m-award-title" class="block text-sm font-medium text-gray-700 mb-2">Award Title *</label>
+                        <input id="m-award-title" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label for="m-date-received" class="block text-sm font-medium text-gray-700 mb-2">Date Received *</label>
+                        <input id="m-date-received" type="date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label for="m-award-description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <textarea id="m-award-description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"></textarea>
+                    </div>
+                    <div>
+                        <label for="m-award-file" class="block text-sm font-medium text-gray-700 mb-2">Upload Certificate</label>
+                        <input id="m-award-file" type="file" accept=".pdf,.jpg,.jpeg,.png" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                        <p class="mt-2 text-sm text-gray-500">Supported formats: PDF, JPG, PNG (Max 5MB)</p>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeAddAwardModal()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+                        <button type="submit" class="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800">Add Award</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Data Modal -->
+    <div id="import-data-modal" class="fixed inset-0 bg-black/50 z-[70] hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <h3 class="text-lg font-semibold text-gray-900">Import Awards Data</h3>
+                    <button class="text-gray-400 hover:text-gray-600" onclick="closeImportDataModal()">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="text-sm text-gray-700">Upload a CSV or Excel file (.csv, .xlsx) with award data. You can download a sample template below.</p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" onclick="downloadImportTemplate()">Download Template</button>
+                            <label class="px-3 py-2 rounded-lg bg-black text-white hover:bg-gray-800 cursor-pointer">
+                                <input id="import-file" type="file" accept=".csv,.xlsx" class="hidden" onchange="handleImportFileChange(event)" />
+                                Choose File
+                            </label>
+                            <span id="import-file-name" class="text-sm text-gray-600"></span>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeImportDataModal()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+                        <button type="button" onclick="processImport()" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Import</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2370,6 +2419,29 @@ LILAC Awards - Keyboard Shortcuts:
                 overlay.addEventListener('click', closeSidebar);
             }
 
+            // Responsive floating button on scroll
+            let lastScrollTop = 0;
+            const floatingBtn = document.getElementById('view-switch-btn');
+            const floatingBtnContainer = floatingBtn?.parentElement;
+            
+            window.addEventListener('scroll', function() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                if (floatingBtnContainer) {
+                    if (scrollTop > lastScrollTop && scrollTop > 100) {
+                        // Scrolling down - move button up (current position above footer)
+                        floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
+                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                    } else {
+                        // Scrolling up - move button down (old position at bottom)
+                        floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
+                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                    }
+                }
+                
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+            });
+
             // Listen for sidebar toggle events from other components
             window.addEventListener('sidebar:toggle', function() {
                 if (sidebarOpen) {
@@ -2419,6 +2491,50 @@ LILAC Awards - Keyboard Shortcuts:
             
         });
     </script>
+
+    <script>
+        function openAddAwardModal(){
+            document.getElementById('add-award-modal').classList.remove('hidden');
+        }
+        function closeAddAwardModal(){
+            document.getElementById('add-award-modal').classList.add('hidden');
+        }
+        function openImportDataModal(){
+            document.getElementById('import-data-modal').classList.remove('hidden');
+        }
+        function closeImportDataModal(){
+            document.getElementById('import-data-modal').classList.add('hidden');
+        }
+        function handleImportFileChange(e){
+            const file = e.target.files[0];
+            document.getElementById('import-file-name').textContent = file ? file.name : '';
+        }
+        function downloadImportTemplate(){
+            const csv = 'Title,Date,Description\nSample Award,2025-01-15,Description here';
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'awards_template.csv'; a.click();
+            URL.revokeObjectURL(url);
+        }
+        function processImport(){
+            const input = document.getElementById('import-file');
+            if (!input.files || !input.files[0]) { alert('Please choose a file first'); return; }
+            closeImportDataModal();
+        }
+        document.getElementById('award-modal-form')?.addEventListener('submit', function(e){
+            e.preventDefault();
+            closeAddAwardModal();
+        });
+    </script>
+
+    <!-- Floating Add Award Button -->
+    <button onclick="openAddAwardModal()" class="fixed bottom-6 right-6 z-40 bg-black text-white rounded-full w-14 h-14 shadow-xl hover:bg-gray-800 transition-colors flex items-center justify-center">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        <span class="sr-only">Add New Award</span>
+    </button>
 </body>
 
 </html>

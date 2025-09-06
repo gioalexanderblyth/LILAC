@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Awards - LILAC System (Offline-Enabled)</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/LILAC/manifest.json">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="LILAC Awards">
+    <link rel="apple-touch-icon" href="/LILAC/icons/icon-192x192.png">
+    <meta name="msapplication-TileColor" content="#1f2937">
+    <meta name="msapplication-TileImage" content="/LILAC/icons/icon-144x144.png">
+    
+    <!-- Styles -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Offline Manager -->
+    <script src="/LILAC/offline-manager.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <!-- Navigation -->
+    <nav class="bg-gray-800 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-xl font-bold">🏆 LILAC System</h1>
+                <span class="text-sm opacity-75">Awards Management</span>
+            </div>
+            
+            <!-- Connection Status Indicator -->
+            <div id="connection-status" class="flex items-center space-x-2">
+                <div id="online-indicator" class="flex items-center space-x-1 text-green-400">
+                    <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span class="text-xs">Online</span>
+                </div>
+                <div id="offline-indicator" class="flex items-center space-x-1 text-orange-400" style="display: none;">
+                    <div class="w-2 h-2 bg-orange-400 rounded-full"></div>
+                    <span class="text-xs">Offline</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- PWA Install Prompt -->
+        <div id="install-prompt" class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-6" style="display: none;">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>Install LILAC as an app for better offline experience</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="install-app" class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                        Install
+                    </button>
+                    <button id="dismiss-install" class="text-blue-700 px-3 py-1 text-sm hover:text-blue-900">
+                        Dismiss
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">🏆 Awards Management</h2>
+                    <p class="text-gray-600">Manage faculty awards and recognitions</p>
+                </div>
+                
+                <!-- Sync Status -->
+                <div id="sync-status" class="text-right">
+                    <div id="sync-info" class="text-sm text-gray-500"></div>
+                    <button id="manual-sync" class="mt-1 bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600" onclick="manualSync()">
+                        🔄 Sync Now
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Award Form -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-xl font-semibold mb-4 flex items-center">
+                <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm mr-3">+</span>
+                Add New Award
+            </h3>
+            
+            <!-- Offline Form Status -->
+            <div id="form-offline-status" class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4" style="display: none;">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>You're offline. Award will be saved locally and synced when connection is restored.</span>
+                </div>
+            </div>
+
+            <form id="awardForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Faculty Name *</label>
+                        <input type="text" name="faculty_name" required 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter faculty name">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Award Title *</label>
+                        <input type="text" name="award_title" required 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter award title">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date Received</label>
+                        <input type="date" name="date_received" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Awarding Body</label>
+                        <input type="text" name="awarding_body" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter awarding organization">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea name="description" rows="3" 
+                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Enter award description"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Certificate Upload</label>
+                    <input type="file" name="certificate" accept=".pdf,.jpg,.jpeg,.png" 
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <p class="text-xs text-gray-500 mt-1">Supported formats: PDF, JPG, PNG (Max: 10MB)</p>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="clearForm()" 
+                            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        Clear
+                    </button>
+                    <button type="submit" id="submit-btn"
+                            class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center">
+                        <span id="submit-text">Add Award</span>
+                        <svg id="submit-loading" class="w-4 h-4 ml-2 animate-spin hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Awards List -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">📋 Awards List</h3>
+                <button onclick="loadAwards()" class="text-blue-500 hover:text-blue-700 text-sm">
+                    🔄 Refresh
+                </button>
+            </div>
+            
+            <!-- Data Status Indicator -->
+            <div id="data-status" class="mb-4"></div>
+            
+            <!-- Awards Container -->
+            <div id="awardsList">
+                <div class="text-center py-8 text-gray-500">
+                    <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p>Loading awards...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notifications" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // Global variables
+        let isOnline = navigator.onLine;
+        let pendingChanges = 0;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Awards page initializing...');
+            
+            // Update connection status
+            updateConnectionStatus();
+            
+            // Set up form handler
+            setupFormHandler();
+            
+            // Set up PWA install handler
+            setupPWAInstall();
+            
+            // Load awards
+            await loadAwards();
+            
+            // Set up connection listeners
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+            
+            // Update sync status
+            updateSyncStatus();
+            
+            console.log('Awards page initialized successfully');
+        });
+
+        // Form submission handler with offline support
+        function setupFormHandler() {
+            document.getElementById('awardForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const submitBtn = document.getElementById('submit-btn');
+                const submitText = document.getElementById('submit-text');
+                const submitLoading = document.getElementById('submit-loading');
+                
+                // Show loading state
+                submitBtn.disabled = true;
+                submitText.textContent = 'Saving...';
+                submitLoading.classList.remove('hidden');
+                
+                try {
+                    const formData = new FormData(e.target);
+                    
+                    const response = await fetch('/LILAC/api/awards.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.offline) {
+                        // Handle offline response
+                        showNotification('Award saved offline - will sync when online', 'info');
+                        pendingChanges++;
+                        updateSyncStatus();
+                    } else if (result.success) {
+                        // Handle online success
+                        showNotification('Award added successfully', 'success');
+                        await loadAwards(); // Refresh list
+                    } else {
+                        showNotification(result.message || 'Failed to add award', 'error');
+                    }
+                    
+                    // Clear form on success
+                    if (result.success || result.offline) {
+                        e.target.reset();
+                    }
+                    
+                } catch (error) {
+                    console.error('Form submission error:', error);
+                    showNotification('Error submitting form', 'error');
+                }
+                
+                // Reset button state
+                submitBtn.disabled = false;
+                submitText.textContent = 'Add Award';
+                submitLoading.classList.add('hidden');
+            });
+        }
+
+        // Load awards with offline support
+        async function loadAwards() {
+            try {
+                const response = await fetch('/LILAC/api/awards.php');
+                const result = await response.json();
+                
+                if (result.offline) {
+                    // Show offline data indicator
+                    document.getElementById('data-status').innerHTML = `
+                        <div class="bg-orange-100 border border-orange-400 text-orange-700 px-4 py-3 rounded">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>📡 Showing cached data - some information may be outdated</span>
+                            </div>
+                        </div>
+                    `;
+                    renderAwards(result.data || []);
+                } else {
+                    // Clear offline indicator and show fresh data
+                    document.getElementById('data-status').innerHTML = '';
+                    renderAwards(result.data || []);
+                }
+                
+            } catch (error) {
+                console.error('Failed to load awards:', error);
+                document.getElementById('awardsList').innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                        <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p>Failed to load awards</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render awards list
+        function renderAwards(awards) {
+            const container = document.getElementById('awardsList');
+            
+            if (awards.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p>No awards found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = awards.map(award => `
+                <div class="border border-gray-200 rounded-lg p-4 mb-4 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <span class="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm mr-3">🏆</span>
+                                <h4 class="text-lg font-semibold text-gray-800">${award.faculty_name}</h4>
+                            </div>
+                            <p class="text-blue-600 font-medium mb-2">${award.award_title}</p>
+                            <div class="text-sm text-gray-600 space-y-1">
+                                ${award.date_received ? `<p><strong>Date:</strong> ${formatDate(award.date_received)}</p>` : ''}
+                                ${award.awarding_body ? `<p><strong>Awarded by:</strong> ${award.awarding_body}</p>` : ''}
+                                ${award.description ? `<p><strong>Description:</strong> ${award.description}</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex space-x-2 ml-4">
+                            <button onclick="viewAward(${award.id})" class="text-blue-500 hover:text-blue-700 p-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="editAward(${award.id})" class="text-green-500 hover:text-green-700 p-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="deleteAward(${award.id})" class="text-red-500 hover:text-red-700 p-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Connection event handlers
+        function handleOnline() {
+            console.log('Connection restored');
+            isOnline = true;
+            updateConnectionStatus();
+            showNotification('Connection restored', 'success');
+            
+            // Trigger sync if offline manager is available
+            if (window.lilacOfflineManager) {
+                window.lilacOfflineManager.manualSync();
+            }
+            
+            // Reload data
+            setTimeout(loadAwards, 1000);
+        }
+
+        function handleOffline() {
+            console.log('Connection lost');
+            isOnline = false;
+            updateConnectionStatus();
+            showNotification('You are now offline', 'warning');
+        }
+
+        // Update connection status indicators
+        function updateConnectionStatus() {
+            const onlineIndicator = document.getElementById('online-indicator');
+            const offlineIndicator = document.getElementById('offline-indicator');
+            const formOfflineStatus = document.getElementById('form-offline-status');
+            
+            if (isOnline) {
+                onlineIndicator.style.display = 'flex';
+                offlineIndicator.style.display = 'none';
+                formOfflineStatus.style.display = 'none';
+            } else {
+                onlineIndicator.style.display = 'none';
+                offlineIndicator.style.display = 'flex';
+                formOfflineStatus.style.display = 'block';
+            }
+        }
+
+        // Update sync status display
+        function updateSyncStatus() {
+            const syncInfo = document.getElementById('sync-info');
+            
+            if (pendingChanges > 0) {
+                syncInfo.innerHTML = `
+                    <div class="text-orange-600">
+                        <div class="w-2 h-2 bg-orange-400 rounded-full inline-block mr-1"></div>
+                        ${pendingChanges} pending sync${pendingChanges > 1 ? 's' : ''}
+                    </div>
+                `;
+            } else {
+                syncInfo.innerHTML = `
+                    <div class="text-green-600">
+                        <div class="w-2 h-2 bg-green-400 rounded-full inline-block mr-1"></div>
+                        All synced
+                    </div>
+                `;
+            }
+        }
+
+        // PWA Installation
+        let deferredPrompt;
+
+        function setupPWAInstall() {
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                
+                // Show install prompt
+                document.getElementById('install-prompt').style.display = 'block';
+            });
+
+            document.getElementById('install-app').addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    
+                    if (outcome === 'accepted') {
+                        showNotification('App installed successfully!', 'success');
+                    }
+                    
+                    deferredPrompt = null;
+                    document.getElementById('install-prompt').style.display = 'none';
+                }
+            });
+
+            document.getElementById('dismiss-install').addEventListener('click', () => {
+                document.getElementById('install-prompt').style.display = 'none';
+            });
+        }
+
+        // Utility functions
+        function formatDate(dateString) {
+            if (!dateString) return 'Not specified';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function clearForm() {
+            document.getElementById('awardForm').reset();
+        }
+
+        function manualSync() {
+            if (window.lilacOfflineManager) {
+                window.lilacOfflineManager.manualSync();
+                showNotification('Sync triggered', 'info');
+            } else {
+                showNotification('Offline manager not available', 'error');
+            }
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500',
+                warning: 'bg-orange-500'
+            };
+
+            const notification = document.createElement('div');
+            notification.className = `${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 max-w-sm`;
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white opacity-75 hover:opacity-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('notifications').appendChild(notification);
+            
+            // Slide in
+            setTimeout(() => notification.classList.remove('translate-x-full'), 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.classList.add('translate-x-full');
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        // Award management functions (placeholders)
+        function viewAward(id) {
+            showNotification(`Viewing award ${id}`, 'info');
+        }
+
+        function editAward(id) {
+            showNotification(`Editing award ${id}`, 'info');
+        }
+
+        function deleteAward(id) {
+            if (confirm('Are you sure you want to delete this award?')) {
+                showNotification(`Deleting award ${id}`, 'info');
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+N: New award
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                document.querySelector('input[name="faculty_name"]').focus();
+            }
+            
+            // F5: Refresh data
+            if (e.key === 'F5') {
+                e.preventDefault();
+                loadAwards();
+            }
+            
+            // Escape: Clear form
+            if (e.key === 'Escape') {
+                clearForm();
+            }
+        });
+    </script>
+</body>
+</html> 

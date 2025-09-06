@@ -4,6 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script>
+        if (window['pdfjsLib']) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
     <title>LILAC Documents</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
@@ -1791,6 +1799,11 @@
             existingFileNames.add(documentName.toLowerCase());
             
             formData.append('document_name', documentName);
+            try {
+                classifyFileClientSide(file).then(category => {
+                    if (category) formData.append('category', category);
+                }).catch(() => {});
+            } catch(e) {}
             
             console.log('Starting upload for file:', file.name, 'Size:', file.size, 'Type:', file.type);
             console.log('Form data prepared:', {
@@ -1858,6 +1871,21 @@
                 });
                 onError();
             });
+        }
+
+        async function classifyFileClientSide(file) {
+            try {
+                const name = (file.name || '').toLowerCase();
+                if (/\b(mou|moa|memorandum|agreement|kuma-mou)\b/i.test(name)) return 'MOUs & MOAs';
+                if (/\b(template|form|admission|application|registration|checklist|request)\b/i.test(name)) return 'Templates';
+                const isImage = /^image\//.test(file.type);
+                if (isImage && file.size < 5 * 1024 * 1024 && window.Tesseract) {
+                    const text = await Tesseract.recognize(file, 'eng').then(r => (r && r.data && r.data.text) ? r.data.text : '').catch(() => '');
+                    if (/\b(MOU|MOA|Memorandum of Understanding|Agreement)\b/i.test(text)) return 'MOUs & MOAs';
+                    if (/\b(Template|Form|Admission|Application|Registration|Checklist|Request)\b/i.test(text)) return 'Templates';
+                }
+            } catch(e) {}
+            return '';
         }
 
         function showUploadProgressModal(files) {
@@ -2204,44 +2232,105 @@
             }
         }
 
-        // Show document viewer
+        // Modal-based document viewer
         function showDocumentViewer(doc) {
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
-            modal.innerHTML = `
-                <div class="bg-white rounded-lg shadow-xl p-6 w-2/3 h-3/4 max-w-4xl mx-4 flex flex-col">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">${doc.document_name || doc.title || 'Untitled Document'}</h3>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="flex-1 bg-gray-100 rounded-lg p-4 overflow-auto">
-                        <div class="text-center text-gray-500">
-                            <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            <p>Document viewer for: ${doc.document_name || doc.title || 'Untitled Document'}</p>
-                            <p class="text-sm mt-2">File type: ${getFileExtension(doc.filename || '')}</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 mt-4">
-                        <button onclick="downloadDocument(${doc.id})" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                            Download
-                        </button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            // Close on outside click
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.remove();
+            const title = doc.document_name || doc.title || 'Untitled Document';
+            let filePath = doc.file_path || doc.filename || doc.filename;
+            const ext = getFileExtension(filePath || '');
+
+            if (filePath && !filePath.startsWith('uploads/') && !filePath.startsWith('/uploads/')) {
+                filePath = `uploads/${filePath}`;
+            }
+
+            const overlay = document.getElementById('document-viewer-overlay');
+            const titleEl = document.getElementById('document-viewer-title');
+            const contentEl = document.getElementById('document-viewer-content');
+            const downloadBtn = document.getElementById('document-viewer-download');
+            const openBtn = document.getElementById('document-viewer-open');
+
+            if (!overlay || !titleEl || !contentEl || !downloadBtn) return;
+
+            titleEl.textContent = title;
+            contentEl.innerHTML = '';
+
+            if (openBtn) {
+                openBtn.onclick = function(){
+                    if (!filePath) return;
+                    const href = new URL(filePath, window.location.origin).href;
+                    window.open(href, '_blank');
+                };
+            }
+
+            if (!filePath) {
+                contentEl.innerHTML = '<div class="text-center text-gray-600">File path not available.</div>';
+            } else if (['png','jpg','jpeg','gif','webp','bmp','svg'].includes(ext)) {
+                const img = document.createElement('img');
+                img.src = filePath;
+                img.alt = title;
+                img.className = 'max-h-full max-w-full object-contain mx-auto';
+                contentEl.appendChild(img);
+            } else if (ext === 'pdf') {
+                const container = document.createElement('div');
+                container.className = 'w-full h-full';
+                contentEl.appendChild(container);
+                try {
+                    if (!window['pdfjsLib']) throw new Error('PDF.js not loaded');
+                    pdfjsLib.getDocument(filePath).promise.then(pdf => {
+                        const numPages = pdf.numPages;
+                        const renderPage = (pageNum) => {
+                            pdf.getPage(pageNum).then(page => {
+                                const availableWidth = contentEl.clientWidth - 16; // account for padding
+                                const viewport = page.getViewport({ scale: 1 });
+                                const scale = Math.min(1.5, Math.max(0.6, availableWidth / viewport.width));
+                                const scaledViewport = page.getViewport({ scale });
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                canvas.width = scaledViewport.width;
+                                canvas.height = scaledViewport.height;
+                                canvas.className = 'block mx-auto mb-4 bg-white max-w-full h-auto';
+                                container.appendChild(canvas);
+                                page.render({ canvasContext: ctx, viewport: scaledViewport }).promise.then(() => {
+                                    if (pageNum < numPages) renderPage(pageNum + 1);
+                                });
+                            });
+                        };
+                        renderPage(1);
+                    }).catch(() => {
+                        const fallback = document.createElement('iframe');
+                        fallback.src = filePath;
+                        fallback.className = 'w-full h-full rounded';
+                        contentEl.innerHTML = '';
+                        contentEl.appendChild(fallback);
+                    });
+                } catch (e) {
+                    const fallback = document.createElement('iframe');
+                    fallback.src = filePath;
+                    fallback.className = 'w-full h-full rounded';
+                    contentEl.appendChild(fallback);
                 }
-            });
+            } else if (['doc','docx','ppt','pptx','xls','xlsx'].includes(ext)) {
+                const isLocalhost = ['localhost','127.0.0.1','::1'].includes(location.hostname);
+                if (isLocalhost) {
+                    const info = document.createElement('div');
+                    info.className = 'text-center text-gray-600';
+                    info.textContent = 'Preview for Office files is not available on localhost. Please use Download to view the file.';
+                    contentEl.appendChild(info);
+                } else {
+                    const absoluteUrl = new URL(filePath, window.location.origin).href;
+                    const officeUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(absoluteUrl);
+                    const iframe = document.createElement('iframe');
+                    iframe.src = officeUrl;
+                    iframe.className = 'w-full rounded bg-white';
+                    iframe.style.height = 'calc(100% - 0px)';
+                    iframe.style.display = 'block';
+                    contentEl.appendChild(iframe);
+                }
+            } else {
+                contentEl.innerHTML = '<div class="text-center text-gray-600">Preview not supported for this file type. Please download to view.</div>';
+            }
+
+            downloadBtn.onclick = function() { downloadDocument(doc.id); };
+            overlay.classList.remove('hidden');
         }
 
         // Download document
@@ -2578,16 +2667,12 @@
             
             // Create modal with form to prevent default submission
             const modal = document.createElement('div');
+            modal.id = 'delete-modal';
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
             modal.innerHTML = `
                 <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full mx-4" role="dialog" aria-modal="true">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Delete Document</h3>
-                        <button type="button" onclick="closeDeleteModal()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
                     </div>
                     <div class="mb-4">
                         <p class="text-gray-700">Are you sure you want to delete "${doc.document_name || doc.title || 'Untitled Document'}"?</p>
@@ -2597,7 +2682,7 @@
                         <button id="delete-confirm-btn-${docId}" type="button" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
                             Delete
                         </button>
-                        <button type="button" class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                        <button type="button" onclick="closeDeleteModal()" class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
                             Cancel
                         </button>
                     </div>
@@ -2608,7 +2693,6 @@
             // Get button references
             const deleteBtn = document.getElementById(`delete-confirm-btn-${docId}`);
             const cancelBtn = modal.querySelector('button:last-child');
-            const closeBtn = modal.querySelector('button:first-child');
             
             // Add event listeners
             deleteBtn.addEventListener('click', function(e) {
@@ -2618,12 +2702,6 @@
             });
             
             cancelBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                closeDeleteModal();
-            });
-            
-            closeBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 closeDeleteModal();
@@ -2666,10 +2744,18 @@
 
         // Helper function to close delete modal
         function closeDeleteModal() {
+            // Prefer targeted close by id, fallback to legacy content check
+            const overlay = document.getElementById('delete-modal');
+            if (overlay) {
+                if (overlay.cleanup && typeof overlay.cleanup === 'function') {
+                    overlay.cleanup();
+                }
+                overlay.remove();
+                return;
+            }
             const allModals = document.querySelectorAll('.fixed');
             allModals.forEach(modal => {
                 if (modal.innerHTML.includes('Delete Document')) {
-                    // Call cleanup if it exists
                     if (modal.cleanup && typeof modal.cleanup === 'function') {
                         modal.cleanup();
                     }
@@ -3052,6 +3138,29 @@
 </head>
 
 <body class="bg-[#F8F8FF]">
+    <!-- Document Viewer Modal -->
+    <div id="document-viewer-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-[80] hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col">
+                <div class="flex items-center justify-between px-4 py-3 border-b">
+                    <h3 id="document-viewer-title" class="text-lg font-semibold text-gray-900"></h3>
+                    <div class="flex items-center gap-2">
+                        <button id="document-viewer-open" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Open in New Tab</button>
+                        <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 bg-gray-50 p-2 overflow-y-auto overflow-x-hidden min-h-0">
+                    <div id="document-viewer-content" class="w-full h-full overflow-y-auto overflow-x-hidden"></div>
+                </div>
+                <div class="flex items-center justify-end gap-2 px-4 py-3 border-t">
+                    <button id="document-viewer-download" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Download</button>
+                    <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Navigation Bar -->
     <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
@@ -3110,7 +3219,7 @@
     </nav>
 
     <!-- Sidebar -->
-    <?php include 'sidebar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
         	<!-- Main Content -->
 	<div id="main-content" class="ml-64 p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
@@ -3195,8 +3304,17 @@
         </button>
     </div>
 
+    <!-- Floating Upload Documents Button Above Footer -->
+    <div class="fixed bottom-20 right-4 z-50">
+        <button id="view-switch-btn" aria-label="Upload Documents" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="showUploadModal()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+        </button>
+    </div>
+
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white text-center p-4 mt-8">
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 
@@ -3211,6 +3329,29 @@
                     } catch (e) {}
                 });
             }
+
+            // Responsive floating button on scroll
+            let lastScrollTop = 0;
+            const floatingBtn = document.getElementById('view-switch-btn');
+            const floatingBtnContainer = floatingBtn?.parentElement;
+            
+            window.addEventListener('scroll', function() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                if (floatingBtnContainer) {
+                    if (scrollTop > lastScrollTop && scrollTop > 100) {
+                        // Scrolling down - move button up (current position above footer)
+                        floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
+                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                    } else {
+                        // Scrolling up - move button down (old position at bottom)
+                        floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
+                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                    }
+                }
+                
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+            });
         });
         
         function toggleSidebar() {

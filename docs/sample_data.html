@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Data Setup - LILAC System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-6">
+        <h1 class="text-2xl font-bold mb-4">LILAC System - Sample Data Setup</h1>
+        <p class="text-gray-600 mb-6">Click the button below to populate the system with sample data for demonstration purposes.</p>
+        
+        <button id="setupData" class="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 mb-4">
+            Setup Sample Data
+        </button>
+        
+        <div id="status" class="text-gray-600"></div>
+        
+        <div class="mt-6 space-y-2">
+            <a href="dashboard.html" class="block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-center">
+                Go to Dashboard
+            </a>
+            <a href="meetings.html" class="block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-center">
+                Go to Meetings
+            </a>
+            <a href="templates.html" class="block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-center">
+                Go to Templates
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('setupData').addEventListener('click', function() {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = 'Setting up sample data...';
+            
+            // Sample Templates Data
+            const templates = [
+                {
+                    id: Date.now(),
+                    name: 'Meeting Minutes Template',
+                    category: 'Meeting Minutes',
+                    description: 'Standard template for recording meeting discussions and decisions',
+                    fileName: 'meeting-minutes-template.docx',
+                    lastUsed: new Date(Date.now() - 2*60*60*1000).toISOString(), // 2 hours ago
+                    dateAdded: new Date(Date.now() - 5*24*60*60*1000).toISOString(), // 5 days ago
+                    usageCount: 8
+                },
+                {
+                    id: Date.now() + 1,
+                    name: 'Research Report Template',
+                    category: 'Report',
+                    description: 'Template for academic research reports and documentation',
+                    fileName: 'research-report-template.docx',
+                    lastUsed: new Date(Date.now() - 24*60*60*1000).toISOString(), // 1 day ago
+                    dateAdded: new Date(Date.now() - 10*24*60*60*1000).toISOString(), // 10 days ago
+                    usageCount: 5
+                },
+                {
+                    id: Date.now() + 2,
+                    name: 'Partnership Agreement Template',
+                    category: 'MOU/MOA',
+                    description: 'Standard MOU template for university partnerships',
+                    fileName: 'partnership-mou-template.docx',
+                    lastUsed: new Date(Date.now() - 3*24*60*60*1000).toISOString(), // 3 days ago
+                    dateAdded: new Date(Date.now() - 15*24*60*60*1000).toISOString(), // 15 days ago
+                    usageCount: 3
+                }
+            ];
+
+            // Sample Meetings Data
+            const meetings = [
+                {
+                    title: 'Faculty Development Meeting',
+                    date: new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0], // tomorrow
+                    time: '10:00',
+                    location: 'Conference Room A',
+                    description: 'Quarterly faculty development planning session',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    title: 'Research Committee Review',
+                    date: new Date(Date.now() + 3*24*60*60*1000).toISOString().split('T')[0], // 3 days from now
+                    time: '14:30',
+                    location: 'Library Meeting Room',
+                    description: 'Review of ongoing research projects and funding applications',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    title: 'Partnership Signing Ceremony',
+                    date: new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0], // 1 week from now
+                    time: '09:00',
+                    location: 'University Auditorium',
+                    description: 'Formal signing of new international partnership agreement',
+                    createdAt: new Date().toISOString()
+                }
+            ];
+
+            // Sample Budget Data
+            const budget = 250000;
+            const transactions = [
+                {
+                    id: 1,
+                    description: 'Research Equipment Purchase',
+                    amount: 45000,
+                    type: 'expense',
+                    category: 'Equipment',
+                    date: new Date(Date.now() - 2*24*60*60*1000).toISOString() // 2 days ago
+                },
+                {
+                    id: 2,
+                    description: 'Conference Registration Fees',
+                    amount: 15000,
+                    type: 'expense',
+                    category: 'Travel',
+                    date: new Date(Date.now() - 24*60*60*1000).toISOString() // 1 day ago
+                },
+                {
+                    id: 3,
+                    description: 'Research Grant Funding',
+                    amount: 100000,
+                    type: 'income',
+                    category: 'Grant',
+                    date: new Date(Date.now() - 6*60*60*1000).toISOString() // 6 hours ago
+                }
+            ];
+
+            // Sample MOUs Data
+            const mous = [
+                {
+                    partnerName: 'University of California',
+                    type: 'Research Partnership',
+                    dateSigned: new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0], // 30 days ago
+                    endDate: new Date(Date.now() + 335*24*60*60*1000).toISOString().split('T')[0], // ~1 year from now
+                    status: 'active',
+                    description: 'Joint research collaboration in renewable energy'
+                },
+                {
+                    partnerName: 'Tokyo Institute of Technology',
+                    type: 'Student Exchange',
+                    dateSigned: new Date(Date.now() - 60*24*60*60*1000).toISOString().split('T')[0], // 60 days ago
+                    endDate: new Date(Date.now() + 305*24*60*60*1000).toISOString().split('T')[0], // ~10 months from now
+                    status: 'active',
+                    description: 'Student and faculty exchange program'
+                }
+            ];
+
+            // Sample Awards Data
+            const awards = [
+                {
+                    title: 'Outstanding Research Excellence Award',
+                    category: 'Research',
+                    dateReceived: new Date(Date.now() - 15*24*60*60*1000).toISOString().split('T')[0], // 15 days ago
+                    awardedBy: 'Department of Science and Technology',
+                    description: 'Recognition for innovative research in sustainable technology'
+                },
+                {
+                    title: 'Community Service Leadership Award',
+                    category: 'Community Service',
+                    dateReceived: new Date(Date.now() - 45*24*60*60*1000).toISOString().split('T')[0], // 45 days ago
+                    awardedBy: 'City Government',
+                    description: 'Outstanding contribution to community development programs'
+                }
+            ];
+
+            // Store all data in localStorage
+            localStorage.setItem('lilacTemplates', JSON.stringify(templates));
+            localStorage.setItem('lilacMeetings', JSON.stringify(meetings));
+            localStorage.setItem('lilacBudget', JSON.stringify(budget));
+            localStorage.setItem('lilacTransactions', JSON.stringify(transactions));
+            localStorage.setItem('lilacMOUs', JSON.stringify(mous));
+            localStorage.setItem('lilacAwards', JSON.stringify(awards));
+
+            // Update status
+            statusEl.innerHTML = `
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                    <strong>Success!</strong> Sample data has been loaded:
+                    <ul class="mt-2 list-disc list-inside">
+                        <li>Templates: ${templates.length} items</li>
+                        <li>Meetings: ${meetings.length} items</li>
+                        <li>Budget: ₱${budget.toLocaleString()} with ${transactions.length} transactions</li>
+                        <li>MOUs: ${mous.length} items</li>
+                        <li>Awards: ${awards.length} items</li>
+                    </ul>
+                    <p class="mt-2">You can now navigate to any page to see the sample data in action!</p>
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html> 

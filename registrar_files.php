@@ -703,7 +703,7 @@
     </nav>
 
     <!-- Sidebar -->
-    <?php include 'sidebar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -719,6 +719,29 @@
                 try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
             });
         }
+
+        // Responsive floating button on scroll
+        let lastScrollTop = 0;
+        const floatingBtn = document.getElementById('view-switch-btn');
+        const floatingBtnContainer = floatingBtn?.parentElement;
+        
+        window.addEventListener('scroll', function() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            if (floatingBtnContainer) {
+                if (scrollTop > lastScrollTop && scrollTop > 100) {
+                    // Scrolling down - move button up (current position above footer)
+                    floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
+                    floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                } else {
+                    // Scrolling up - move button down (old position at bottom)
+                    floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
+                    floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                }
+            }
+            
+            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+        });
 
         // Update date in top-right
         function updateCurrentDate() {
@@ -773,48 +796,11 @@
             </div>
         </div>
 
-        <!-- Upload File Section -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6">Upload Registrar File</h2>
-            <form id="file-form" class="space-y-6">
-                <div>
-                    <label for="file-name" class="block text-sm font-medium text-gray-700 mb-2">File Name *</label>
-                    <input type="text" id="file-name" name="file-name" required
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                           placeholder="Enter file name">
-                </div>
-                <div>
-                    <label for="file-type" class="block text-sm font-medium text-gray-700 mb-2">Document Type *</label>
-                    <select id="file-type" name="file-type" required
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors">
-                        <option value="Grade Report">Grade Report</option>
-                        <option value="Enrollment Form">Enrollment Form</option>
-                        <option value="Certificate">Certificate</option>
-                        <option value="Transcript">Transcript</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="file-description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <textarea id="file-description" name="file-description" rows="3"
-                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                              placeholder="Enter file description (optional)"></textarea>
-                </div>
-                <div>
-                    <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-2">Upload File *</label>
-                    <input type="file" id="file-upload" name="file-upload" required
-                           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-black file:text-white hover:file:bg-gray-800">
-                    <p class="mt-2 text-sm text-gray-500">Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)</p>
-                </div>
-                <div class="flex justify-end">
-                    <button type="submit"
-                            class="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors font-medium">
-                        Upload File
-                    </button>
-                </div>
-            </form>
-        </div>
+        <!-- Floating Upload Button -->
+        <button onclick="openRegistrarUploadModal()" class="fixed bottom-16 sm:bottom-20 md:bottom-24 right-4 sm:right-6 md:right-8 lg:right-10 z-[70] bg-black text-white rounded-full w-14 h-14 shadow-xl hover:bg-gray-800 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span class="sr-only">Upload Registrar File</span>
+        </button>
 
         <!-- Search and Filter Section -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
@@ -890,8 +876,17 @@
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
+    <!-- Floating Upload Registrar File Button Above Footer -->
+    <div class="fixed bottom-20 right-4 z-50">
+        <button id="view-switch-btn" aria-label="Upload Registrar File" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="showRegistrarUploadModal()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+        </button>
+    </div>
+
     <!-- Footer -->
-    <footer class="ml-0 md:ml-64 bg-gray-800 text-white text-center p-4 mt-8">
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 
@@ -916,6 +911,61 @@
             </div>
         </div>
     </div>
+
+    <!-- Upload Registrar File Modal -->
+    <div id="registrarUploadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-[80]">
+        <div class="relative p-8 bg-white w-full max-w-lg m-auto flex-col flex rounded-xl shadow-xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-900">Upload Registrar File</h2>
+                <button onclick="closeRegistrarUploadModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <form id="file-form" class="space-y-4">
+                <div>
+                    <label for="file-name" class="block text-sm font-medium text-gray-700 mb-1">File Name *</label>
+                    <input type="text" id="file-name" name="file-name" required class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label for="file-type" class="block text-sm font-medium text-gray-700 mb-1">Document Type *</label>
+                    <select id="file-type" name="file-type" required class="w-full px-3 py-2 border rounded-lg">
+                        <option value="Grade Report">Grade Report</option>
+                        <option value="Enrollment Form">Enrollment Form</option>
+                        <option value="Certificate">Certificate</option>
+                        <option value="Transcript">Transcript</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="file-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea id="file-description" name="file-description" rows="3" class="w-full px-3 py-2 border rounded-lg"></textarea>
+                </div>
+                <div>
+                    <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-1">Upload File *</label>
+                    <input type="file" id="file-upload" name="file-upload" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="w-full">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeRegistrarUploadModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">Upload File</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openRegistrarUploadModal(){ document.getElementById('registrarUploadModal').classList.remove('hidden'); }
+        function closeRegistrarUploadModal(){ document.getElementById('registrarUploadModal').classList.add('hidden'); }
+        document.addEventListener('DOMContentLoaded', function(){
+            var f = document.getElementById('file-form');
+            if (f) {
+                f.addEventListener('submit', function(e){
+                    e.preventDefault();
+                    // Existing submit logic assumed elsewhere; close modal after
+                    closeRegistrarUploadModal();
+                });
+            }
+        });
+    </script>
 
          <!-- View File Modal -->
      <div id="viewFileModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50">

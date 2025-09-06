@@ -200,6 +200,77 @@
                 align-self: center !important;
             }
         }
+        /* Awards Breakdown custom donut chart */
+        .awards-donut .donut-chart {
+          position: relative;
+          width: 192px;
+          height: 192px;
+          margin: 0 auto 0;
+          border-radius: 100%;
+        }
+        .awards-donut p.center {
+          background: #ffffff;
+          position: absolute;
+          text-align: center;
+          font-size: 16px;
+          top:0;left:0;bottom:0;right:0;
+          width: 124px;
+          height: 124px;
+          margin: auto;
+          border-radius: 50%;
+          line-height: 20px;
+          padding: 36px 0 0;
+          color: #374151;
+        }
+        .awards-donut .portion-block {
+          border-radius: 50%;
+          clip: rect(0px, 192px, 192px, 96px);
+          height: 100%;
+          position: absolute;
+          width: 100%;
+        }
+        .awards-donut .circle {
+          border-radius: 50%;
+          clip: rect(0px, 96px, 192px, 0px);
+          height: 100%;
+          position: absolute;
+          width: 100%;
+          font-family: monospace;
+          font-size: 1.5rem;
+        }
+        .awards-donut #part1 { transform: rotate(0deg); }
+        .awards-donut #part1 .circle { background-color: #DC2626; animation: first 1s 1 forwards; }
+        .awards-donut #part2 { transform: rotate(0deg); }
+        .awards-donut #part2 .circle { background-color: #3B82F6; animation: second 1s 1 forwards 1s; }
+        .awards-donut #part3 { transform: rotate(0deg); }
+        .awards-donut #part3 .circle { background-color: #F9A8D4; animation: third 0.5s 1 forwards 2s; }
+
+        @keyframes first {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(100deg); }
+        }
+        @keyframes second {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(150deg); }
+        }
+        @keyframes third {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(111deg); }
+        }
+        /* Seamless donut via conic-gradient (no gaps) */
+        .awards-donut .donut-chart.gradient {
+          background: conic-gradient(
+            #DC2626 0deg var(--deg-red),
+            #3B82F6 var(--deg-red) calc(var(--deg-red) + var(--deg-blue)),
+            #F9A8D4 calc(var(--deg-red) + var(--deg-blue)) 360deg
+          );
+        }
+        .awards-donut .donut-chart.gradient .portion-block { display: none;         }
+        /* Chart container styles (match provided design but scoped) */
+        .awards-chart { background-color: #273241; border-radius: 8px; padding: 16px; }
+        .awards-chart canvas { display: block; width: 100% !important; height: 300px !important; }
+        /* Ensure chart canvas is visible and sized in the Average Awards Statistic card */
+        #monthlyTrendChart { display: none; }
     </style>
     <script>
         // Initialize awards functionality
@@ -213,6 +284,12 @@
             updateCurrentDate();
             
             // Initialize tabs - ensure Awards Progress is active by default
+            const periodSelect = document.getElementById('awards-breakdown-period');
+            if (periodSelect) {
+                periodSelect.addEventListener('change', function() {
+                    updateAwardsDonutForPeriod(this.value);
+                });
+            }
             switchTab('overview');
             
             // Update date every minute
@@ -424,6 +501,13 @@
             
             // Also load monthly trend data
             loadMonthlyTrendData();
+            // initialize donut values
+            updateAwardsDonutForPeriod('This Month');
+            const monthEl = document.getElementById('awards-donut-month');
+            if (monthEl) {
+                const now = new Date();
+                monthEl.textContent = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            }
         }
 
         function loadMonthlyTrendData() {
@@ -455,8 +539,44 @@
                         loadingElement.classList.add('hidden');
                     }
                 });
+                }
+        
+        // Awards Breakdown donut updater
+        function updateAwardsDonutForPeriod(period) {
+            // simple preset data per period
+            const presets = {
+                'This Month': { red: 52, blue: 32, pink: 16 },
+                'Last 7 Days': { red: 40, blue: 45, pink: 15 },
+                'Today': { red: 60, blue: 25, pink: 15 },
+                'Last Month': { red: 48, blue: 36, pink: 16 }
+            };
+            const data = presets[period] || presets['This Month'];
+            const total = data.red + data.blue + data.pink;
+            // convert to degrees with decimals to avoid gaps between slices
+            const redDeg = 360 * (data.red / total);
+            const blueDeg = 360 * (data.blue / total);
+            const pinkDeg = Math.max(0, 360 - (redDeg + blueDeg)); // exact remainder
+            const donut = document.getElementById('awardsDonut');
+            if (donut) {
+                donut.style.setProperty('--deg-red', redDeg + 'deg');
+                donut.style.setProperty('--deg-blue', blueDeg + 'deg');
+            }
+            // update labels on right
+            const pctElems = document.querySelectorAll('#awards-breakdown-percentages .pct');
+            if (pctElems.length >= 3) {
+                pctElems[0].textContent = data.red + '%';
+                pctElems[1].textContent = data.blue + '%';
+                pctElems[2].textContent = data.pink + '%';
+            }
+            // update bar widths
+            const barRed = document.getElementById('bar-red');
+            const barBlue = document.getElementById('bar-blue');
+            const barPink = document.getElementById('bar-pink');
+            if (barRed) barRed.style.width = data.red + '%';
+            if (barBlue) barBlue.style.width = data.blue + '%';
+            if (barPink) barPink.style.width = data.pink + '%';
         }
-
+        
         function updateMonthlyTrendChart(apiData = null) {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             let thisYearData, lastYearData;
@@ -1373,7 +1493,7 @@ LILAC Awards - Keyboard Shortcuts:
     <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-0 md:ml-64 p-6 pt-14 min-h-screen bg-white transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-0 md:ml-64 p-4 pt-6 min-h-screen bg-white transition-all duration-300 ease-in-out">
 
         
 
@@ -1391,12 +1511,7 @@ LILAC Awards - Keyboard Shortcuts:
                             Award Match Analysis
                         </button>
                     </nav>
-                    <button onclick="openImportDataModal()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-                        </svg>
-                        <span>Import Data</span>
-                    </button>
+                    
                 </div>
             </div>
         </div>
@@ -1493,35 +1608,17 @@ LILAC Awards - Keyboard Shortcuts:
                         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        <select class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
-                            <option>This Year</option>
+                        <select id="avg-awards-period" class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
+                            <option value="This Year" selected>This Year</option>
                         </select>
                     </div>
                 </div>
-                <div class="mb-4">
+                <div class="mb-2">
                                             <div class="text-2xl font-bold text-gray-900"></div>
-                    <div class="text-sm text-green-600">+ 25.4% from previous year</div>
                 </div>
-                <div class="h-40">
-                    <canvas id="monthlyTrendChart" height="160"></canvas>
-                    <div id="monthlyTrendChartFallback" class="hidden flex items-center justify-center h-full text-center">
-                        <div>
-                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                            </svg>
-                            <p class="text-gray-500 text-sm">Chart not loading</p>
-                            <div class="space-y-2 mt-3">
-                                <button onclick="renderMonthlyTrendChart()" class="block w-full text-blue-600 hover:text-blue-700 text-xs font-medium">
-                                    Try Render Chart
-                                </button>
-                                <button onclick="console.log('Chart.js available:', typeof Chart !== 'undefined')" class="block w-full text-purple-600 hover:text-purple-700 text-xs font-medium">
-                                    Check Chart.js Status
-                                </button>
-                                <button onclick="hideChartFallback()" class="block w-full text-green-600 hover:text-green-700 text-xs font-medium">
-                                    Show Chart Canvas
-                                </button>
-                            </div>
-                        </div>
+                <div class="w-full">
+                    <div class="chart__container awards-chart w-full">
+                        <canvas id="awardsLineChartCanvas" width="600" height="300"></canvas>
                     </div>
                 </div>
             </div>
@@ -1534,51 +1631,56 @@ LILAC Awards - Keyboard Shortcuts:
                         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        <select class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
-                            <option>This Month</option>
+                        <select id="awards-breakdown-period" class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
+                            <option value="This Month" selected>This Month</option>
+                            <option value="Last 7 Days">Last 7 Days</option>
+                            <option value="Today">Today</option>
+                            <option value="Last Month">Last Month</option>
                         </select>
                     </div>
                 </div>
                 <div class="flex items-start space-x-8">
                     <div class="flex-shrink-0">
-                        <div class="relative w-48 h-48">
-                            <canvas id="awardsCategoryChart" width="200" height="200" class="w-full h-full"></canvas>
-                            <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                <div class="text-2xl font-bold text-gray-900"></div>
-                                <div class="text-sm text-gray-600">August 2023</div>
+                        <div class="awards-donut">
+                            <div id="awardsDonut" class="donut-chart gradient" style="--deg-red: 187deg; --deg-blue: 115deg;">
+                                <div id="part1" class="portion-block"><div class="circle"></div></div>
+                                <div id="part2" class="portion-block"><div class="circle"></div></div>
+                                <div id="part3" class="portion-block"><div class="circle"></div></div>
+                                <p class="center"></p>
                             </div>
                         </div>
+                        <div id="awards-donut-month" class="text-sm text-gray-600 text-center mt-2">August 2023</div>
                     </div>
-                    <div class="flex-1 space-y-4 min-w-0">
+                    <div id="awards-breakdown-percentages" class="flex-1 space-y-4 min-w-0">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center">
                                 <div class="w-3 h-3 bg-red-600 rounded-full mr-2"></div>
                                 <span class="text-sm text-gray-600"></span>
                             </div>
-                            <span class="text-sm font-medium text-gray-900">52%</span>
+                            <span class="text-sm font-medium text-red-600 pct">52%</span>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-red-600 h-2 rounded-full" style="width: 52%"></div>
+                            <div id="bar-red" class="bg-red-600 h-2 rounded-full" style="width: 52%"></div>
                         </div>
                         <div class="flex items-center justify-between">
                             <div class="flex items-center">
                                 <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
                                 <span class="text-sm text-gray-600"></span>
                             </div>
-                            <span class="text-sm font-medium text-gray-900">32%</span>
+                            <span class="text-sm font-medium text-blue-600 pct">32%</span>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-blue-500 h-2 rounded-full" style="width: 32%"></div>
+                            <div id="bar-blue" class="bg-blue-500 h-2 rounded-full" style="width: 32%"></div>
                         </div>
                         <div class="flex items-center justify-between">
                             <div class="flex items-center">
                                 <div class="w-3 h-3 bg-pink-300 rounded-full mr-2"></div>
                                 <span class="text-sm text-gray-600"></span>
                             </div>
-                            <span class="text-sm font-medium text-gray-900">16%</span>
+                            <span class="text-sm font-medium text-pink-500 pct">16%</span>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-pink-300 h-2 rounded-full" style="width: 16%"></div>
+                            <div id="bar-pink" class="bg-pink-300 h-2 rounded-full" style="width: 16%"></div>
                         </div>
                     </div>
                 </div>
@@ -2074,50 +2176,72 @@ LILAC Awards - Keyboard Shortcuts:
     <script>
     // Simple chart initialization
     function initializeCharts() {
-        console.log('Initializing charts...');
-        
-        // Wait for Chart.js to be available
         if (typeof Chart === 'undefined') {
-            console.log('Chart.js not available, retrying in 100ms...');
             setTimeout(initializeCharts, 100);
             return;
         }
-        
-        console.log('Chart.js is available, rendering charts...');
-        
-        // Initialize monthly trend chart
-        renderMonthlyTrendChart();
-        
-        // Update current month display
-        updateCurrentMonthDisplay();
-        
-        console.log('Charts initialized successfully!');
+        renderAwardsLineChart();
     }
     
+    // Helper: render when canvas has a layout size
+    function renderWhenReady(attempts = 10) {
+        const canvas = document.getElementById('monthlyTrendChart');
+        if (!canvas) return initializeCharts();
+        const ready = canvas.offsetWidth > 0 && canvas.offsetHeight > 0;
+        if (ready) {
+            hideChartFallback();
+            initializeCharts();
+        } else if (attempts > 0) {
+            setTimeout(() => renderWhenReady(attempts - 1), 150);
+        } else {
+            initializeCharts();
+        }
+    }
+
     // Start initialization when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM loaded, starting chart initialization...');
-        initializeCharts();
+        if (document.getElementById('awardsLineChartCanvas')) {
+            renderAwardsLineChart();
+            const period = document.getElementById('avg-awards-period');
+            if (period) {
+                period.addEventListener('change', function(){
+                    // For now only 'This Year' is available; re-render to simulate filter
+                    renderAwardsLineChart();
+                });
+            }
+        } else {
+            renderWhenReady();
+        }
     });
     
     // Also try on window load
     window.addEventListener('load', function() {
         if (typeof Chart !== 'undefined' && !window.monthlyTrendChart) {
-            console.log('Chart.js available on window load, initializing...');
-            initializeCharts();
+            renderWhenReady();
         }
     });
 
     function renderMonthlyTrendChart() {
         console.log('renderMonthlyTrendChart called');
-        const ctx = document.getElementById('monthlyTrendChart');
-        if (!ctx) {
-            console.error('Monthly trend chart canvas not found');
+        const canvasEl = document.getElementById('monthlyTrendChart');
+        if (!canvasEl) {
             createFallbackChart();
             return;
         }
+        // Ensure canvas has dimensions
+        canvasEl.style.display = 'block';
+        canvasEl.width = canvasEl.parentElement.clientWidth;
+        canvasEl.height = 160;
         
         console.log('Canvas found, destroying existing chart if any...');
+        const ctx = canvasEl.getContext('2d');
+        // build gradients similar to provided snippet
+        const gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
+        gradientStroke.addColorStop(0, '#ff6c00');
+        gradientStroke.addColorStop(1, '#ff3b74');
+        const gradientBkgrd = ctx.createLinearGradient(0, 0, 0, canvasEl.height);
+        gradientBkgrd.addColorStop(0, 'rgba(244,94,132,0.2)');
+        gradientBkgrd.addColorStop(1, 'rgba(249,135,94,0)');
         // Destroy existing chart if it exists
         if (window.monthlyTrendChart) {
             window.monthlyTrendChart.destroy();
@@ -2136,106 +2260,68 @@ LILAC Awards - Keyboard Shortcuts:
         try {
             console.log('Creating new Chart.js instance...');
             
+            const lineShadow = { id: 'lineShadow', beforeDatasetsDraw(chart){ const {ctx}=chart; ctx.save(); ctx.shadowBlur=8; ctx.shadowOffsetX=0; ctx.shadowOffsetY=6; ctx.shadowColor='rgba(244,94,132,0.35)'; }, afterDatasetsDraw(chart){ chart.ctx.restore(); } };
+            if (typeof Chart !== 'undefined') { Chart.register(lineShadow); }
+            
             window.monthlyTrendChart = new Chart(ctx, {
-                type: 'bar',
+                type: 'line',
                 data: {
-                    labels: months,
-                    datasets: [
-                        {
-                            label: `${currentYear}`,
-                            data: thisYearData,
-                            backgroundColor: function(context) {
-                                // Highlight August (index 7) with darker color
-                                if (context.dataIndex === 7) {
-                                    return '#DC2626'; // Dark red for August
-                                }
-                                return '#F3E8FF'; // Light beige/orange for other months
-                            },
-                            borderRadius: 4,
-                            borderSkipped: false,
-                        },
-                        {
-                            label: `${lastYear}`,
-                            data: lastYearData,
-                            backgroundColor: '#E5E7EB', // Light gray for comparison
-                            borderRadius: 4,
-                            borderSkipped: false,
-                        }
-                    ]
+                    labels: ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr"],
+                    datasets: [{
+                        label: "Income",
+                        data: [5500, 2500, 10000, 6000, 14000, 1500, 7000, 20000],
+                        borderColor: gradientStroke,
+                        backgroundColor: gradientBkgrd,
+                        pointBorderColor: 'rgba(255,255,255,0)',
+                        pointBackgroundColor: 'rgba(255,255,255,0)',
+                        pointBorderWidth: 0,
+                        pointHoverRadius: 8,
+                        pointHoverBackgroundColor: '#ff6c00',
+                        pointHoverBorderColor: 'rgba(220,220,220,1)',
+                        pointHoverBorderWidth: 4,
+                        pointRadius: 1,
+                        borderWidth: 5,
+                        pointHitRadius: 16,
+                        tension: 0.35,
+                        fill: 'start'
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { 
-                            display: false 
-                        },
+                        legend: { display: false },
                         tooltip: {
                             mode: 'index',
                             intersect: false,
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            borderColor: '#374151',
+                            backgroundColor: '#fff',
+                            titleColor: '#000',
+                            bodyColor: '#000',
+                            borderColor: '#E5E7EB',
                             borderWidth: 1,
                             cornerRadius: 8,
-                            displayColors: true,
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.parsed.y;
-                                    if (value < 1000) {
-                                        return `Income Rp${value}`;
-                                    }
-                                    return `Income Rp${value}k`;
-                                }
-                            }
+                            displayColors: false
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            max: 10000,
-                            grid: { 
-                                color: '#f3f4f6',
-                                drawBorder: false
-                            },
-                            ticks: { 
+                            grid: { color: '#f3f4f6', drawBorder: false },
+                            ticks: {
                                 color: '#6b7280',
-                                font: {
-                                    size: 11
-                                },
+                                font: { size: 11 },
                                 padding: 8,
-                                callback: function(value) {
-                                    if (value === 0) return 'Rp0';
-                                    if (value < 1000) return `Rp${value}`;
-                                    return `Rp${value}k`;
-                                },
-                                stepSize: 2000
+                                callback: function(value){ return (value/1000) + 'K'; }
                             },
-                            border: {
-                                display: false
-                            }
+                            border: { display: false }
                         },
                         x: {
-                            grid: { 
-                                display: false 
-                            },
-                            ticks: { 
-                                color: '#6b7280',
-                                font: {
-                                    size: 11
-                                },
-                                padding: 8
-                            },
-                            border: {
-                                display: false
-                            }
+                            grid: { display: false },
+                            ticks: { color: '#6b7280', font: { size: 11 }, padding: 8 },
+                            border: { display: false }
                         }
                     },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    }
+                    interaction: { intersect: false, mode: 'index' }
                 }
             });
             console.log('Chart created successfully!');
@@ -2267,6 +2353,8 @@ LILAC Awards - Keyboard Shortcuts:
         
         if (canvas && fallback) {
             canvas.style.display = 'block';
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = 160;
             fallback.classList.add('hidden');
         }
     }
@@ -2528,6 +2616,92 @@ LILAC Awards - Keyboard Shortcuts:
             e.preventDefault();
             closeAddAwardModal();
         });
+    </script>
+
+    <script>
+    // ... existing code ...
+    function renderAwardsLineChart() {
+        const canvas = document.getElementById('awardsLineChartCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        // Gradients per provided design
+        const gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
+        gradientStroke.addColorStop(0, '#ff6c00');
+        gradientStroke.addColorStop(1, '#ff3b74');
+
+        const gradientBkgrd = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradientBkgrd.addColorStop(0, 'rgba(244,94,132,0.2)');
+        gradientBkgrd.addColorStop(1, 'rgba(249,135,94,0)');
+
+        // Shadow plugin (Chart.js v4)
+        const lineShadow = {
+            id: 'lineShadowAwards',
+            beforeDatasetsDraw(chart) {
+                const { ctx } = chart;
+                ctx.save();
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 6;
+                ctx.shadowColor = 'rgba(244,94,132,0.35)';
+            },
+            afterDatasetsDraw(chart) {
+                chart.ctx.restore();
+            }
+        };
+        if (typeof Chart !== 'undefined') Chart.register(lineShadow);
+
+        if (window.awardsLineChart) {
+            window.awardsLineChart.destroy();
+        }
+
+        window.awardsLineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
+                datasets: [{
+                    label: 'Income',
+                    data: [5500, 2500, 10000, 6000, 14000, 1500, 7000, 20000],
+                    backgroundColor: gradientBkgrd,
+                    borderColor: gradientStroke,
+                    pointBorderColor: 'rgba(255,255,255,0)',
+                    pointBackgroundColor: 'rgba(255,255,255,0)',
+                    pointBorderWidth: 0,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: gradientStroke,
+                    pointHoverBorderColor: 'rgba(220,220,220,1)',
+                    pointHoverBorderWidth: 4,
+                    pointRadius: 1,
+                    borderWidth: 5,
+                    pointHitRadius: 16,
+                    tension: 0.35,
+                    fill: 'start'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#fff',
+                        displayColors: false,
+                        titleColor: '#000',
+                        bodyColor: '#000'
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        ticks: {
+                            callback: function(value) { return (value / 1000) + 'K'; }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    // ... existing code ...
     </script>
 
 </body>

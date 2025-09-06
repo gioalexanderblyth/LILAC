@@ -757,7 +757,7 @@
     </script>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 p-6 pt-20 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-64 p-4 pt-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-all duration-300 ease-in-out">
         <!-- Header Section -->
         <div class="mb-6">
             <div class="relative overflow-hidden bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white rounded-2xl p-4 shadow-xl">
@@ -796,11 +796,7 @@
             </div>
         </div>
 
-        <!-- Floating Upload Button -->
-        <button onclick="openRegistrarUploadModal()" class="fixed bottom-16 sm:bottom-20 md:bottom-24 right-4 sm:right-6 md:right-8 lg:right-10 z-[70] bg-black text-white rounded-full w-14 h-14 shadow-xl hover:bg-gray-800 flex items-center justify-center">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="sr-only">Upload Registrar File</span>
-        </button>
+        <!-- Floating Upload Button removed per request -->
 
         <!-- Search and Filter Section -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">

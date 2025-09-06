@@ -11,7 +11,7 @@ echo "Testing with ID: " . $_POST['id'] . "<br>";
 
 // Include the API file
 ob_start();
-include 'api/scheduler.php';
+include __DIR__ . '/api/scheduler.php';
 $output = ob_get_clean();
 
 echo "<h3>API Response:</h3>";
@@ -20,7 +20,7 @@ echo "<pre>" . htmlspecialchars($output) . "</pre>";
 // Also test if we can connect to the database
 echo "<h3>Database Connection Test:</h3>";
 try {
-    require_once 'config/database.php';
+    require_once __DIR__ . '/config/database.php';
     $database = new Database();
     $conn = $database->getConnection();
     

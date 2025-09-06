@@ -1199,50 +1199,6 @@ window.addEventListener('sidebar:state', function (e) {
             }
         });
 
-        // Quick Actions Panel Functions
-        function toggleQuickActions() {
-            const menu = document.getElementById('quick-actions-menu');
-            const fab = document.getElementById('quick-actions-fab');
-            const icon = document.getElementById('fab-icon');
-            
-            const isHidden = menu.classList.contains('hidden');
-            
-            if (isHidden) {
-                // Show menu
-                menu.classList.remove('hidden');
-                setTimeout(() => {
-                    menu.classList.remove('scale-95', 'opacity-0');
-                    menu.classList.add('scale-100', 'opacity-100');
-                }, 10);
-                
-                // Rotate icon
-                icon.style.transform = 'rotate(45deg)';
-                fab.classList.add('bg-gradient-to-r', 'from-red-600', 'to-pink-600');
-                fab.classList.remove('bg-gradient-to-r', 'from-purple-600', 'to-blue-600');
-            } else {
-                // Hide menu
-                menu.classList.add('scale-95', 'opacity-0');
-                menu.classList.remove('scale-100', 'opacity-100');
-                setTimeout(() => {
-                    menu.classList.add('hidden');
-                }, 300);
-                
-                // Reset icon
-                icon.style.transform = 'rotate(0deg)';
-                fab.classList.remove('bg-gradient-to-r', 'from-red-600', 'to-pink-600');
-                fab.classList.add('bg-gradient-to-r', 'from-purple-600', 'to-blue-600');
-            }
-        }
-
-        // Close quick actions when clicking outside
-        document.addEventListener('click', function(event) {
-            const panel = document.getElementById('quick-actions-panel');
-            const menu = document.getElementById('quick-actions-menu');
-            
-            if (panel && !panel.contains(event.target) && !menu.classList.contains('hidden')) {
-                toggleQuickActions();
-            }
-        });
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -1407,7 +1363,7 @@ window.addEventListener('sidebar:state', function (e) {
     </nav>
 
     <!-- Sidebar -->
-    <?php include 'sidebar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
     <div id="main-content" class="ml-64 p-4 pt-16 min-h-screen bg-muted transition-all duration-300 ease-in-out">
@@ -1640,71 +1596,7 @@ window.addEventListener('sidebar:state', function (e) {
 
 
 
-    <!-- Quick Actions Panel -->
-    <div id="quick-actions-panel" class="fixed bottom-6 right-6 z-50">
-        <!-- Main FAB -->
-        <button id="quick-actions-fab" onclick="toggleQuickActions()" 
-                class="w-14 h-14 border-2 border-black text-black rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center group">
-            <svg id="fab-icon" class="w-6 h-6 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-        </button>
-        
-        <!-- Quick Actions Menu -->
-        <div id="quick-actions-menu" class="absolute bottom-16 right-0 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 hidden transform scale-95 opacity-0 transition-all duration-300 origin-bottom-right">
-            <div class="space-y-3 min-w-48">
-                <h3 class="text-sm font-bold text-gray-700 mb-3 text-center">Quick Actions</h3>
-                
-                <a href="documents.php" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                    <div class="w-10 h-10 border border-black rounded-xl flex items-center justify-center group-hover:border-gray-600 transition-colors">
-                        <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800 text-sm">Upload Document</p>
-                        <p class="text-xs text-gray-500">Add new files</p>
-                    </div>
-                </a>
-                
-                <a href="scheduler.php" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                    <div class="w-10 h-10 border border-black rounded-xl flex items-center justify-center group-hover:border-gray-600 transition-colors">
-                        <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800 text-sm">Schedule Meeting</p>
-                        <p class="text-xs text-gray-500">Book appointment</p>
-                    </div>
-                </a>
-                
-                <a href="mou-moa.php" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                    <div class="w-10 h-10 border border-black rounded-xl flex items-center justify-center group-hover:border-gray-600 transition-colors">
-                        <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800 text-sm">New MOU/MOA</p>
-                        <p class="text-xs text-gray-500">Create partnership</p>
-                    </div>
-                </a>
-                
-                <a href="awards.php" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                    <div class="w-10 h-10 border border-black rounded-xl flex items-center justify-center group-hover:border-gray-600 transition-colors">
-                        <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="font-semibold text-gray-800 text-sm">Add Award</p>
-                        <p class="text-xs text-gray-500">Record achievement</p>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
+
 
          <!-- Footer -->
      <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
@@ -1746,6 +1638,7 @@ window.addEventListener('sidebar:state', function (e) {
                     } catch (e) {}
                 });
             }
+
         });
     </script>
 </body>

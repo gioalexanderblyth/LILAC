@@ -3,6 +3,7 @@
 echo "<h2>Testing Delete API Endpoint</h2>";
 
 // Test the API endpoint directly
+$base = dirname(__DIR__) ? rtrim(dirname(__FILE__), DIRECTORY_SEPARATOR) : __DIR__;
 $url = 'http://localhost/LILAC/api/documents.php';
 
 // First, let's get a list of documents to see what we can delete
@@ -53,6 +54,6 @@ if ($data && isset($data['documents']) && count($data['documents']) > 0) {
 
 echo "<h3>3. API Endpoint Status:</h3>";
 echo "URL: " . $url . "<br>";
-echo "File exists: " . (file_exists('api/documents.php') ? 'Yes' : 'No') . "<br>";
-echo "File readable: " . (is_readable('api/documents.php') ? 'Yes' : 'No') . "<br>";
+echo "File exists: " . (file_exists($base . DIRECTORY_SEPARATOR . 'api' . DIRECTORY_SEPARATOR . 'documents.php') ? 'Yes' : 'No') . "<br>";
+echo "File readable: " . (is_readable($base . DIRECTORY_SEPARATOR . 'api' . DIRECTORY_SEPARATOR . 'documents.php') ? 'Yes' : 'No') . "<br>";
 ?> 

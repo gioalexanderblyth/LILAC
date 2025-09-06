@@ -875,7 +875,7 @@ Approved by: ________________
     </nav>
 
     <!-- Sidebar -->
-    <?php include 'sidebar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -942,7 +942,7 @@ Approved by: ________________
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
     <!-- Footer -->
-    <footer class="ml-0 md:ml-64 bg-gray-800 text-white text-center p-4 mt-8">
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 

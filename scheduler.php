@@ -207,6 +207,29 @@
                 addEventBtn.addEventListener('click', showAddEventModal);
             }
 
+            // Responsive floating button on scroll
+            let lastScrollTop = 0;
+            const floatingBtn = document.getElementById('view-switch-btn');
+            const floatingBtnContainer = floatingBtn?.parentElement;
+            
+            window.addEventListener('scroll', function() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                if (floatingBtnContainer) {
+                    if (scrollTop > lastScrollTop && scrollTop > 100) {
+                        // Scrolling down - move button up (current position above footer)
+                        floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
+                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                    } else {
+                        // Scrolling up - move button down (old position at bottom)
+                        floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
+                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                    }
+                }
+                
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+            });
+
             // Calendar day clicks
             document.addEventListener('click', function(e) {
                 if (e.target.classList.contains('calendar-day')) {
@@ -3860,7 +3883,7 @@
 	</nav>
 
 	<!-- Sidebar -->
-	<?php include 'sidebar.php'; ?>
+	<?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
     <div id="main-content" class="ml-64 px-6 pt-2 pb-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-colors duration-200">
@@ -4086,8 +4109,8 @@
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
-    <!-- Floating View Switch Button -->
-    <div class="fixed bottom-4 right-4 z-50">
+    <!-- Floating View Switch Button Above Footer -->
+    <div class="fixed bottom-20 right-4 z-50">
         <button id="view-switch-btn" aria-label="Schedule a Meeting" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center">
             <svg id="calendar-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -4421,7 +4444,7 @@
     </div>
 
     <!-- Footer -->
-    <footer class="ml-0 md:ml-64 bg-gray-800 text-white text-center p-4 mt-8">
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 </body>

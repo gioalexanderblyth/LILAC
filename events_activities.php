@@ -653,79 +653,7 @@
             const startDate = getEventStartDate(event);
             const formattedDate = startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-            container.innerHTML = `
-                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                    <div class="aspect-video bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center relative">
-                        <div class="absolute inset-0 bg-black bg-opacity-20"></div>
-                        <div class="relative z-10 text-center text-white">
-                            <div class="w-24 h-24 mx-auto mb-4 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                                <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
-                                </svg>
-                            </div>
-                            <h3 class="text-2xl font-bold mb-2">${event.title || event.event_name || event.document_name || 'Untitled Event'}</h3>
-                            <p class="text-lg opacity-90">Event Preview</p>
-                        </div>
-                    </div>
-                    <div class="p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-2xl font-bold text-gray-900">${event.title || event.event_name || event.document_name || 'Untitled Event'}</h2>
-                            <div class="flex space-x-2">
-                                <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                    Edit Event
-                                </button>
-                                <button onclick="showDeleteEventModal(${event.id || event.event_id}, '${(event.title || event.event_name || event.document_name || 'Untitled Event').replace(/'/g, "\\'")}')" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                        <div class="border-b border-gray-200 mb-6">
-                            <nav class="flex space-x-8">
-                                <button class="border-b-2 border-blue-600 py-2 px-1 text-sm font-medium text-blue-600">Overview</button>
-                                <button class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Notes</button>
-                                <button class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Announcements</button>
-                                <button class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">Reviews</button>
-                            </nav>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <h4 class="text-lg font-semibold text-gray-900 mb-3">Event Details</h4>
-                                <div class="space-y-3">
-                                    <div class="flex items-center">
-                                        <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                        </svg>
-                                        <span class="text-gray-700">${formattedDate}</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        </svg>
-                                        <span class="text-gray-700">${event.venue || 'No venue specified'}</span>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                        </svg>
-                                        <span class="text-gray-700">${event.organizer || 'No organizer specified'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                <h4 class="text-lg font-semibold text-gray-900 mb-3">Description</h4>
-                                <p class="text-gray-700 leading-relaxed">${event.description && event.description.trim() ? event.description : 'No description available for this event.'}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            container.innerHTML = '';
         }
     </script>
 </head>
@@ -783,40 +711,93 @@
     </script>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 p-6 pt-20 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-64 px-4 lg:px-6 pt-3 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-all duration-300 ease-in-out overflow-x-hidden min-w-0">
 
-        <!-- Event Counters -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div class="text-sm text-gray-500">Upcoming</div>
-                <div id="stat-upcoming" class="text-2xl font-semibold text-gray-900">0</div>
+        <!-- Event Counters removed per request -->
+
+        <!-- Compact Dashboard Section -->
+        <div id="ea-dashboard-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-4">
+            <!-- Left: Greeting + Overview -->
+            <div class="lg:col-span-2 space-y-6 pr-0 lg:pr-2 min-w-0">
+                <!-- Greeting + Quick actions -->
+                <div class="bg-white rounded-xl border border-gray-200 p-4">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div class="min-w-0">
+                            <div class="flex items-center">
+                                <h2 class="ea-greeting-title text-xl font-bold text-gray-900 leading-6 md:whitespace-nowrap">Good morning, Lesley</h2>
+                                <span class="ml-2 text-xl align-middle" aria-hidden="true">!</span>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1">Here's a quick glance at your events</p>
+                        </div>
+                        <div class="hidden md:flex items-center gap-2 shrink-0">
+                            <button class="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 text-transparent w-25" aria-label="Course" title="Course">Course</button>
+                            <button class="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 text-transparent w-25" aria-label="Page" title="Page">Page</button>
+                            <button class="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 text-transparent w-25" aria-label="Quiz" title="Quiz">Quiz</button>
+                            <button class="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 text-transparent w-25" aria-label="Quiz" title="Quiz">Quiz</button>
+                            <button class="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 text-transparent w-25" aria-label="Learning Path" title="Learning Path">Learning Path</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overview cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-xl border border-gray-200 p-4">
+                        <p class="text-xs text-gray-500">Upcoming</p>
+                        <p id="dash-upcoming" class="mt-1 text-3xl font-bold">0</p>
+                        <p class="text-xs text-green-600 mt-2">On your schedule</p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-4">
+                        <p class="text-xs text-gray-500">Ongoing</p>
+                        <p id="dash-ongoing" class="mt-1 text-3xl font-bold">0</p>
+                        <div class="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="ongoing-bar" class="h-2 bg-indigo-600" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-4">
+                        <p class="text-xs text-gray-500">Completed</p>
+                        <p id="dash-completed" class="mt-1 text-3xl font-bold">0</p>
+                        <p class="text-xs text-gray-500 mt-2">This period</p>
+                    </div>
+                </div>
+
+                <!-- Ungraded-like table (Upcoming items) -->
+                <div class="bg-white rounded-xl border border-gray-200 min-h-[450px]">
+                    <div class="p-4 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold">Upcoming Events</h3>
+                        <a href="#" onclick="document.getElementById('event-search').focus(); return false;" class="text-sm text-blue-600">Search events →</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-500">Title</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-500">When</th>
+                                    <th class="px-4 py-3 text-left font-medium text-gray-500">Organizer</th>
+                                    <th class="px-4 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="upcoming-table" class="divide-y">
+                                <!-- Filled by JS from currentEvents -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div class="text-sm text-gray-500">Ongoing</div>
-                <div id="stat-ongoing" class="text-2xl font-semibold text-gray-900">0</div>
-            </div>
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div class="text-sm text-gray-500">Completed</div>
-                <div id="stat-completed" class="text-2xl font-semibold text-gray-900">0</div>
-            </div>
-        </div>
- 
-         
- 
- 
- 
- 
-         <!-- Course Platform Layout -->
-         <div class="flex flex-col lg:flex-row gap-6">
-             <!-- Main Content Area (Left) -->
-             <div class="flex-1">
-                 <div id="events-container">
-                     <!-- Main event content will be loaded here -->
-                 </div>
-             </div>
-             
-             <!-- Course Content Sidebar (Right) -->
-             <div class="lg:w-80">
+
+                         <!-- Right: To Do + Events + Upgrade -->
+             <div id="ea-right-rail" class="space-y-6 lg:w-[350px] xl:w-[400px] 2xl:w-[430px]">
+                 <!-- To Do List -->
+                 <div class="bg-white rounded-xl border border-gray-200">
+                    <div class="p-4 border-b flex items-center justify-between">
+                        <h3 class="text-lg font-semibold">To Do List</h3>
+                        <button id="todo-add" class="px-2 py-1 text-sm rounded-lg border hover:bg-gray-50">+ Add</button>
+                    </div>
+                    <div id="todo-list" class="p-4 space-y-3 text-sm">
+                        <!-- Items injected via JS -->
+                    </div>
+                </div>
+
+                 <!-- Events (moved here) -->
                  <div class="bg-white rounded-lg shadow-lg border border-gray-200">
                     <div class="p-4 border-b border-gray-200 flex items-center justify-between">
                         <h3 class="text-lg font-semibold text-gray-900">Events</h3>
@@ -835,7 +816,117 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Upgrade card -->
+                <!-- Removed upgrade card per request -->
             </div>
+        </div>
+
+        <script>
+        // Lightweight widgets populated from existing currentEvents
+        function refreshMiniDashboard() {
+            try {
+                const upcoming = currentEvents.filter(e => getEventStatus(e) === 'upcoming');
+                const ongoing = currentEvents.filter(e => getEventStatus(e) === 'ongoing');
+                const completed = currentEvents.filter(e => getEventStatus(e) === 'completed');
+                const u = document.getElementById('dash-upcoming');
+                const o = document.getElementById('dash-ongoing');
+                const c = document.getElementById('dash-completed');
+                if (u) u.textContent = upcoming.length;
+                if (o) o.textContent = ongoing.length;
+                if (c) c.textContent = completed.length;
+                const bar = document.getElementById('ongoing-bar');
+                if (bar) {
+                    const total = upcoming.length + ongoing.length + completed.length || 1;
+                    bar.style.width = Math.min(100, Math.round((ongoing.length/total)*100)) + '%';
+                }
+                const tbody = document.getElementById('upcoming-table');
+                if (tbody) {
+                    const items = upcoming.slice(0, 5).map(ev => {
+                        const dt = getEventStartDate(ev);
+                        const time = dt.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                        const date = dt.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+                        const title = ev.title || ev.event_name || ev.document_name || 'Untitled Event';
+                        const organizer = ev.organizer || '-';
+                        return `<tr>
+                            <td class=\"px-4 py-3\">${title}</td>
+                            <td class=\"px-4 py-3 text-gray-600\">${date} • ${time}</td>
+                            <td class=\"px-4 py-3 text-gray-600\">${organizer}</td>
+                            <td class=\"px-4 py-3\"><button class=\"px-3 py-1 text-xs rounded-lg border hover:bg-gray-50\" onclick=\"selectEvent(${ev.id || ev.event_id})\">Grade Now</button></td>
+                        </tr>`;
+                    }).join('');
+                    tbody.innerHTML = items || `<tr><td class=\"px-4 py-6 text-center text-gray-500\" colspan=\"4\">No upcoming items</td></tr>`;
+                }
+            } catch (e) { /* noop */ }
+        }
+        // Hook into existing loadEvents
+        const __origLoadEvents = loadEvents;
+        loadEvents = function() { __origLoadEvents(); setTimeout(refreshMiniDashboard, 50); };
+
+        // Minimal localStorage-backed todo
+        const TODO_KEY = 'lilac.events.todo.v1';
+        function getTodos(){
+            try { return JSON.parse(localStorage.getItem(TODO_KEY) || '[]'); } catch(e){ return []; }
+        }
+        function setTodos(items){
+            localStorage.setItem(TODO_KEY, JSON.stringify(items));
+            renderTodos();
+        }
+        function renderTodos(){
+            const wrap = document.getElementById('todo-list');
+            if (!wrap) return;
+            const items = getTodos();
+            if (!items.length) {
+                wrap.innerHTML = `<div class=\"text-gray-500 text-sm\">Add new task to get started</div>`;
+                return;
+            }
+            wrap.innerHTML = items.map((t, i) => `
+                <label class=\"flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer\"> 
+                    <input type=\"checkbox\" ${t.done?'checked':''} onchange=\"toggleTodo(${i})\" class=\"mt-1 rounded\"> 
+                    <div>
+                        <p class=\"${t.done?'line-through text-gray-400':'text-gray-800'}\">${t.text}</p>
+                        ${t.due ? `<p class=\\"text-xs text-gray-500\\">${t.due}</p>` : ''}
+                    </div>
+                    <button onclick=\"deleteTodo(${i})\" class=\"ml-auto text-gray-400 hover:text-red-600\">✕</button>
+                </label>`).join('');
+        }
+        function addTodo(){
+            const text = prompt('Task');
+            if (!text) return;
+            const items = getTodos();
+            items.unshift({ text, done:false, due:'Today' });
+            setTodos(items);
+        }
+        function toggleTodo(i){
+            const items = getTodos();
+            if (!items[i]) return; items[i].done = !items[i].done; setTodos(items);
+        }
+        function deleteTodo(i){
+            const items = getTodos(); items.splice(i,1); setTodos(items);
+        }
+        document.addEventListener('DOMContentLoaded', function(){
+            const btn = document.getElementById('todo-add');
+            if (btn) btn.addEventListener('click', addTodo);
+            renderTodos();
+        });
+        </script>
+
+        
+        
+        
+        
+        
+        
+        <!-- Course Platform Layout -->
+        <div class="flex flex-col lg:flex-row gap-6">
+             <!-- Main Content Area (Left) -->
+             <div class="flex-1">
+                 <div id="events-container">
+                     <!-- Main event content will be loaded here -->
+                 </div>
+             </div>
+                         
+            <!-- Course Content Sidebar (Right) removed; Events moved to right widgets column -->
         </div>
     </div>
 
@@ -908,7 +999,7 @@
     <!-- Add/Edit Event Modal -->
     <div id="addEventModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div class="bg-white rounded-xl shadow-xl max-w-sm w-full max-h-[70vh] overflow-y-auto">
                 <div class="p-6 border-b border-gray-200 flex items-center justify-between">
                     <h3 id="addEventModalTitle" class="text-lg font-semibold text-gray-900">Add Event</h3>
                     <button onclick="hideAddEventModal()" class="text-gray-400 hover:text-gray-600">
@@ -917,62 +1008,62 @@
                         </svg>
                     </button>
                 </div>
-                <form id="add-event-form" class="p-6 space-y-4">
+                <form id="add-event-form" class="p-4 space-y-3">
                     <input type="hidden" id="event-id">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Title<span class="text-red-500">*</span></label>
-                        <input id="event-title-input" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        <input id="event-title-input" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Description</label>
-                        <textarea id="event-description-input" rows="3" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        <textarea id="event-description-input" rows="2" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                     </div>
                     <div class="flex items-center space-x-2">
                         <input id="event-all-day" type="checkbox" class="rounded">
                         <label for="event-all-day" class="text-sm text-gray-700">All day</label>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Start Date<span class="text-red-500">*</span></label>
-                            <input id="event-date-start" type="date" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                            <input id="event-date-start" type="date" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Start Time</label>
-                            <input id="event-time-start" type="time" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input id="event-time-start" type="time" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">End Date</label>
-                            <input id="event-date-end" type="date" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input id="event-date-end" type="date" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">End Time</label>
-                            <input id="event-time-end" type="time" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input id="event-time-end" type="time" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Organizer</label>
-                            <input id="event-organizer-input" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="LILAC">
+                            <input id="event-organizer-input" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="LILAC">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Venue</label>
-                            <input id="event-venue-input" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Auditorium">
+                            <input id="event-venue-input" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Auditorium">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
-                        <div class="flex items-center space-x-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                        <div class="flex items-center space-x-2">
                             <label class="cursor-pointer flex items-center space-x-2"><input type="radio" name="event-color" value="blue" checked><span class="w-5 h-5 rounded-full bg-blue-500 inline-block"></span></label>
                             <label class="cursor-pointer flex items-center space-x-2"><input type="radio" name="event-color" value="orange"><span class="w-5 h-5 rounded-full bg-orange-500 inline-block"></span></label>
                             <label class="cursor-pointer flex items-center space-x-2"><input type="radio" name="event-color" value="teal"><span class="w-5 h-5 rounded-full bg-teal-500 inline-block"></span></label>
                             <label class="cursor-pointer flex items-center space-x-2"><input type="radio" name="event-color" value="brown"><span class="w-5 h-5 rounded-full bg-amber-700 inline-block"></span></label>
                         </div>
                     </div>
-                    <div class="pt-2 flex justify-end space-x-3 border-t border-gray-200">
-                        <button type="button" onclick="hideAddEventModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
-                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-colors">Save</button>
+                    <div class="pt-2 flex justify-end space-x-2 border-t border-gray-200">
+                        <button type="button" onclick="hideAddEventModal()" class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+                        <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-colors">Save</button>
                     </div>
                 </form>
             </div>
@@ -1211,8 +1302,83 @@
                 })
                 .catch(() => alert('Network error. Please try again.'));
         }
-    </script>
 
+        // Listen for sidebar state changes and adjust layout tightly
+        window.addEventListener('sidebar:state', function(e){
+            try {
+                const open = !!(e && e.detail && e.detail.open);
+                // Body flag already handled in sidebar.php; ensure classes consistent for safety
+                document.body.classList[open ? 'add' : 'remove']('sidebar-open');
+                const main = document.getElementById('main-content');
+                const nav = document.querySelector('nav.modern-nav');
+                if (main) {
+                    main.classList[open ? 'add' : 'remove']('ml-64');
+                    main.classList[open ? 'add' : 'remove']('ea-compact');
+                }
+                if (nav) nav.classList[open ? 'add' : 'remove']('pl-64');
+
+                // Tighten right rail width when sidebar open to keep everything visible
+                const right = document.getElementById('ea-right-rail');
+                if (right) {
+                    if (open) {
+                        right.classList.add('ea-rail-compact');
+                        right.classList.add('lg:w-[320px]');
+                        right.classList.remove('lg:w-[330px]');
+                    } else {
+                        right.classList.remove('ea-rail-compact');
+                        right.classList.add('lg:w-[330px]');
+                        right.classList.remove('lg:w-[280px]');
+                    }
+                }
+
+                // If grid overflows, drop to denser gap
+                const grid = document.getElementById('ea-dashboard-grid');
+                if (grid) {
+                    if (open) {
+                        grid.classList.remove('lg:gap-6');
+                        grid.classList.add('lg:gap-5');
+                    } else {
+                        grid.classList.add('lg:gap-6');
+                        grid.classList.remove('lg:gap-5');
+                    }
+                }
+
+                // Trigger a refresh so tables recalc widths
+                setTimeout(refreshMiniDashboard, 0);
+            } catch(_e){}
+        });
+        </script>
+
+    </footer>
+
+    <style>
+    /* Compact layout helpers for events page to prevent hidden content on toggle */
+    .ml-64{ margin-left:16rem; }
+    .pl-64{ padding-left:16rem; }
+    </style>
+
+    <style>
+    /* Extra compact mode when sidebar is open */
+    #main-content.ea-compact { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    @media (min-width: 1024px) {
+      #main-content.ea-compact { padding-left: 1rem !important; padding-right: 1rem !important; }
+    }
+    #main-content.ea-compact .p-4 { padding: 0.75rem !important; }
+    #main-content.ea-compact .px-4 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+    #main-content.ea-compact .py-4 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+    #main-content.ea-compact .ea-greeting-title { font-size: 1.125rem !important; line-height: 1.5rem !important; }
+    #main-content.ea-compact .md\:whitespace-nowrap { white-space: nowrap; }
+
+    /* Right rail compact mode */
+    @media (min-width: 1024px) {
+      #ea-right-rail.ea-rail-compact { width: 280px !important; }
+      #ea-right-rail.ea-rail-compact .p-4 { padding: 0.75rem !important; }
+      #ea-right-rail.ea-rail-compact .text-lg { font-size: 1rem !important; }
+      #ea-right-rail.ea-rail-compact .text-sm { font-size: 0.8125rem !important; }
+      #ea-right-rail.ea-rail-compact .px-3 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+      #ea-right-rail.ea-rail-compact .py-1\.5 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+    }
+    </style>
 </body>
 
 </html>

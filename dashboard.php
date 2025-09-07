@@ -7,6 +7,7 @@
     <title>LILAC Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
+    <link rel="stylesheet" href="dashboard-theme.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
     <script>
@@ -518,8 +519,8 @@ window.addEventListener('sidebar:state', function (e) {
         let selectedDate = new Date();
 
         function generateCalendar(date = currentCalendarDate) {
-            const currentMonthYearEl = document.getElementById('current-month-year');
-            const calendarDaysEl = document.getElementById('calendar-days');
+            const currentMonthYearEl = document.getElementById('current-month-year') || document.getElementById('crextio-month-year');
+            const calendarDaysEl = document.getElementById('calendar-days') || document.getElementById('crextio-calendar-days');
             
             if (!currentMonthYearEl || !calendarDaysEl) return;
 
@@ -570,8 +571,8 @@ window.addEventListener('sidebar:state', function (e) {
 
         function loadTodayEvents(date = selectedDate) {
             // This function can be enhanced to load events from the API
-            const selectedDateEl = document.getElementById('selected-date');
-            const dayEventsEl = document.getElementById('day-events');
+            const selectedDateEl = document.getElementById('selected-date') || document.getElementById('crextio-selected-date');
+            const dayEventsEl = document.getElementById('day-events') || document.getElementById('crextio-day-events');
             
             if (!selectedDateEl || !dayEventsEl) return;
 
@@ -1295,7 +1296,7 @@ window.addEventListener('sidebar:state', function (e) {
             <!-- User Profile -->
             <div class="relative">
                 <button id="user-profile-btn" class="flex items-center space-x-2 btn my-1 btn-sm">
-                    <div class="w-9 h-9 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <div class="w-9 h-9 bg-gradient-to-r from-amber-600 to-amber-800 rounded-xl flex items-center justify-center shadow-lg border border-amber-700">
                         <span class="text-white text-sm font-bold">LD</span>
                     </div>
                 </button>
@@ -1366,10 +1367,182 @@ window.addEventListener('sidebar:state', function (e) {
     <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 p-4 pt-16 min-h-screen bg-muted transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-64 p-4 pt-4 min-h-screen bg-muted transition-all duration-300 ease-in-out">
                 <!-- Welcome Section -->
+        <div class="soft-card p-4 rounded-3xl mb-3 flex flex-col md:flex-row items-start md:items-center justify-between">
+            <div>
+                <div class="text-sm text-gray-500" id="current-date"></div>
+                <h2 class="text-3xl font-extrabold tracking-tight mt-1">Welcome in, LESLEY!</h2>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="badge-pill">Interviews <span class="text-gray-400">15%</span></span>
+                    <span class="badge-pill">Hired <span class="text-gray-400">15%</span></span>
+                    <span class="badge-pill">Project time <span class="text-gray-400">60%</span></span>
+                    <span class="badge-pill">Output <span class="text-gray-400">10%</span></span>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center gap-6">
+                <div class="ring-meter" style="--progress: 42%">
+                    <div class="ring-meter__value text-xl">02:35</div>
+                </div>
+                <div class="panel-dark p-4 rounded-3xl w-56">
+                    <div class="text-sm muted mb-2">Onboarding</div>
+                    <div class="h-2 bg-white\/20 rounded-full overflow-hidden">
+                        <div class="h-full bg-yellow-300" style="width: 18%"></div>
+                    </div>
+                    <div class="text-xs mt-2 muted">18%</div>
+                </div>
+            </div>
+        </div>
+        <!-- New Crextio Grid -->
+        <div class="crextio-grid grid grid-cols-12 gap-2 mb-3">
+            <!-- Profile card -->
+            <div class="col-span-12 lg:col-span-3">
+                <div class="soft-card p-0 rounded-3xl overflow-hidden card-eq">
+                    <div class="bg-gradient-to-br from-gray-200 to-gray-100 h-28"></div>
+                    <div class="p-5 flex items-center">
+                        <div class="avatar-xl mr-4">
+                            <img src="img/6154262087753385333.jpg" alt="Profile" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-800">Events &amp; Activities</div>
+                            <div class="text-xs text-gray-500">Latest campus events</div>
+                        </div>
+                        <div class="ml-3 badge-pill">$1,200</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress card -->
+            <div class="col-span-12 sm:col-span-6 lg:col-span-3">
+                <div class="soft-card p-5 rounded-3xl card-eq">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-gray-800 font-semibold">Awards Progress</div>
+                            <div class="text-3xl font-extrabold mt-1">6.1h</div>
+                            <div class="text-xs text-gray-500">Work time this week</div>
+                        </div>
+                        <button class="btn-soft px-3 py-2">^</button>
+                    </div>
+                    <div class="mini-bars mt-4">
+                        <div class="mini-bar" style="height: 28px"></div>
+                        <div class="mini-bar" style="height: 42px"></div>
+                        <div class="mini-bar" style="height: 52px"></div>
+                        <div class="mini-bar is-accent" style="height: 70px"></div>
+                        <div class="mini-bar" style="height: 44px"></div>
+                        <div class="mini-bar" style="height: 60px"></div>
+                        <div class="mini-bar" style="height: 36px"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-400 mt-2">
+                        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time tracker -->
+            <div class="col-span-12 sm:col-span-6 lg:col-span-3">
+                <div class="soft-card p-5 rounded-3xl card-eq">
+                    <div class="text-gray-800 font-semibold mb-2">Meetings</div>
+                    <div class="flex items-center justify-center">
+                        <div class="ring-meter" style="--progress: 60%">
+                            <div class="ring-meter__value text-xl">02:35</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center justify-center gap-2">
+                        <button class="btn-soft px-3 py-2">⏵</button>
+                        <button class="btn-soft px-3 py-2">⏸</button>
+                        <button class="btn-soft px-3 py-2">⏹</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onboarding summary -->
+            <div class="col-span-12 lg:col-span-3">
+                <div class="soft-card p-5 rounded-3xl card-eq">
+                    <div class="flex items-start justify-between">
+                        <div class="text-gray-800 font-semibold">Documents</div>
+                        <div class="text-xl font-bold">18%</div>
+                    </div>
+                    <div class="mt-3 space-y-3">
+                        <div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-yellow-400" style="width: 30%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">30%</div>
+                        </div>
+                        <div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-gray-800" style="width: 25%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">25%</div>
+                        </div>
+                        <div>
+                            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-gray-400" style="width: 0%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar preview -->
+            <div class="col-span-12 lg:col-span-9">
+                <div class="soft-card p-5 rounded-3xl card-eq">
+
+                    <div>
+                        <div class="container" id="flip-cal-container">
+                            <div class="card">
+                                <div class="front">
+                                    <div class="contentfront">
+                                        <div class="month">
+                                            <table class="w-full">
+                                                <tr class="orangeTr">
+                                                    <th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th><th>S</th>
+                                                </tr>
+                                                <tr class="whiteTr"><th></th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>
+                                                <tr class="whiteTr"><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th></tr>
+                                                <tr class="whiteTr"><th>14</th><th>15</th><th>16</th><th>17</th><th>18</th><th>19</th><th>20</th></tr>
+                                                <tr class="whiteTr"><th>21</th><th>22</th><th>23</th><th>24</th><th>25</th><th>26</th><th>27</th></tr>
+                                                <tr class="whiteTr"><th>28</th><th>29</th><th>30</th><th>31</th><th></th><th></th><th></th></tr>
+                                            </table>
+                                        </div>
+                                        <div class="date">
+                                            <div class="datecont">
+                                                <div id="flip-date"></div>
+                                                <div id="flip-day"></div>
+                                                <div id="flip-month"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="back">
+                                    <div class="contentback"><div class="backcontainer"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dark onboarding task panel -->
+            <div class="col-span-12 lg:col-span-3">
+                <div class="panel-dark p-6 rounded-3xl">
+                    <div class="flex items-center justify-between">
+                        <div class="text-lg font-semibold">Onboarding Task</div>
+                        <div class="text-sm">2/8</div>
+                    </div>
+                    <ul class="mt-5 space-y-3">
+                        <li class="task-item"><span>Interview</span><span class="status success"></span></li>
+                        <li class="task-item"><span>Team Meeting</span><span class="status success"></span></li>
+                        <li class="task-item"><span>Project Update</span><span class="status pending"></span></li>
+                        <li class="task-item"><span>Discuss Q3 Goals</span><span class="status pending"></span></li>
+                        <li class="task-item"><span>HR Policy Review</span><span class="status todo"></span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
         <!-- Stats Cards -->
-        <div class="grid grid-cols-4 gap-4 mb-6 mt-4">
+        <div class="grid grid-cols-4 gap-4 mb-6 mt-4 hidden">
             <!-- MOUs Card -->
             <a href="mou-moa.php" class="stats-card group cursor-pointer" style="text-decoration: none;">
                 <div class="flex items-center justify-between mb-4"></div>
@@ -1432,7 +1605,7 @@ window.addEventListener('sidebar:state', function (e) {
         </div>
 
         <!-- Main Content Grid -->
-        <div class="grid grid-cols-3 gap-4" style="margin-top: 28px;">
+        <div class="grid grid-cols-3 gap-4 hidden" style="margin-top: 28px;">
             <!-- Left Column -->
             <div class="col-span-2 space-y-6">
                 <!-- Upcoming Meetings -->
@@ -1633,12 +1806,39 @@ window.addEventListener('sidebar:state', function (e) {
             var hamburger = document.getElementById('hamburger-toggle');
             if (hamburger) {
                 hamburger.addEventListener('click', function() {
-                    try {
-                        window.dispatchEvent(new CustomEvent('sidebar:toggle'));
-                    } catch (e) {}
+                    try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
                 });
             }
 
+            // Initialize standard calendar (if present)
+            try { generateCalendar(currentCalendarDate); } catch (e) {}
+
+            // Initialize flip calendar
+            (function initFlipCalendar(){
+                var cont = document.getElementById('flip-cal-container');
+                if (!cont) return;
+                var card = cont.querySelector('.card');
+                if (card) {
+                    card.addEventListener('click', function(){ card.classList.toggle('flipped'); });
+                }
+                function startTime(){
+                    var weekday = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+                    var month   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                    var today = new Date();
+                    var d = today.getDate();
+                    var y = today.getFullYear();
+                    var wd = weekday[today.getDay()];
+                    var mt = month[today.getMonth()];
+                    var dateEl = document.getElementById('flip-date');
+                    var dayEl  = document.getElementById('flip-day');
+                    var monthEl= document.getElementById('flip-month');
+                    if (dateEl) dateEl.textContent = d;
+                    if (dayEl)  dayEl.textContent  = wd;
+                    if (monthEl)monthEl.textContent= mt + '/' + y;
+                    setTimeout(startTime, 1000);
+                }
+                startTime();
+            })();
         });
     </script>
 </body>

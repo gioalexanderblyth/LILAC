@@ -119,10 +119,13 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   function adjustDashboardLayout(isOpen) {
     var main = document.getElementById('main-content');
+    var nav = document.querySelector('nav.modern-nav');
     if (isOpen) {
         if (main) main.classList.add('ml-64');
+        if (nav) nav.classList.add('pl-64');
     } else {
         if (main) main.classList.remove('ml-64');
+        if (nav) nav.classList.remove('pl-64');
     }
 }
   function openSidebarDesktop() { sidebar.style.transform = ''; isOpen = true; dispatchSidebarState(true, 'desktop'); adjustDashboardLayout(true); }

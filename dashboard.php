@@ -1294,7 +1294,7 @@ window.addEventListener('sidebar:state', function (e) {
 
             
             <!-- User Profile -->
-            <div class="relative">
+            <div id="user-profile-container" class="relative">
                 <button id="user-profile-btn" class="flex items-center space-x-2 btn my-1 btn-sm">
                     <div class="w-9 h-9 bg-gradient-to-r from-amber-600 to-amber-800 rounded-xl flex items-center justify-center shadow-lg border border-amber-700">
                         <span class="text-white text-sm font-bold">LD</span>
@@ -1302,7 +1302,7 @@ window.addEventListener('sidebar:state', function (e) {
                 </button>
                 
                 <!-- User Profile Dropdown -->
-                <div id="user-dropdown" class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 hidden z-[1000]">
+                <div id="user-dropdown" class="absolute right-0 mt-0 w-64 bg-white rounded-lg shadow-lg border border-gray-200 hidden z-[1000]">
                     <!-- User Info Section -->
                     <div class="p-4 border-b border-gray-200">
                         <div class="flex items-center space-x-3">
@@ -1357,6 +1357,12 @@ window.addEventListener('sidebar:state', function (e) {
                             </svg>
                             <span>Notifications</span>
                         </a>
+                        <a href="index.html" class="flex items-center space-x-3 px-4 py-2 text-sm text-black hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1"></path>
+                            </svg>
+                            <span>Logout</span>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1378,18 +1384,6 @@ window.addEventListener('sidebar:state', function (e) {
                     <span class="badge-pill">Statistics</span>
                     <span class="badge-pill">Improvements</span>
                     <span class="badge-pill">Goals</span>
-                </div>
-            </div>
-            <div class="hidden md:flex items-center gap-6">
-                <div class="ring-meter" style="--progress: 42%">
-                    <div class="ring-meter__value text-xl">02:35</div>
-                </div>
-                <div class="panel-dark p-4 rounded-3xl w-56">
-                    <div class="text-sm muted mb-2">Onboarding</div>
-                    <div class="h-2 bg-white\/20 rounded-full overflow-hidden">
-                        <div class="h-full bg-yellow-300" style="width: 18%"></div>
-                    </div>
-                    <div class="text-xs mt-2 muted">18%</div>
                 </div>
             </div>
         </div>
@@ -1418,12 +1412,10 @@ window.addEventListener('sidebar:state', function (e) {
                     <div class="flex items-start justify-between">
                         <div>
                             <div class="text-gray-800 font-semibold">Awards Progress</div>
-                            <div class="text-3xl font-extrabold mt-1">6.1h</div>
-                            <div class="text-xs text-gray-500">Work time this week</div>
                         </div>
                         <button class="btn-soft px-3 py-2">^</button>
                     </div>
-                    <div class="mini-bars mt-4">
+                    <div class="mini-bars mt-8">
                         <div class="mini-bar" style="height: 28px"></div>
                         <div class="mini-bar" style="height: 42px"></div>
                         <div class="mini-bar" style="height: 52px"></div>
@@ -1432,7 +1424,7 @@ window.addEventListener('sidebar:state', function (e) {
                         <div class="mini-bar" style="height: 60px"></div>
                         <div class="mini-bar" style="height: 36px"></div>
                     </div>
-                    <div class="flex justify-between text-xs text-gray-400 mt-2">
+                    <div class="flex justify-between text-xs text-gray-400 -mt-4">
                         <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
                     </div>
                 </div>
@@ -1442,16 +1434,12 @@ window.addEventListener('sidebar:state', function (e) {
             <div class="col-span-12 sm:col-span-6 lg:col-span-3">
                 <div class="soft-card p-5 rounded-3xl card-eq">
                     <div class="text-gray-800 font-semibold mb-2">Meetings</div>
-                    <div class="flex items-center justify-center">
+                    <div class="flex-1 flex items-center justify-center">
                         <div class="ring-meter" style="--progress: 60%">
                             <div class="ring-meter__value text-xl">02:35</div>
                         </div>
                     </div>
-                    <div class="mt-4 flex items-center justify-center gap-2">
-                        <button class="btn-soft px-3 py-2">⏵</button>
-                        <button class="btn-soft px-3 py-2">⏸</button>
-                        <button class="btn-soft px-3 py-2">⏹</button>
-                    </div>
+
                 </div>
             </div>
 
@@ -1532,11 +1520,8 @@ window.addEventListener('sidebar:state', function (e) {
                         <div class="text-sm">2/8</div>
                     </div>
                     <ul class="mt-5 space-y-3">
-                        <li class="task-item"><span>Interview</span><span class="status success"></span></li>
                         <li class="task-item"><span>Team Meeting</span><span class="status success"></span></li>
                         <li class="task-item"><span>Project Update</span><span class="status pending"></span></li>
-                        <li class="task-item"><span>Discuss Q3 Goals</span><span class="status pending"></span></li>
-                        <li class="task-item"><span>HR Policy Review</span><span class="status todo"></span></li>
                     </ul>
                 </div>
             </div>
@@ -1783,10 +1768,27 @@ window.addEventListener('sidebar:state', function (e) {
             const userDropdown = document.getElementById('user-dropdown');
             
             if (userProfileBtn && userDropdown) {
+                let hideTimer;
                 userProfileBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     userDropdown.classList.toggle('hidden');
                 });
+                
+                // Hover to open/close with small delay to allow moving into menu
+                const container = document.getElementById('user-profile-container');
+                if (container) {
+                    const clearHide = () => { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } };
+                    const scheduleHide = () => { hideTimer = setTimeout(() => userDropdown.classList.add('hidden'), 200); };
+                    container.addEventListener('mouseenter', function() {
+                        clearHide();
+                        userDropdown.classList.remove('hidden');
+                    });
+                    container.addEventListener('mouseleave', function() {
+                        scheduleHide();
+                    });
+                    userDropdown.addEventListener('mouseenter', clearHide);
+                    userDropdown.addEventListener('mouseleave', scheduleHide);
+                }
                 
                 // Close dropdown when clicking outside
                 document.addEventListener('click', function(e) {

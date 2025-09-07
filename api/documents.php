@@ -167,8 +167,22 @@ try {
         }
         $total = count($filtered);
         $totalSize = array_sum(array_map(function ($d) { return intval($d['file_size'] ?? 0); }, $filtered));
+        // derive simple recency metrics for UI compatibility
+        $now = time();
+        $thirtyDaysAgo = $now - (30 * 24 * 60 * 60);
+        $startOfMonth = strtotime(date('Y-m-01 00:00:00'));
+        $recentCount = 0;
+        $monthCount = 0;
+        foreach ($filtered as $d) {
+            $ts = isset($d['upload_date']) ? strtotime($d['upload_date']) : 0;
+            if ($ts && $ts >= $thirtyDaysAgo) { $recentCount++; }
+            if ($ts && $ts >= $startOfMonth) { $monthCount++; }
+        }
         respond(true, ['stats' => [
             'total_documents' => $total,
+            'total' => $total,
+            'recent' => $recentCount,
+            'month' => $monthCount,
             'total_size' => $totalSize,
         ]]);
     }

@@ -90,10 +90,45 @@ switch ($action) {
 				'is_all_day' => isset($m['is_all_day']) ? $m['is_all_day'] : '0',
 				'color' => isset($m['color']) ? $m['color'] : 'blue',
 				'organizer' => isset($m['organizer']) ? $m['organizer'] : '',
-				'venue' => isset($m['venue']) ? $m['venue'] : ''
+				'venue' => isset($m['venue']) ? $m['venue'] : '',
+				'location' => isset($m['venue']) ? $m['venue'] : ''
 			];
 		}, $db['meetings']);
 		json_ok([ 'meetings' => $meetings ]);
+	}
+	case 'get_upcoming': {
+		$limit = (int)get_param('limit', 3);
+		if ($limit <= 0) { $limit = 3; }
+		$today = date('Y-m-d');
+		$filtered = array_values(array_filter($db['meetings'], function($m) use ($today){
+			$eventEnd = isset($m['end_date']) && $m['end_date'] ? $m['end_date'] : $m['date'];
+			return $eventEnd >= $today;
+		}));
+		usort($filtered, function($a, $b){
+			$ad = ($a['date'] ?? '');
+			$at = ($a['time'] ?? '00:00');
+			$bd = ($b['date'] ?? '');
+			$bt = ($b['time'] ?? '00:00');
+			return strcmp($ad . 'T' . $at, $bd . 'T' . $bt);
+		});
+		$filtered = array_slice($filtered, 0, $limit);
+		$mapped = array_map(function($m){
+			return [
+				'id' => $m['id'],
+				'title' => $m['title'],
+				'meeting_date' => $m['date'],
+				'meeting_time' => $m['time'],
+				'end_date' => $m['end_date'],
+				'end_time' => $m['end_time'],
+				'description' => isset($m['description']) ? $m['description'] : '',
+				'is_all_day' => isset($m['is_all_day']) ? $m['is_all_day'] : '0',
+				'color' => isset($m['color']) ? $m['color'] : 'blue',
+				'organizer' => isset($m['organizer']) ? $m['organizer'] : '',
+				'venue' => isset($m['venue']) ? $m['venue'] : '',
+				'location' => isset($m['venue']) ? $m['venue'] : ''
+			];
+		}, $filtered);
+		json_ok([ 'meetings' => $mapped ]);
 	}
 	case 'get_by_date_range': {
 		$start = normalize_date(get_param('start_date'));
@@ -118,7 +153,8 @@ switch ($action) {
 				'is_all_day' => isset($m['is_all_day']) ? $m['is_all_day'] : '0',
 				'color' => isset($m['color']) ? $m['color'] : 'blue',
 				'organizer' => isset($m['organizer']) ? $m['organizer'] : '',
-				'venue' => isset($m['venue']) ? $m['venue'] : ''
+				'venue' => isset($m['venue']) ? $m['venue'] : '',
+				'location' => isset($m['venue']) ? $m['venue'] : ''
 			];
 		}, $meetings);
 		json_ok([ 'meetings' => $mapped ]);

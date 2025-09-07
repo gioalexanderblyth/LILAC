@@ -769,7 +769,6 @@
             });
         }
 
-
         // Update date in top-right
         function updateCurrentDate() {
             var el = document.getElementById('current-date');
@@ -842,7 +841,6 @@
 
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
-
 
     <!-- Footer -->
     <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">

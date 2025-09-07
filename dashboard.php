@@ -1374,10 +1374,10 @@ window.addEventListener('sidebar:state', function (e) {
                 <div class="text-sm text-gray-500" id="current-date"></div>
                 <h2 class="text-3xl font-extrabold tracking-tight mt-1">Welcome in, LESLEY!</h2>
                 <div class="mt-4 flex flex-wrap gap-2">
-                    <span class="badge-pill">Interviews <span class="text-gray-400">15%</span></span>
-                    <span class="badge-pill">Hired <span class="text-gray-400">15%</span></span>
-                    <span class="badge-pill">Project time <span class="text-gray-400">60%</span></span>
-                    <span class="badge-pill">Output <span class="text-gray-400">10%</span></span>
+                    <span class="badge-pill">About</span>
+                    <span class="badge-pill">Statistics</span>
+                    <span class="badge-pill">Improvements</span>
+                    <span class="badge-pill">Goals</span>
                 </div>
             </div>
             <div class="hidden md:flex items-center gap-6">
@@ -1407,7 +1407,7 @@ window.addEventListener('sidebar:state', function (e) {
                             <div class="font-semibold text-gray-800">Events &amp; Activities</div>
                             <div class="text-xs text-gray-500">Latest campus events</div>
                         </div>
-                        <div class="ml-3 badge-pill">$1,200</div>
+                        <div class="ml-3 badge-pill">View</div>
                     </div>
                 </div>
             </div>

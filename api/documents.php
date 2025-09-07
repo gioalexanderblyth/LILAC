@@ -48,6 +48,20 @@ $action = $_GET['action'] ?? ($_POST['action'] ?? 'get_all');
 try {
     $db = load_db($dbFile);
 
+    // Simple auto-category detection based on filename/title keywords
+    function detect_category_from_name($name) {
+        $upper = strtoupper((string)$name);
+        // MOU/MOA patterns
+        if (preg_match('/\b(MOU|MOA|MEMORANDUM OF UNDERSTANDING|AGREEMENT|KUMA-MOU)\b/i', $name)) {
+            return 'MOUs & MOAs';
+        }
+        // Template / Form patterns
+        if (preg_match('/\b(TEMPLATE|FORM|FORMS|ADMISSION|APPLICATION|REGISTRATION|CHECKLIST|REQUEST)\b/i', $name)) {
+            return 'Templates';
+        }
+        return '';
+    }
+
     if ($action === 'add') {
         // Validate file
         if (!isset($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {
@@ -76,7 +90,11 @@ try {
         }
 
         $documentName = $_POST['document_name'] ?? ($_POST['title'] ?? pathinfo($safeName, PATHINFO_FILENAME));
-        $category = $_POST['category'] ?? '';
+        $category = trim((string)($_POST['category'] ?? ''));
+        if ($category === '') {
+            $auto = detect_category_from_name($documentName . ' ' . $safeName);
+            if ($auto !== '') { $category = $auto; }
+        }
         $description = $_POST['description'] ?? '';
 
         $now = date('Y-m-d H:i:s');
@@ -96,6 +114,21 @@ try {
         $db['documents'][] = $record;
         save_db($dbFile, $db);
         respond(true, ['message' => 'Document added', 'document' => $record]);
+    }
+
+    if ($action === 'reclassify_auto') {
+        $updated = 0;
+        foreach ($db['documents'] as &$doc) {
+            $name = ($doc['document_name'] ?? '') . ' ' . ($doc['original_filename'] ?? '');
+            $auto = detect_category_from_name($name);
+            if ($auto !== '' && ($doc['category'] ?? '') !== $auto) {
+                $doc['category'] = $auto;
+                $updated++;
+            }
+        }
+        unset($doc);
+        if ($updated > 0) { save_db($dbFile, $db); }
+        respond(true, ['message' => 'Reclassification complete', 'updated' => $updated]);
     }
 
     if ($action === 'delete') {
@@ -134,8 +167,22 @@ try {
         }
         $total = count($filtered);
         $totalSize = array_sum(array_map(function ($d) { return intval($d['file_size'] ?? 0); }, $filtered));
+        // derive simple recency metrics for UI compatibility
+        $now = time();
+        $thirtyDaysAgo = $now - (30 * 24 * 60 * 60);
+        $startOfMonth = strtotime(date('Y-m-01 00:00:00'));
+        $recentCount = 0;
+        $monthCount = 0;
+        foreach ($filtered as $d) {
+            $ts = isset($d['upload_date']) ? strtotime($d['upload_date']) : 0;
+            if ($ts && $ts >= $thirtyDaysAgo) { $recentCount++; }
+            if ($ts && $ts >= $startOfMonth) { $monthCount++; }
+        }
         respond(true, ['stats' => [
             'total_documents' => $total,
+            'total' => $total,
+            'recent' => $recentCount,
+            'month' => $monthCount,
             'total_size' => $totalSize,
         ]]);
     }

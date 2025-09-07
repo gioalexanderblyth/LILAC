@@ -14,17 +14,14 @@
         let currentDocuments = [];
         let showExpiringOnly = false;
         const CATEGORY = 'Templates';
-        const TABS = ['Recommended', 'Reports', 'Meeting notes', 'CVs', 'Flyers', 'Business and productivity'];
+        const TABS = ['Recommended', 'Reports', 'Meeting notes'];
         let activeTab = 'Recommended';
         let favorites = new Set();
 
         // Map UI tabs to existing category names in the system
         const TAB_TO_CATEGORY = {
             'Reports': 'Report',
-            'Meeting notes': 'Meeting Minutes',
-            'CVs': 'Other',
-            'Flyers': 'Other',
-            'Business and productivity': 'Other'
+            'Meeting notes': 'Meeting Minutes'
         };
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -260,7 +257,7 @@
                         <button class="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white shadow" title="Favorite" onclick="event.stopPropagation(); toggleFavorite('${doc.id}')">
                             <svg class="w-4 h-4 ${fav ? 'text-yellow-500' : 'text-gray-400'}" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.802 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118L10 13.347l-2.985 2.155c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L3.38 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                         </button>
-                        <div class="h-64 bg-gradient-to-br from-gray-900 to-gray-700 relative" onclick="viewTemplate(${doc.id})">
+                        <div class="h-56 bg-gradient-to-br from-gray-900 to-gray-700 relative cursor-pointer" onclick="viewTemplate(${doc.id})">
                             ${badge}
                             <div class="absolute bottom-3 left-3 right-3 flex items-end justify-between">
                                 <div class="inline-block bg-yellow-400 text-black font-extrabold text-xs px-2 py-1 rounded">${(doc.category||'').toLowerCase().includes('report') ? 'ANNUAL REPORT' : 'TEMPLATE'}</div>
@@ -291,7 +288,7 @@
                     </div>
                 </button>`;
 
-            container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">${blankCard}${cards}</div>`;
+            container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">${blankCard}${cards}</div>`;
         }
 
         function renderTemplateTabs() {
@@ -864,7 +861,7 @@ Approved by: ________________
                 </svg>
             </button>
         <div class="absolute left-1/2 transform -translate-x-1/2">
-            <h1 class="text-xl font-bold text-gray-800">LILAC Templates</h1>
+            <h1 id="templates-title" class="text-xl font-bold text-gray-800 cursor-pointer">Templates</h1>
         </div>
         <div class="absolute right-4 top-4 z-[90] text-sm flex items-center space-x-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -875,7 +872,7 @@ Approved by: ________________
     </nav>
 
     <!-- Sidebar -->
-    <?php include 'sidebar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -906,22 +903,13 @@ Approved by: ________________
     </script>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 p-6 pt-20 min-h-screen bg-white transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-64 p-4 pt-4 min-h-screen bg-white transition-all duration-300 ease-in-out">
         <!-- Top Actions Row -->
-        <div class="flex flex-wrap gap-3 mb-6">
-            <button id="create-document-btn" onclick="goToDocumentEditor()" class="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-full shadow hover:bg-blue-700 hover:shadow-md active:translate-y-px focus:outline-none focus:ring-2 focus:ring-blue-300">
-                <span class="w-5 h-5 rounded bg-white text-blue-600 flex items-center justify-center font-bold text-xs">W</span>
-                Create a Document
-            </button>
-
-            <button class="ml-auto inline-flex items-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-full hover:bg-gray-200">
-                Browse all templates
-            </button>
-        </div>
+        <div class="hidden"></div>
 
         <!-- Templates Display -->
-        <div class="bg-white rounded-xl shadow-md p-6">
-            <h2 class="text-xl font-bold mb-4">Start with a template</h2>
+        <div class="bg-white rounded-xl shadow-md p-4">
+            <h2 class="text-xl font-bold mb-2">Start with a template</h2>
             <div class="flex flex-wrap items-center gap-3 mb-4">
                 <div class="relative flex-1 min-w-[220px]">
                     <input id="template-search" type="search" placeholder="Search templates..." class="w-full border rounded-full px-4 py-2 pl-9 focus:outline-none focus:ring-2 focus:ring-blue-200" oninput="displayDocuments(currentDocuments)">
@@ -942,7 +930,7 @@ Approved by: ________________
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
     <!-- Footer -->
-    <footer class="ml-0 md:ml-64 bg-gray-800 text-white text-center p-4 mt-8">
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 
@@ -970,7 +958,7 @@ Approved by: ________________
 
     <!-- View Template Modal -->
     <div id="viewTemplateModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50">
-        <div class="relative p-6 bg-white w-full max-w-6xl m-auto flex-col flex rounded-xl shadow-2xl max-h-[95vh] overflow-y-auto">
+        <div class="relative p-4 bg-white w-full max-w-3xl m-auto flex-col flex rounded-lg shadow-xl max-h-[80vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6 sticky top-0 bg-white py-2">
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
                     <div class="p-2 bg-purple-100 rounded-lg">
@@ -1092,6 +1080,20 @@ Approved by: ________________
                         sidebar.classList.add('-translate-x-full');
                         overlay.classList.add('hidden');
                     }
+                });
+            }
+
+            // Reset filters and scroll to top when Browse All Templates button is clicked
+            const browseTemplatesBtn = document.getElementById('browse-templates-btn');
+            if (browseTemplatesBtn) {
+                browseTemplatesBtn.addEventListener('click', function() {
+                    document.getElementById('template-search').value = ''; // Clear search
+                    document.getElementById('template-sort').value = 'newest'; // Reset sort
+                    document.getElementById('template-tabs').innerHTML = ''; // Clear tabs
+                    activeTab = 'Recommended'; // Reset active tab
+                    renderTemplateTabs(); // Re-render tabs
+                    displayDocuments(currentDocuments); // Display all documents
+                    window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top
                 });
             }
         });

@@ -200,6 +200,77 @@
                 align-self: center !important;
             }
         }
+        /* Awards Breakdown custom donut chart */
+        .awards-donut .donut-chart {
+          position: relative;
+          width: 192px;
+          height: 192px;
+          margin: 0 auto 0;
+          border-radius: 100%;
+        }
+        .awards-donut p.center {
+          background: #ffffff;
+          position: absolute;
+          text-align: center;
+          font-size: 16px;
+          top:0;left:0;bottom:0;right:0;
+          width: 124px;
+          height: 124px;
+          margin: auto;
+          border-radius: 50%;
+          line-height: 20px;
+          padding: 36px 0 0;
+          color: #374151;
+        }
+        .awards-donut .portion-block {
+          border-radius: 50%;
+          clip: rect(0px, 192px, 192px, 96px);
+          height: 100%;
+          position: absolute;
+          width: 100%;
+        }
+        .awards-donut .circle {
+          border-radius: 50%;
+          clip: rect(0px, 96px, 192px, 0px);
+          height: 100%;
+          position: absolute;
+          width: 100%;
+          font-family: monospace;
+          font-size: 1.5rem;
+        }
+        .awards-donut #part1 { transform: rotate(0deg); }
+        .awards-donut #part1 .circle { background-color: #DC2626; animation: first 1s 1 forwards; }
+        .awards-donut #part2 { transform: rotate(0deg); }
+        .awards-donut #part2 .circle { background-color: #3B82F6; animation: second 1s 1 forwards 1s; }
+        .awards-donut #part3 { transform: rotate(0deg); }
+        .awards-donut #part3 .circle { background-color: #F9A8D4; animation: third 0.5s 1 forwards 2s; }
+
+        @keyframes first {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(100deg); }
+        }
+        @keyframes second {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(150deg); }
+        }
+        @keyframes third {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(111deg); }
+        }
+        /* Seamless donut via conic-gradient (no gaps) */
+        .awards-donut .donut-chart.gradient {
+          background: conic-gradient(
+            #DC2626 0deg var(--deg-red),
+            #3B82F6 var(--deg-red) calc(var(--deg-red) + var(--deg-blue)),
+            #F9A8D4 calc(var(--deg-red) + var(--deg-blue)) 360deg
+          );
+        }
+        .awards-donut .donut-chart.gradient .portion-block { display: none;         }
+        /* Chart container styles (match provided design but scoped) */
+        .awards-chart { background-color: #ffffff; border-radius: 8px; padding: 16px; border: 1px solid #e5e7eb; }
+        .awards-chart canvas { display: block; width: 100% !important; height: 300px !important; }
+        /* Ensure chart canvas is visible and sized in the Average Awards Statistic card */
+        #monthlyTrendChart { display: none; }
     </style>
     <script>
         // Initialize awards functionality
@@ -213,6 +284,12 @@
             updateCurrentDate();
             
             // Initialize tabs - ensure Awards Progress is active by default
+            const periodSelect = document.getElementById('awards-breakdown-period');
+            if (periodSelect) {
+                periodSelect.addEventListener('change', function() {
+                    updateAwardsDonutForPeriod(this.value);
+                });
+            }
             switchTab('overview');
             
             // Update date every minute
@@ -424,6 +501,13 @@
             
             // Also load monthly trend data
             loadMonthlyTrendData();
+            // initialize donut values
+            updateAwardsDonutForPeriod('This Month');
+            const monthEl = document.getElementById('awards-donut-month');
+            if (monthEl) {
+                const now = new Date();
+                monthEl.textContent = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            }
         }
 
         function loadMonthlyTrendData() {
@@ -455,8 +539,44 @@
                         loadingElement.classList.add('hidden');
                     }
                 });
+                }
+        
+        // Awards Breakdown donut updater
+        function updateAwardsDonutForPeriod(period) {
+            // simple preset data per period
+            const presets = {
+                'This Month': { red: 52, blue: 32, pink: 16 },
+                'Last 7 Days': { red: 40, blue: 45, pink: 15 },
+                'Today': { red: 60, blue: 25, pink: 15 },
+                'Last Month': { red: 48, blue: 36, pink: 16 }
+            };
+            const data = presets[period] || presets['This Month'];
+            const total = data.red + data.blue + data.pink;
+            // convert to degrees with decimals to avoid gaps between slices
+            const redDeg = 360 * (data.red / total);
+            const blueDeg = 360 * (data.blue / total);
+            const pinkDeg = Math.max(0, 360 - (redDeg + blueDeg)); // exact remainder
+            const donut = document.getElementById('awardsDonut');
+            if (donut) {
+                donut.style.setProperty('--deg-red', redDeg + 'deg');
+                donut.style.setProperty('--deg-blue', blueDeg + 'deg');
+            }
+            // update labels on right
+            const pctElems = document.querySelectorAll('#awards-breakdown-percentages .pct');
+            if (pctElems.length >= 3) {
+                pctElems[0].textContent = data.red + '%';
+                pctElems[1].textContent = data.blue + '%';
+                pctElems[2].textContent = data.pink + '%';
+            }
+            // update bar widths
+            const barRed = document.getElementById('bar-red');
+            const barBlue = document.getElementById('bar-blue');
+            const barPink = document.getElementById('bar-pink');
+            if (barRed) barRed.style.width = data.red + '%';
+            if (barBlue) barBlue.style.width = data.blue + '%';
+            if (barPink) barPink.style.width = data.pink + '%';
         }
-
+        
         function updateMonthlyTrendChart(apiData = null) {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             let thisYearData, lastYearData;
@@ -1333,7 +1453,7 @@ LILAC Awards - Keyboard Shortcuts:
 <body class="bg-gray-50">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] bg-white border-b border-gray-200 p-4 h-16 flex items-center">
+    <nav class="fixed top-0 left-0 right-0 z-[60] bg-white border-b border-gray-200 p-4 h-14 flex items-center relative">
         <!-- Left Side - Menu Buttons -->
         <div class="flex items-center space-x-4">
             <button id="menu-toggle" onclick="openSidebar()" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700" title="Open Sidebar">
@@ -1349,129 +1469,99 @@ LILAC Awards - Keyboard Shortcuts:
         </div>
         
         <!-- Center - Title -->
-        <div class="flex-1 flex justify-center">
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div class="text-center text-gray-900">
                 <div class="text-lg font-bold">Awards Progress</div>
             </div>
         </div>
         
-        <!-- Right Side - Date and Export Button -->
-        <div class="flex items-center space-x-4">
+        <!-- Right Side - Date and Actions -->
+        <div class="flex items-center space-x-4 ml-auto">
             <div class="flex items-center space-x-2 text-gray-700">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
                 <span id="current-date" class="text-sm"></span>
             </div>
-            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-                </svg>
-                                        <span>Import Data</span>
-            </button>
+            
         </div>
     </nav>
 
+    
+
     <!-- Sidebar -->
-    <?php include 'sidebar.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-0 md:ml-64 p-6 pt-20 min-h-screen bg-white transition-all duration-300 ease-in-out">
+    <div id="main-content" class="ml-0 md:ml-64 p-4 pt-0 min-h-screen bg-white transition-all duration-300 ease-in-out">
+
+        
 
 
 
         <!-- Tab Navigation -->
-        <div class="mb-8">
-            <div class="border-b border-gray-200">
-                <nav class="flex space-x-8 px-6" aria-label="Tabs">
-                    <button id="tab-overview" onclick="switchTab('overview')" class="tab-button active py-4 px-1  font-medium text-sm text-black">
-                        Awards Progress
-                    </button>
-                    <button id="tab-awardmatch" onclick="switchTab('awardmatch')" class="tab-button py-4 px-1  font-medium text-sm text-gray-500 hover:text-gray-700 ">
-                        Award Match Analysis
-                    </button>
-                </nav>
+        <div class="mb-2">
+            <div class="border-b border-gray-200 px-4">
+                <div class="flex items-center justify-between">
+                    <nav class="flex space-x-8" aria-label="Tabs">
+                        <button id="tab-overview" onclick="switchTab('overview')" class="tab-button active py-4 px-1  font-medium text-sm text-black">
+                            Awards Progress
+                        </button>
+                        <button id="tab-awardmatch" onclick="switchTab('awardmatch')" class="tab-button py-4 px-1  font-medium text-sm text-gray-500 hover:text-gray-700 ">
+                            Award Match Analysis
+                        </button>
+                    </nav>
+                    
+                </div>
             </div>
         </div>
 
         <!-- Tab Content Container -->
         <div id="tab-overview-content" class="tab-content">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center justify-between">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3 bg-gray-50 p-2 rounded-lg">
+            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Total Awards</p>
-                        <p class="text-2xl font-bold text-gray-900" id="total-awards">44</p>
-                        <p class="text-sm text-green-600">+2.30% from last month</p>
+                        <div class="text-2xl font-extrabold text-gray-900" id="total-awards">0</div>
+                        <div class="text-sm text-gray-600">Total Awards</div>
                     </div>
-                    <div class="p-3 rounded-full bg-blue-100">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                        </svg>
+                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/></svg>
                     </div>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Academic Excellence</p>
-                        <p class="text-2xl font-bold text-gray-900" id="academic-count">23</p>
-                        <p class="text-sm text-green-600">+30.8% from last month</p>
+                        <div class="text-2xl font-extrabold text-gray-900" id="academic-count">23</div>
+                        <div class="text-sm text-gray-600">Academic Excellence</div>
                     </div>
-                    <div class="p-3 rounded-full bg-green-100">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
+                    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                     </div>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Research Awards</p>
-                        <p class="text-2xl font-bold text-gray-900" id="research-count">14</p>
-                        <p class="text-sm text-red-600">+2.30% from last month</p>
+                        <div class="text-2xl font-extrabold text-gray-900" id="research-count">14</div>
+                        <div class="text-sm text-gray-600">Research Awards</div>
                     </div>
-                    <div class="p-3 rounded-full bg-red-100">
-                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 01-3.138-3.138z"></path>
-                        </svg>
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
                     </div>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center justify-between">
+            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Leadership Awards</p>
-                        <p class="text-2xl font-bold text-gray-900" id="leadership-count">7</p>
-                        <p class="text-sm text-gray-600">upcoming awards this month</p>
+                        <div class="text-2xl font-extrabold text-gray-900" id="leadership-count">7</div>
+                        <div class="text-sm text-gray-600">Leadership Awards</div>
                     </div>
-                    <div class="p-3 rounded-full bg-purple-100">
-                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
+                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     </div>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
                 </div>
             </div>
         </div>
@@ -1486,35 +1576,17 @@ LILAC Awards - Keyboard Shortcuts:
                         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        <select class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
-                            <option>This Year</option>
+                        <select id="avg-awards-period" class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
+                            <option value="This Year" selected>This Year</option>
                         </select>
                     </div>
                 </div>
-                <div class="mb-4">
+                <div class="mb-2">
                                             <div class="text-2xl font-bold text-gray-900"></div>
-                    <div class="text-sm text-green-600">+ 25.4% from previous year</div>
                 </div>
-                <div class="h-40">
-                    <canvas id="monthlyTrendChart" height="160"></canvas>
-                    <div id="monthlyTrendChartFallback" class="hidden flex items-center justify-center h-full text-center">
-                        <div>
-                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                            </svg>
-                            <p class="text-gray-500 text-sm">Chart not loading</p>
-                            <div class="space-y-2 mt-3">
-                                <button onclick="renderMonthlyTrendChart()" class="block w-full text-blue-600 hover:text-blue-700 text-xs font-medium">
-                                    Try Render Chart
-                                </button>
-                                <button onclick="console.log('Chart.js available:', typeof Chart !== 'undefined')" class="block w-full text-purple-600 hover:text-purple-700 text-xs font-medium">
-                                    Check Chart.js Status
-                                </button>
-                                <button onclick="hideChartFallback()" class="block w-full text-green-600 hover:text-green-700 text-xs font-medium">
-                                    Show Chart Canvas
-                                </button>
-                            </div>
-                        </div>
+                <div class="w-full">
+                    <div class="chart__container awards-chart w-full">
+                        <canvas id="awardsLineChartCanvas" width="600" height="300"></canvas>
                     </div>
                 </div>
             </div>
@@ -1527,51 +1599,56 @@ LILAC Awards - Keyboard Shortcuts:
                         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                        <select class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
-                            <option>This Month</option>
+                        <select id="awards-breakdown-period" class="text-sm text-gray-600 bg-transparent border-none focus:ring-0">
+                            <option value="This Month" selected>This Month</option>
+                            <option value="Last 7 Days">Last 7 Days</option>
+                            <option value="Today">Today</option>
+                            <option value="Last Month">Last Month</option>
                         </select>
                     </div>
                 </div>
                 <div class="flex items-start space-x-8">
                     <div class="flex-shrink-0">
-                        <div class="relative w-48 h-48">
-                            <canvas id="awardsCategoryChart" width="200" height="200" class="w-full h-full"></canvas>
-                            <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                <div class="text-2xl font-bold text-gray-900"></div>
-                                <div class="text-sm text-gray-600">August 2023</div>
+                        <div class="awards-donut">
+                            <div id="awardsDonut" class="donut-chart gradient" style="--deg-red: 187deg; --deg-blue: 115deg;">
+                                <div id="part1" class="portion-block"><div class="circle"></div></div>
+                                <div id="part2" class="portion-block"><div class="circle"></div></div>
+                                <div id="part3" class="portion-block"><div class="circle"></div></div>
+                                <p class="center"></p>
                             </div>
                         </div>
+                        <div id="awards-donut-month" class="text-sm text-gray-600 text-center mt-2">August 2023</div>
                     </div>
-                    <div class="flex-1 space-y-4 min-w-0">
+                    <div id="awards-breakdown-percentages" class="flex-1 space-y-4 min-w-0">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center">
                                 <div class="w-3 h-3 bg-red-600 rounded-full mr-2"></div>
                                 <span class="text-sm text-gray-600"></span>
                             </div>
-                            <span class="text-sm font-medium text-gray-900">52%</span>
+                            <span class="text-sm font-medium text-red-600 pct">52%</span>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-red-600 h-2 rounded-full" style="width: 52%"></div>
+                            <div id="bar-red" class="bg-red-600 h-2 rounded-full" style="width: 52%"></div>
                         </div>
                         <div class="flex items-center justify-between">
                             <div class="flex items-center">
                                 <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
                                 <span class="text-sm text-gray-600"></span>
                             </div>
-                            <span class="text-sm font-medium text-gray-900">32%</span>
+                            <span class="text-sm font-medium text-blue-600 pct">32%</span>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-blue-500 h-2 rounded-full" style="width: 32%"></div>
+                            <div id="bar-blue" class="bg-blue-500 h-2 rounded-full" style="width: 32%"></div>
                         </div>
                         <div class="flex items-center justify-between">
                             <div class="flex items-center">
                                 <div class="w-3 h-3 bg-pink-300 rounded-full mr-2"></div>
                                 <span class="text-sm text-gray-600"></span>
                             </div>
-                            <span class="text-sm font-medium text-gray-900">16%</span>
+                            <span class="text-sm font-medium text-pink-500 pct">16%</span>
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-pink-300 h-2 rounded-full" style="width: 16%"></div>
+                            <div id="bar-pink" class="bg-pink-300 h-2 rounded-full" style="width: 16%"></div>
                         </div>
                     </div>
                 </div>
@@ -1691,42 +1768,7 @@ LILAC Awards - Keyboard Shortcuts:
             </div>
         </div>
 
-        <!-- Add New Award Section -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-8 border border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6">Add New Award</h2>
-            <form id="award-form" class="space-y-6">
-                <div>
-                    <label for="award-title" class="block text-sm font-medium text-gray-700 mb-2">Award Title *</label>
-                    <input type="text" id="award-title" name="award-title" required
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                           placeholder="Enter award title">
-                </div>
-                <div>
-                    <label for="date-received" class="block text-sm font-medium text-gray-700 mb-2">Date Received *</label>
-                    <input type="date" id="date-received" name="date-received" required
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors">
-                </div>
-                <div>
-                    <label for="award-description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <textarea id="award-description" name="award-description" rows="3"
-                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                              placeholder="Enter award description and details"></textarea>
-                </div>
-                <div>
-                    <label for="award-file" class="block text-sm font-medium text-gray-700 mb-2">Upload Certificate</label>
-                    <input type="file" id="award-file" name="award-file"
-                           accept=".pdf,.jpg,.jpeg,.png"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-black file:text-white hover:file:bg-gray-800">
-                    <p class="mt-2 text-sm text-gray-500">Supported formats: PDF, JPG, PNG (Max 5MB)</p>
-                </div>
-                <div class="flex justify-end">
-                    <button type="submit"
-                            class="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors font-medium">
-                        Add Award
-                    </button>
-                </div>
-            </form>
-        </div>
+        
 
         <!-- Awards Grid -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -1932,8 +1974,18 @@ LILAC Awards - Keyboard Shortcuts:
         </div>
     </div>
 
+
+    <!-- Floating Add Award Button Above Footer -->
+    <div class="fixed bottom-20 right-4 z-50">
+        <button id="view-switch-btn" aria-label="Add Award" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="showAddAwardModal()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+            </svg>
+        </button>
+    </div>
+
     <!-- Footer -->
-    <footer class="ml-0 md:ml-64 bg-white text-gray-600 text-center p-4 mt-8 border-t border-gray-200">
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 
@@ -2021,53 +2073,143 @@ LILAC Awards - Keyboard Shortcuts:
         </div>
     </div>
 
+    <!-- Add New Award Modal -->
+    <div id="add-award-modal" class="fixed inset-0 bg-black/50 z-[70] hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <h3 class="text-lg font-semibold text-gray-900">Add New Award</h3>
+                    <button class="text-gray-400 hover:text-gray-600" onclick="closeAddAwardModal()">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <form id="award-modal-form" class="p-6 space-y-4">
+                    <div>
+                        <label for="m-award-title" class="block text-sm font-medium text-gray-700 mb-2">Award Title *</label>
+                        <input id="m-award-title" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label for="m-date-received" class="block text-sm font-medium text-gray-700 mb-2">Date Received *</label>
+                        <input id="m-date-received" type="date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label for="m-award-description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <textarea id="m-award-description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"></textarea>
+                    </div>
+                    <div>
+                        <label for="m-award-file" class="block text-sm font-medium text-gray-700 mb-2">Upload Certificate</label>
+                        <input id="m-award-file" type="file" accept=".pdf,.jpg,.jpeg,.png" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
+                        <p class="mt-2 text-sm text-gray-500">Supported formats: PDF, JPG, PNG (Max 5MB)</p>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeAddAwardModal()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+                        <button type="submit" class="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800">Add Award</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Data Modal -->
+    <div id="import-data-modal" class="fixed inset-0 bg-black/50 z-[70] hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <h3 class="text-lg font-semibold text-gray-900">Import Awards Data</h3>
+                    <button class="text-gray-400 hover:text-gray-600" onclick="closeImportDataModal()">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="text-sm text-gray-700">Upload a CSV or Excel file (.csv, .xlsx) with award data. You can download a sample template below.</p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" onclick="downloadImportTemplate()">Download Template</button>
+                            <label class="px-3 py-2 rounded-lg bg-black text-white hover:bg-gray-800 cursor-pointer">
+                                <input id="import-file" type="file" accept=".csv,.xlsx" class="hidden" onchange="handleImportFileChange(event)" />
+                                Choose File
+                            </label>
+                            <span id="import-file-name" class="text-sm text-gray-600"></span>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeImportDataModal()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+                        <button type="button" onclick="processImport()" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Import</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
     // Simple chart initialization
     function initializeCharts() {
-        console.log('Initializing charts...');
-        
-        // Wait for Chart.js to be available
         if (typeof Chart === 'undefined') {
-            console.log('Chart.js not available, retrying in 100ms...');
             setTimeout(initializeCharts, 100);
             return;
         }
-        
-        console.log('Chart.js is available, rendering charts...');
-        
-        // Initialize monthly trend chart
-        renderMonthlyTrendChart();
-        
-        // Update current month display
-        updateCurrentMonthDisplay();
-        
-        console.log('Charts initialized successfully!');
+        renderAwardsLineChart();
     }
     
+    // Helper: render when canvas has a layout size
+    function renderWhenReady(attempts = 10) {
+        const canvas = document.getElementById('monthlyTrendChart');
+        if (!canvas) return initializeCharts();
+        const ready = canvas.offsetWidth > 0 && canvas.offsetHeight > 0;
+        if (ready) {
+            hideChartFallback();
+            initializeCharts();
+        } else if (attempts > 0) {
+            setTimeout(() => renderWhenReady(attempts - 1), 150);
+        } else {
+            initializeCharts();
+        }
+    }
+
     // Start initialization when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM loaded, starting chart initialization...');
-        initializeCharts();
+        if (document.getElementById('awardsLineChartCanvas')) {
+            renderAwardsLineChart();
+            const period = document.getElementById('avg-awards-period');
+            if (period) {
+                period.addEventListener('change', function(){
+                    // For now only 'This Year' is available; re-render to simulate filter
+                    renderAwardsLineChart();
+                });
+            }
+        } else {
+            renderWhenReady();
+        }
     });
     
     // Also try on window load
     window.addEventListener('load', function() {
         if (typeof Chart !== 'undefined' && !window.monthlyTrendChart) {
-            console.log('Chart.js available on window load, initializing...');
-            initializeCharts();
+            renderWhenReady();
         }
     });
 
     function renderMonthlyTrendChart() {
         console.log('renderMonthlyTrendChart called');
-        const ctx = document.getElementById('monthlyTrendChart');
-        if (!ctx) {
-            console.error('Monthly trend chart canvas not found');
+        const canvasEl = document.getElementById('monthlyTrendChart');
+        if (!canvasEl) {
             createFallbackChart();
             return;
         }
+        // Ensure canvas has dimensions
+        canvasEl.style.display = 'block';
+        canvasEl.width = canvasEl.parentElement.clientWidth;
+        canvasEl.height = 160;
         
         console.log('Canvas found, destroying existing chart if any...');
+        const ctx = canvasEl.getContext('2d');
+        // build gradients similar to provided snippet
+        const gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
+        gradientStroke.addColorStop(0, '#ff6c00');
+        gradientStroke.addColorStop(1, '#ff3b74');
+        const gradientBkgrd = ctx.createLinearGradient(0, 0, 0, canvasEl.height);
+        gradientBkgrd.addColorStop(0, 'rgba(244,94,132,0.2)');
+        gradientBkgrd.addColorStop(1, 'rgba(249,135,94,0)');
         // Destroy existing chart if it exists
         if (window.monthlyTrendChart) {
             window.monthlyTrendChart.destroy();
@@ -2086,106 +2228,68 @@ LILAC Awards - Keyboard Shortcuts:
         try {
             console.log('Creating new Chart.js instance...');
             
+            const lineShadow = { id: 'lineShadow', beforeDatasetsDraw(chart){ const {ctx}=chart; ctx.save(); ctx.shadowBlur=8; ctx.shadowOffsetX=0; ctx.shadowOffsetY=6; ctx.shadowColor='rgba(244,94,132,0.35)'; }, afterDatasetsDraw(chart){ chart.ctx.restore(); } };
+            if (typeof Chart !== 'undefined') { Chart.register(lineShadow); }
+            
             window.monthlyTrendChart = new Chart(ctx, {
-                type: 'bar',
+                type: 'line',
                 data: {
-                    labels: months,
-                    datasets: [
-                        {
-                            label: `${currentYear}`,
-                            data: thisYearData,
-                            backgroundColor: function(context) {
-                                // Highlight August (index 7) with darker color
-                                if (context.dataIndex === 7) {
-                                    return '#DC2626'; // Dark red for August
-                                }
-                                return '#F3E8FF'; // Light beige/orange for other months
-                            },
-                            borderRadius: 4,
-                            borderSkipped: false,
-                        },
-                        {
-                            label: `${lastYear}`,
-                            data: lastYearData,
-                            backgroundColor: '#E5E7EB', // Light gray for comparison
-                            borderRadius: 4,
-                            borderSkipped: false,
-                        }
-                    ]
+                    labels: ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr"],
+                    datasets: [{
+                        label: "Income",
+                        data: [5500, 2500, 10000, 6000, 14000, 1500, 7000, 20000],
+                        borderColor: gradientStroke,
+                        backgroundColor: gradientBkgrd,
+                        pointBorderColor: 'rgba(255,255,255,0)',
+                        pointBackgroundColor: 'rgba(255,255,255,0)',
+                        pointBorderWidth: 0,
+                        pointHoverRadius: 8,
+                        pointHoverBackgroundColor: '#ff6c00',
+                        pointHoverBorderColor: 'rgba(220,220,220,1)',
+                        pointHoverBorderWidth: 4,
+                        pointRadius: 1,
+                        borderWidth: 5,
+                        pointHitRadius: 16,
+                        tension: 0.35,
+                        fill: 'start'
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { 
-                            display: false 
-                        },
+                        legend: { display: false },
                         tooltip: {
                             mode: 'index',
                             intersect: false,
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            borderColor: '#374151',
+                            backgroundColor: '#fff',
+                            titleColor: '#000',
+                            bodyColor: '#000',
+                            borderColor: '#E5E7EB',
                             borderWidth: 1,
                             cornerRadius: 8,
-                            displayColors: true,
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.parsed.y;
-                                    if (value < 1000) {
-                                        return `Income Rp${value}`;
-                                    }
-                                    return `Income Rp${value}k`;
-                                }
-                            }
+                            displayColors: false
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            max: 10000,
-                            grid: { 
-                                color: '#f3f4f6',
-                                drawBorder: false
-                            },
-                            ticks: { 
+                            grid: { color: '#f3f4f6', drawBorder: false },
+                            ticks: {
                                 color: '#6b7280',
-                                font: {
-                                    size: 11
-                                },
+                                font: { size: 11 },
                                 padding: 8,
-                                callback: function(value) {
-                                    if (value === 0) return 'Rp0';
-                                    if (value < 1000) return `Rp${value}`;
-                                    return `Rp${value}k`;
-                                },
-                                stepSize: 2000
+                                callback: function(value){ return (value/1000) + 'K'; }
                             },
-                            border: {
-                                display: false
-                            }
+                            border: { display: false }
                         },
                         x: {
-                            grid: { 
-                                display: false 
-                            },
-                            ticks: { 
-                                color: '#6b7280',
-                                font: {
-                                    size: 11
-                                },
-                                padding: 8
-                            },
-                            border: {
-                                display: false
-                            }
+                            grid: { display: false },
+                            ticks: { color: '#6b7280', font: { size: 11 }, padding: 8 },
+                            border: { display: false }
                         }
                     },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    }
+                    interaction: { intersect: false, mode: 'index' }
                 }
             });
             console.log('Chart created successfully!');
@@ -2217,6 +2321,8 @@ LILAC Awards - Keyboard Shortcuts:
         
         if (canvas && fallback) {
             canvas.style.display = 'block';
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = 160;
             fallback.classList.add('hidden');
         }
     }
@@ -2370,6 +2476,29 @@ LILAC Awards - Keyboard Shortcuts:
                 overlay.addEventListener('click', closeSidebar);
             }
 
+            // Responsive floating button on scroll
+            let lastScrollTop = 0;
+            const floatingBtn = document.getElementById('view-switch-btn');
+            const floatingBtnContainer = floatingBtn?.parentElement;
+            
+            window.addEventListener('scroll', function() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                if (floatingBtnContainer) {
+                    if (scrollTop > lastScrollTop && scrollTop > 100) {
+                        // Scrolling down - move button up (current position above footer)
+                        floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
+                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                    } else {
+                        // Scrolling up - move button down (old position at bottom)
+                        floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
+                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                    }
+                }
+                
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+            });
+
             // Listen for sidebar toggle events from other components
             window.addEventListener('sidebar:toggle', function() {
                 if (sidebarOpen) {
@@ -2419,6 +2548,128 @@ LILAC Awards - Keyboard Shortcuts:
             
         });
     </script>
+
+    <script>
+        function showAddAwardModal(){ openAddAwardModal(); }
+        function openAddAwardModal(){
+            document.getElementById('add-award-modal').classList.remove('hidden');
+        }
+        function closeAddAwardModal(){
+            document.getElementById('add-award-modal').classList.add('hidden');
+        }
+        function openImportDataModal(){
+            document.getElementById('import-data-modal').classList.remove('hidden');
+        }
+        function closeImportDataModal(){
+            document.getElementById('import-data-modal').classList.add('hidden');
+        }
+        function handleImportFileChange(e){
+            const file = e.target.files[0];
+            document.getElementById('import-file-name').textContent = file ? file.name : '';
+        }
+        function downloadImportTemplate(){
+            const csv = 'Title,Date,Description\nSample Award,2025-01-15,Description here';
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'awards_template.csv'; a.click();
+            URL.revokeObjectURL(url);
+        }
+        function processImport(){
+            const input = document.getElementById('import-file');
+            if (!input.files || !input.files[0]) { alert('Please choose a file first'); return; }
+            closeImportDataModal();
+        }
+        document.getElementById('award-modal-form')?.addEventListener('submit', function(e){
+            e.preventDefault();
+            closeAddAwardModal();
+        });
+    </script>
+
+    <script>
+    // ... existing code ...
+    function renderAwardsLineChart() {
+        const canvas = document.getElementById('awardsLineChartCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        // Gradients per provided design
+        const gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
+        gradientStroke.addColorStop(0, '#ff6c00');
+        gradientStroke.addColorStop(1, '#ff3b74');
+
+        const gradientBkgrd = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradientBkgrd.addColorStop(0, 'rgba(244,94,132,0.2)');
+        gradientBkgrd.addColorStop(1, 'rgba(249,135,94,0)');
+
+        // Shadow plugin (Chart.js v4)
+        const lineShadow = {
+            id: 'lineShadowAwards',
+            beforeDatasetsDraw(chart) {
+                const { ctx } = chart;
+                ctx.save();
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 6;
+                ctx.shadowColor = 'rgba(244,94,132,0.35)';
+            },
+            afterDatasetsDraw(chart) {
+                chart.ctx.restore();
+            }
+        };
+        if (typeof Chart !== 'undefined') Chart.register(lineShadow);
+
+        if (window.awardsLineChart) {
+            window.awardsLineChart.destroy();
+        }
+
+        window.awardsLineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
+                datasets: [{
+                    label: 'Income',
+                    data: [5500, 2500, 10000, 6000, 14000, 1500, 7000, 20000],
+                    backgroundColor: gradientBkgrd,
+                    borderColor: gradientStroke,
+                    pointBorderColor: 'rgba(255,255,255,0)',
+                    pointBackgroundColor: 'rgba(255,255,255,0)',
+                    pointBorderWidth: 0,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: gradientStroke,
+                    pointHoverBorderColor: 'rgba(220,220,220,1)',
+                    pointHoverBorderWidth: 4,
+                    pointRadius: 1,
+                    borderWidth: 5,
+                    pointHitRadius: 16,
+                    tension: 0.35,
+                    fill: 'start'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#fff',
+                        displayColors: false,
+                        titleColor: '#000',
+                        bodyColor: '#000'
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    // ... existing code ...
+    </script>
+
 </body>
 
 </html>

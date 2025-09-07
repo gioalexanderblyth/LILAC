@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>(function(){ try { document.documentElement.classList.add('sidebar-prep'); } catch(e){} })();</script>
+    <style id="sidebar-prep-style">.sidebar-prep #sidebar, .sidebar-prep nav.modern-nav, .sidebar-prep #main-content{ transition: none !important; }</style>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -124,6 +126,23 @@
         console.log('Event filters:', eventFilters);
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Ensure sidebar state is applied immediately on this page as well
+            try {
+                var localState = localStorage.getItem('sidebar_state');
+                var sidebarEl = document.getElementById('sidebar');
+                if (sidebarEl && localState) {
+                    if (localState === 'closed') {
+                        if (window.innerWidth >= 768) {
+                            sidebarEl.style.transform = 'translateX(-100%)';
+                        } else {
+                            sidebarEl.classList.add('-translate-x-full');
+                        }
+                    } else if (localState === 'open') {
+                        sidebarEl.style.transform = '';
+                        sidebarEl.classList.remove('-translate-x-full');
+                    }
+                }
+            } catch(_) {}
             loadMeetings();
             initializeCalendar();
             renderMiniCalendar();
@@ -3875,7 +3894,7 @@
 </head>
 <body class="bg-gray-50 dark:bg-[#222831] transition-colors duration-200">
 	<!-- Navigation Bar -->
-	<nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-3 h-14 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
+	<nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-3 h-14 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out" style="will-change:auto">
 		<div class="flex items-center space-x-4">
 			<button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-1/2 -translate-y-1/2 left-4 z-[70]" title="Toggle sidebar">
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3893,7 +3912,7 @@
 	<?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 px-6 pt-2 pb-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-colors duration-200">
+    <div id="main-content" class="ml-64 px-6 pt-2 pb-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-all duration-300 ease-in-out" style="will-change:auto">
 
 
 
@@ -4116,22 +4135,11 @@
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
-    <!-- Floating View Switch Button Above Footer -->
-    <div class="fixed bottom-20 right-4 z-50">
-        <button id="view-switch-btn" aria-label="Schedule a Meeting" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center">
-            <svg id="calendar-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-            <svg id="meetings-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-            <span id="view-switch-text" class="hidden">Schedule a Meeting</span>
-        </button>
-    </div>
+    <!-- Floating View Switch Button Removed per request -->
 
     <!-- Add Event Modal -->
-    <div id="add-event-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 z-50 hidden">
-        <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-xl max-w-sm w-full mx-4 max-h-[80vh] overflow-y-auto">
+    <div id="add-event-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden" onclick="if(event.target===this){closeAddEventModal()}">
+        <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-xl w-full max-w-3xl mx-4" onclick="event.stopPropagation()">
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600">
                 <h3 id="add-event-modal-title" class="text-lg font-semibold text-gray-900 dark:text-white">Add Event</h3>
@@ -4143,9 +4151,9 @@
             </div>
 
             <!-- Modal Body -->
-            <form id="add-event-form" onsubmit="handleAddEventSubmit(event)" class="p-4 space-y-4">
+            <form id="add-event-form" onsubmit="handleAddEventSubmit(event)" class="p-4 grid grid-cols-2 gap-4">
                 <!-- Event Name -->
-                <div>
+                <div class="col-span-2">
                     <label for="event-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Event Name*
                     </label>
@@ -4155,11 +4163,11 @@
                 </div>
 
                 <!-- Description -->
-                <div>
+                <div class="col-span-2">
                     <label for="event-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Description
                     </label>
-                    <textarea id="event-description-input" name="event-description" rows="3"
+                    <textarea id="event-description-input" name="event-description" rows="2"
                               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                               placeholder="Enter event description"></textarea>
                 </div>
@@ -4200,7 +4208,7 @@
                 </div>
 
                 <!-- Color Selection -->
-                <div>
+                <div class="col-span-2">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Color*
                     </label>
@@ -4234,7 +4242,7 @@
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="flex justify-center pt-4">
+                <div class="col-span-2 flex justify-center pt-2">
                     <button type="submit" id="add-event-submit-btn" onclick="handleSubmitButtonClick(event)"
                             class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium">
                         Save

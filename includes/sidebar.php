@@ -108,6 +108,18 @@ document.addEventListener('DOMContentLoaded', function () {
   var sidebar = document.getElementById('sidebar');
   if (!sidebar) return;
 
+  // Temporarily disable transitions to avoid initial flicker until state is applied
+  try {
+    document.documentElement.classList.add('sidebar-prep');
+    var prepStyle = document.getElementById('sidebar-prep-style');
+    if (!prepStyle) {
+      prepStyle = document.createElement('style');
+      prepStyle.id = 'sidebar-prep-style';
+      prepStyle.textContent = '.sidebar-prep #sidebar, .sidebar-prep nav.modern-nav, .sidebar-prep #main-content { transition: none !important; }';
+      document.head.appendChild(prepStyle);
+    }
+  } catch (_) {}
+
   var EDGE_OPEN_PX = 24; // open when cursor is within 24px of left edge
   var EDGE_CLOSE_PX = 300; // close when cursor moves beyond 300px from left edge
   var isOpen = true;
@@ -120,37 +132,117 @@ document.addEventListener('DOMContentLoaded', function () {
   function adjustDashboardLayout(isOpen) {
     var main = document.getElementById('main-content');
     var nav = document.querySelector('nav.modern-nav');
+    if (main) main.classList.add('transition-all','duration-300','ease-in-out');
+    if (nav) nav.classList.add('transition-all','duration-300','ease-in-out');
+    // Reflect current state on both desktop and mobile
     if (isOpen) {
-        if (main) main.classList.add('ml-64');
-        if (nav) nav.classList.add('pl-64');
+      if (main) main.classList.add('ml-64');
+      if (nav) nav.classList.add('pl-64');
     } else {
-        if (main) main.classList.remove('ml-64');
-        if (nav) nav.classList.remove('pl-64');
+      if (main) main.classList.remove('ml-64');
+      if (nav) nav.classList.remove('pl-64');
     }
-}
+  }
   function openSidebarDesktop() { sidebar.style.transform = ''; isOpen = true; dispatchSidebarState(true, 'desktop'); adjustDashboardLayout(true); }
-  function closeSidebarDesktop() { sidebar.style.transform = 'translateX(-100%)'; isOpen = false; dispatchSidebarState(false, 'desktop'); adjustDashboardLayout(false); }
+  function closeSidebarDesktop() {
+    sidebar.style.transform = 'translateX(-100%)';
+    isOpen = false;
+    dispatchSidebarLayoutTransition();
+    dispatchSidebarState(false, 'desktop');
+    adjustDashboardLayout(false);
+  }
+
+  function dispatchSidebarLayoutTransition(){
+    var main = document.getElementById('main-content');
+    var nav = document.querySelector('nav.modern-nav');
+    if (main) { main.classList.add('transition-all','duration-300'); }
+    if (nav) { nav.classList.add('transition-all','duration-300'); }
+  }
 
   // Listen for explicit toggle requests (from hamburger button)
   window.addEventListener('sidebar:toggle', function () {
     if (isOpen) {
       closeSidebarDesktop();
+      try { localStorage.setItem('sidebar_state', 'closed'); } catch(e){}
+      try { fetch('api/sidebar_state.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sidebar_state: 'closed' }) }); } catch(e){}
     } else {
       openSidebarDesktop();
+      try { localStorage.setItem('sidebar_state', 'open'); } catch(e){}
+      try { fetch('api/sidebar_state.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sidebar_state: 'open' }) }); } catch(e){}
     }
   });
 
   window.addEventListener('resize', function () {
-    // Keep layout consistent; treat desktop as open spacing by default
-    sidebar.classList.remove('-translate-x-full');
-    sidebar.style.transform = '';
-    dispatchSidebarState(true, 'desktop');
-    adjustDashboardLayout(true);
+    // Apply last known state on resize; do not force open
+    var state = 'open';
+    try { state = localStorage.getItem('sidebar_state') || (isOpen ? 'open' : 'closed'); } catch(_) {}
+    if (state === 'closed') {
+      sidebar.classList.add('-translate-x-full');
+      sidebar.style.transform = 'translateX(-100%)';
+      isOpen = false;
+    } else {
+      sidebar.classList.remove('-translate-x-full');
+      sidebar.style.transform = '';
+      isOpen = true;
+    }
+    dispatchSidebarState(isOpen, 'desktop');
+    adjustDashboardLayout(isOpen);
   });
 
-  // Broadcast initial state so layout adjusts immediately
-  dispatchSidebarState(true, 'desktop');
-  adjustDashboardLayout(true);
+  // Apply last known state synchronously from localStorage to avoid flicker
+  (function applyLocalSidebarState(){
+    try {
+      var localState = localStorage.getItem('sidebar_state');
+      if (localState === 'closed') {
+        if (window.innerWidth >= 768) {
+          // On desktop, we keep spacing but hide via transform to match state
+          sidebar.style.transform = 'translateX(-100%)';
+          isOpen = false;
+          adjustDashboardLayout(false);
+        } else {
+          sidebar.classList.add('-translate-x-full');
+          isOpen = false;
+          adjustDashboardLayout(false);
+        }
+      } else if (localState === 'open') {
+        sidebar.style.transform = '';
+        sidebar.classList.remove('-translate-x-full');
+        isOpen = true;
+        adjustDashboardLayout(true);
+      }
+    } catch(_) {}
+  })();
+
+  // Fetch persisted state from server and finalize (remove prep class once applied)
+  (function initSidebarState(){
+    try {
+      fetch('api/sidebar_state.php')
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          var state = (d && d.ok && d.sidebar_state) ? d.sidebar_state : 'open';
+          if (window.innerWidth >= 768) {
+            if (state === 'closed') { sidebar.style.transform = 'translateX(-100%)'; isOpen = false; adjustDashboardLayout(false); }
+            else { sidebar.style.transform = ''; isOpen = true; adjustDashboardLayout(true); }
+          } else {
+            // Mobile defaults to closed; overlay hidden
+            if (state === 'closed') { sidebar.classList.add('-translate-x-full'); isOpen = false; adjustDashboardLayout(false); }
+            else { sidebar.classList.remove('-translate-x-full'); isOpen = true; adjustDashboardLayout(true); }
+          }
+          try { localStorage.setItem('sidebar_state', state); } catch(e){}
+          // Allow transitions after first paint with correct state
+          setTimeout(function(){ try { document.documentElement.classList.remove('sidebar-prep'); } catch(_){} }, 0);
+        })
+        .catch(function(){
+          dispatchSidebarState(true, 'desktop');
+          adjustDashboardLayout(true);
+          setTimeout(function(){ try { document.documentElement.classList.remove('sidebar-prep'); } catch(_){} }, 0);
+        });
+    } catch (e) {
+      dispatchSidebarState(true, 'desktop');
+      adjustDashboardLayout(true);
+      try { document.documentElement.classList.remove('sidebar-prep'); } catch(_){}
+    }
+  })();
 
 });
 </script> 

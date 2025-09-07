@@ -397,10 +397,12 @@ class LILACMobileNav {
             overlay.addEventListener('click', () => this.closeMenu());
         }
 
-        // Close menu on route change (only if using enhancement system navigation)
+        // Close menu on route change only on small screens
         if (typeof window.toggleMenu === 'undefined') {
             document.addEventListener('click', (e) => {
-                if (e.target.tagName === 'A' && e.target.getAttribute('href')) {
+                const anchor = e.target.closest('a[href]');
+                if (!anchor) return;
+                if (window.innerWidth < 768) {
                     this.closeMenu();
                 }
             });
@@ -412,9 +414,10 @@ class LILACMobileNav {
         const overlay = document.getElementById('menu-overlay');
 
         if (sidebar) {
-            sidebar.classList.toggle('-translate-x-full');
-            if (overlay) {
-                overlay.classList.toggle('hidden');
+            // Only toggle for mobile widths; keep sidebar fixed on desktop
+            if (window.innerWidth < 768) {
+                sidebar.classList.toggle('-translate-x-full');
+                if (overlay) overlay.classList.toggle('hidden');
             }
         }
     }
@@ -424,9 +427,9 @@ class LILACMobileNav {
         const overlay = document.getElementById('menu-overlay');
 
         if (sidebar) {
-            sidebar.classList.add('-translate-x-full');
-            if (overlay) {
-                overlay.classList.add('hidden');
+            if (window.innerWidth < 768) {
+                sidebar.classList.add('-translate-x-full');
+                if (overlay) overlay.classList.add('hidden');
             }
         }
     }
@@ -557,6 +560,31 @@ document.addEventListener('DOMContentLoaded', function() {
     window.lilacValidator = new LILACFormValidator();
     window.lilacLoading = new LILACLoadingManager();
     window.lilacMobileNav = new LILACMobileNav();
+
+    // Smooth page transitions (fade-out on navigation)
+    try {
+        const anchors = Array.from(document.querySelectorAll('a[href]'));
+        anchors.forEach(a => {
+            const href = a.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+            a.addEventListener('click', function(e){
+                // only intercept left-click, same tab
+                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                // Avoid double-handling if download or target set
+                if (a.getAttribute('download') !== null || a.getAttribute('target') === '_blank') return;
+                e.preventDefault();
+                const main = document.getElementById('main-content');
+                if (main) {
+                    main.classList.add('transition-opacity','duration-200');
+                    main.style.opacity = '0';
+                    setTimeout(() => { window.location.href = href; }, 180);
+                } else {
+                    // No main content container; navigate immediately without fade to avoid sidebar flicker
+                    window.location.href = href;
+                }
+            });
+        });
+    } catch(_) {}
 
     // Enhanced alert replacement
     window.showNotification = (message, type = 'info') => window.lilacNotifications.show(message, type);

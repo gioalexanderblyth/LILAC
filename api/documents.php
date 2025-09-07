@@ -23,7 +23,7 @@ function respond($ok, $payload = []) {
 // Ensure storage exists
 if (!is_dir($dataDir)) { @mkdir($dataDir, 0777, true); }
 if (!is_dir($uploadsDir)) { @mkdir($uploadsDir, 0777, true); }
-if (!file_exists($dbFile)) { file_put_contents($dbFile, json_encode(['auto_id' => 1, 'documents' => []])); }
+if (!file_exists($dbFile)) { file_put_contents($dbFile, json_encode(['auto_id' => 1, 'documents' => [], 'trash' => []])); }
 
 function load_db($dbFile) {
     $raw = @file_get_contents($dbFile);
@@ -31,6 +31,7 @@ function load_db($dbFile) {
     if (!is_array($data)) { $data = ['auto_id' => 1, 'documents' => []]; }
     if (!isset($data['auto_id'])) { $data['auto_id'] = 1; }
     if (!isset($data['documents']) || !is_array($data['documents'])) { $data['documents'] = []; }
+    if (!isset($data['trash']) || !is_array($data['trash'])) { $data['trash'] = []; }
     return $data;
 }
 
@@ -138,15 +139,70 @@ try {
         foreach ($db['documents'] as $i => $doc) {
             if (intval($doc['id']) === $id) {
                 $found = true;
-                $filepath = $uploadsDir . DIRECTORY_SEPARATOR . ($doc['filename'] ?? '');
-                if (is_file($filepath)) { @unlink($filepath); }
+                // Move to trash instead of permanently deleting
+                $removed = $doc;
+                $removed['original_id'] = $doc['id'];
+                $removed['deleted_at'] = date('c');
+                // Ensure unique trash id
+                $removed['id'] = $db['auto_id']++;
+                $db['trash'][] = $removed;
                 array_splice($db['documents'], $i, 1);
                 break;
             }
         }
         if (!$found) { respond(false, ['message' => 'Document not found']); }
         save_db($dbFile, $db);
-        respond(true, ['message' => 'Deleted']);
+        respond(true, ['message' => 'Moved to trash']);
+    }
+
+    if ($action === 'get_trash') {
+        respond(true, ['trash' => array_values($db['trash'])]);
+    }
+
+    if ($action === 'restore') {
+        $trashId = intval($_POST['trash_id'] ?? 0);
+        if ($trashId <= 0) { respond(false, ['message' => 'Invalid trash id']); }
+        foreach ($db['trash'] as $i => $t) {
+            if (intval($t['id']) === $trashId || intval($t['original_id'] ?? 0) === $trashId) {
+                $restored = $t;
+                unset($restored['deleted_at']);
+                unset($restored['original_id']);
+                // Assign new id to avoid collisions
+                $restored['id'] = $db['auto_id']++;
+                $db['documents'][] = $restored;
+                array_splice($db['trash'], $i, 1);
+                save_db($dbFile, $db);
+                respond(true, ['message' => 'Restored']);
+            }
+        }
+        respond(false, ['message' => 'Trash item not found']);
+    }
+
+    if ($action === 'permanently_delete') {
+        $trashId = intval($_POST['trash_id'] ?? 0);
+        if ($trashId <= 0) { respond(false, ['message' => 'Invalid trash id']); }
+        foreach ($db['trash'] as $i => $t) {
+            if (intval($t['id']) === $trashId || intval($t['original_id'] ?? 0) === $trashId) {
+                // Also remove uploaded file if exists
+                $filepath = $uploadsDir . DIRECTORY_SEPARATOR . ($t['filename'] ?? '');
+                if (is_file($filepath)) { @unlink($filepath); }
+                array_splice($db['trash'], $i, 1);
+                save_db($dbFile, $db);
+                respond(true, ['message' => 'Permanently deleted']);
+            }
+        }
+        respond(false, ['message' => 'Trash item not found']);
+    }
+
+    if ($action === 'empty_trash') {
+        // Delete files for all trash items then clear
+        foreach ($db['trash'] as $t) {
+            $filepath = $uploadsDir . DIRECTORY_SEPARATOR . ($t['filename'] ?? '');
+            if (is_file($filepath)) { @unlink($filepath); }
+        }
+        $db['trash'] = [];
+        save_db($dbFile, $db);
+        respond(true, ['message' => 'Trash emptied']);
     }
 
     if ($action === 'get_categories') {

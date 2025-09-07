@@ -541,21 +541,15 @@
                 });
                 }
         
-        // Awards Breakdown donut updater
+        // Awards Breakdown donut updater (zero by default)
         function updateAwardsDonutForPeriod(period) {
-            // simple preset data per period
-            const presets = {
-                'This Month': { red: 52, blue: 32, pink: 16 },
-                'Last 7 Days': { red: 40, blue: 45, pink: 15 },
-                'Today': { red: 60, blue: 25, pink: 15 },
-                'Last Month': { red: 48, blue: 36, pink: 16 }
-            };
-            const data = presets[period] || presets['This Month'];
+            // Default to zeros when no data is uploaded
+            const data = { red: 0, blue: 0, pink: 0 };
             const total = data.red + data.blue + data.pink;
-            // convert to degrees with decimals to avoid gaps between slices
-            const redDeg = 360 * (data.red / total);
-            const blueDeg = 360 * (data.blue / total);
-            const pinkDeg = Math.max(0, 360 - (redDeg + blueDeg)); // exact remainder
+            // Convert to degrees safely (avoid NaN when total is 0)
+            const redDeg = total > 0 ? 360 * (data.red / total) : 0;
+            const blueDeg = total > 0 ? 360 * (data.blue / total) : 0;
+            const pinkDeg = total > 0 ? Math.max(0, 360 - (redDeg + blueDeg)) : 0;
             const donut = document.getElementById('awardsDonut');
             if (donut) {
                 donut.style.setProperty('--deg-red', redDeg + 'deg');
@@ -564,17 +558,17 @@
             // update labels on right
             const pctElems = document.querySelectorAll('#awards-breakdown-percentages .pct');
             if (pctElems.length >= 3) {
-                pctElems[0].textContent = data.red + '%';
-                pctElems[1].textContent = data.blue + '%';
-                pctElems[2].textContent = data.pink + '%';
+                pctElems[0].textContent = '0%';
+                pctElems[1].textContent = '0%';
+                pctElems[2].textContent = '0%';
             }
             // update bar widths
             const barRed = document.getElementById('bar-red');
             const barBlue = document.getElementById('bar-blue');
             const barPink = document.getElementById('bar-pink');
-            if (barRed) barRed.style.width = data.red + '%';
-            if (barBlue) barBlue.style.width = data.blue + '%';
-            if (barPink) barPink.style.width = data.pink + '%';
+            if (barRed) barRed.style.width = '0%';
+            if (barBlue) barBlue.style.width = '0%';
+            if (barPink) barPink.style.width = '0%';
         }
         
         function updateMonthlyTrendChart(apiData = null) {
@@ -587,9 +581,9 @@
                 // For last year, we could fetch from a different endpoint or use a percentage of this year
                 lastYearData = thisYearData.map(val => Math.max(0, Math.floor(val * 0.8 + Math.random() * 2)));
             } else {
-                // Use simulated data
-                thisYearData = [3, 5, 4, 6, 8, 7, 9, 6, 8, 7, 5, 4];
-                lastYearData = [2, 3, 4, 5, 6, 4, 7, 5, 6, 4, 3, 2];
+                // Default to zeros when no data is uploaded
+                thisYearData = new Array(12).fill(0);
+                lastYearData = new Array(12).fill(0);
             }
             
             // Update the chart with new data
@@ -621,20 +615,21 @@
 
 
         function updateCategoryCounts() {
-            // Use fixed data to match the design
+            // Default to zeros when no data is uploaded
             const categories = {
-                academic: 23,
-                research: 14,
-                leadership: 7
+                academic: 0,
+                research: 0,
+                leadership: 0
             };
             
             document.getElementById('academic-count').textContent = categories.academic;
             document.getElementById('research-count').textContent = categories.research;
             document.getElementById('leadership-count').textContent = categories.leadership;
             
-            // Update total count
+            // Update total count if element is present
             const total = categories.academic + categories.research + categories.leadership;
-            document.getElementById('category-total').textContent = total;
+            const totalEl = document.getElementById('category-total');
+            if (totalEl) totalEl.textContent = total;
             
             // Update category chart
             renderCategoryChart(categories);
@@ -1112,29 +1107,100 @@
             citizenship: new Set(['citizenship', 'global', 'cultural', 'exchange', 'community', 'awareness', 'engagement', 'social', 'responsibility', 'diversity'])
         };
 
+        // Activity keyword sets derived from university activities (static for now)
+        const activityKeywords = {
+            leadership: new Set(['partnership', 'exchange', 'global', 'international', 'collaboration', 'initiative', 'management', 'coordination']),
+            education: new Set(['education', 'curriculum', 'research', 'academic', 'program', 'course', 'study', 'learning', 'teaching', 'scholarship']),
+            emerging: new Set(['emerging', 'innovation', 'new', 'creative', 'pioneering', 'breakthrough', 'advancement', 'development', 'growth', 'future']),
+            regional: new Set(['regional', 'local', 'community', 'area', 'district', 'province', 'coordination', 'management', 'office', 'administration']),
+            citizenship: new Set(['citizenship', 'global', 'cultural', 'exchange', 'community', 'awareness', 'engagement', 'social', 'responsibility', 'diversity'])
+        };
+
+        function setsToArrays(mapOfSets) {
+            const out = {};
+            Object.keys(mapOfSets).forEach(k => {
+                out[k] = Array.from(mapOfSets[k]);
+            });
+            return out;
+        }
+
+        
+
+        // Modal helpers for missing data notice
+        function showAwardMatchMissingDataModal() {
+            const modal = document.getElementById('awardMatchMissingDataModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function hideAwardMatchMissingDataModal() {
+            const modal = document.getElementById('awardMatchMissingDataModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
         // Run AwardMatch analysis
-        function runAwardMatch() {
+        async function runAwardMatch() {
             // Show loading state
             const button = document.querySelector('button[onclick="runAwardMatch()"]');
             const originalText = button.textContent;
             button.disabled = true;
             button.textContent = 'Analyzing...';
 
-            // Simulate analysis delay for better UX
-            setTimeout(() => {
+            try {
                 // Analyze university activities (this would normally come from database)
                 const universityActivities = analyzeUniversityActivities();
-                
-                // Calculate scores for each award
-                const scores = calculateAwardScores(universityActivities);
-                
+
+                // Prepare payload for backend Jaccard computation
+                const payload = {
+                    awardCriteria: setsToArrays(awardCriteria),
+                    activities: setsToArrays(activityKeywords)
+                };
+
+                // File presence guard: check if uploaded data exists before running analysis
+                try {
+                    const statusResp = await fetch('api/award_match_status.php', { method: 'GET' });
+                    if (statusResp.ok) {
+                        const st = await statusResp.json();
+                        if (!st.has_awards || !st.has_records) {
+                            showAwardMatchMissingDataModal();
+                            button.disabled = false;
+                            button.textContent = originalText;
+                            return;
+                        }
+                    }
+                } catch (_) {
+                    // If status check fails, proceed but keep client-side guards below
+                }
+
+                const resp = await fetch('api/award_match.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                let apiResult = null;
+                if (resp.ok) {
+                    apiResult = await resp.json();
+                }
+
+                let scores = {};
+                if (apiResult && apiResult.scores) {
+                    scores = apiResult.scores;
+                } else {
+                    // Fallback to client-side Jaccard if API fails
+                    ['leadership','education','emerging','regional','citizenship'].forEach(cat => {
+                        const sim = calculateJaccardSimilarity(awardCriteria[cat], activityKeywords[cat]);
+                        scores[cat] = Math.round(sim * 100);
+                    });
+                }
+
                 // Update UI with results
                 updateAwardMatchResults(scores, universityActivities);
-                
+            } catch (e) {
+                console.error('AwardMatch error', e);
+            } finally {
                 // Restore button
                 button.disabled = false;
                 button.textContent = originalText;
-            }, 1500);
+            }
         }
 
         // Analyze university activities (simulated data for now)
@@ -1155,57 +1221,7 @@
             };
         }
 
-        // Calculate award scores using Jaccard Similarity
-        function calculateAwardScores(activities) {
-            const scores = {};
-            
-            // Convert activities to keyword sets for each category
-            const activityKeywords = {
-                leadership: new Set(['partnership', 'exchange', 'global', 'international', 'collaboration', 'initiative', 'management', 'coordination']),
-                education: new Set(['education', 'curriculum', 'research', 'academic', 'program', 'course', 'study', 'learning', 'teaching', 'scholarship']),
-                emerging: new Set(['emerging', 'innovation', 'new', 'creative', 'pioneering', 'breakthrough', 'advancement', 'development', 'growth', 'future']),
-                regional: new Set(['regional', 'local', 'community', 'area', 'district', 'province', 'coordination', 'management', 'office', 'administration']),
-                citizenship: new Set(['citizenship', 'global', 'cultural', 'exchange', 'community', 'awareness', 'engagement', 'social', 'responsibility', 'diversity'])
-            };
-
-            // Calculate scores based on activity strengths
-            scores.leadership = Math.min(100, Math.round(
-                (activities.internationalPartnerships * 0.3 + 
-                 activities.studentExchanges * 0.25 + 
-                 activities.globalProjects * 0.25 + 
-                 activities.leadershipPrograms * 0.2) * 2.5
-            ));
-            
-            scores.education = Math.min(100, Math.round(
-                (activities.academicPrograms * 0.4 + 
-                 activities.researchCollaborations * 0.3 + 
-                 activities.internationalConferences * 0.2 + 
-                 activities.studentExchanges * 0.1) * 2.2
-            ));
-            
-            scores.emerging = Math.min(100, Math.round(
-                (activities.globalProjects * 0.3 + 
-                 activities.internationalPartnerships * 0.25 + 
-                 activities.researchCollaborations * 0.25 + 
-                 activities.culturalPrograms * 0.2) * 2.8
-            ));
-            
-            scores.regional = Math.min(100, Math.round(
-                (activities.regionalInitiatives * 0.4 + 
-                 activities.communityEngagement * 0.3 + 
-                 activities.internationalPartnerships * 0.2 + 
-                 activities.culturalPrograms * 0.1) * 2.5
-            ));
-            
-            scores.citizenship = Math.min(100, Math.round(
-                (activities.culturalPrograms * 0.35 + 
-                 activities.communityEngagement * 0.3 + 
-                 activities.studentExchanges * 0.2 + 
-                 activities.globalProjects * 0.15) * 2.6
-            ));
-
-            return scores;
-        }
+        // Legacy heuristic scoring removed; scoring now computed by backend Jaccard or client fallback
 
         // Update AwardMatch results in UI
         function updateAwardMatchResults(scores, activities) {
@@ -1534,7 +1550,7 @@ LILAC Awards - Keyboard Shortcuts:
             <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
-                        <div class="text-2xl font-extrabold text-gray-900" id="academic-count">23</div>
+                        <div class="text-2xl font-extrabold text-gray-900" id="academic-count">0</div>
                         <div class="text-sm text-gray-600">Academic Excellence</div>
                     </div>
                     <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
@@ -1545,7 +1561,7 @@ LILAC Awards - Keyboard Shortcuts:
             <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
-                        <div class="text-2xl font-extrabold text-gray-900" id="research-count">14</div>
+                        <div class="text-2xl font-extrabold text-gray-900" id="research-count">0</div>
                         <div class="text-sm text-gray-600">Research Awards</div>
                     </div>
                     <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -1556,7 +1572,7 @@ LILAC Awards - Keyboard Shortcuts:
             <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
-                        <div class="text-2xl font-extrabold text-gray-900" id="leadership-count">7</div>
+                        <div class="text-2xl font-extrabold text-gray-900" id="leadership-count">0</div>
                         <div class="text-sm text-gray-600">Leadership Awards</div>
                     </div>
                     <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -1930,10 +1946,31 @@ LILAC Awards - Keyboard Shortcuts:
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
-    <!-- Add Award Confirmation Modal -->
-    <div id="addAwardConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <!-- Missing Data Modal -->
+    <div id="awardMatchMissingDataModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" onclick="hideAwardMatchMissingDataModal()">
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full" onclick="event.stopPropagation()">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Action Required</h3>
+                    </div>
+                </div>
+                <div class="p-6 space-y-3">
+                    <p class="text-sm text-gray-700">Please upload both award and record data before running analysis.</p>
+                </div>
+                <div class="p-4 border-t border-gray-200 flex justify-end">
+                    <button onclick="hideAwardMatchMissingDataModal()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <!-- Add Award Confirmation Modal -->
+    <div id="addAwardConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" onclick="this.classList.add('hidden')">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full" onclick="event.stopPropagation()">
                 <div class="p-6 border-b border-gray-200">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold text-gray-900">Confirm Award Details</h3>
@@ -1990,8 +2027,8 @@ LILAC Awards - Keyboard Shortcuts:
     </footer>
 
     <!-- Delete Confirmation Modal -->
-    <div id="deleteConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50">
-        <div class="relative p-8 bg-white w-full max-w-md m-auto flex-col flex rounded-lg shadow-lg">
+    <div id="deleteConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50" onclick="this.classList.add('hidden')">
+        <div class="relative p-8 bg-white w-full max-w-md m-auto flex-col flex rounded-lg shadow-lg" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-semibold text-gray-800">Confirm Deletion</h2>
                 <button id="closeDeleteModalBtn" class="text-gray-400 hover:text-gray-600">
@@ -2012,8 +2049,8 @@ LILAC Awards - Keyboard Shortcuts:
     </div>
 
     <!-- View Award Modal -->
-    <div id="viewAwardModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50">
-        <div class="relative p-8 bg-white w-full max-w-2xl m-auto flex-col flex rounded-lg shadow-lg">
+    <div id="viewAwardModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50" onclick="this.classList.add('hidden')">
+        <div class="relative p-8 bg-white w-full max-w-2xl m-auto flex-col flex rounded-lg shadow-lg" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-semibold text-gray-800 flex items-center gap-2">
                     <svg class="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
@@ -2074,9 +2111,9 @@ LILAC Awards - Keyboard Shortcuts:
     </div>
 
     <!-- Add New Award Modal -->
-    <div id="add-award-modal" class="fixed inset-0 bg-black/50 z-[70] hidden">
+    <div id="add-award-modal" class="fixed inset-0 bg-black/50 z-[70] hidden" onclick="this.classList.add('hidden')">
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg" onclick="event.stopPropagation()">
                 <div class="flex items-center justify-between p-4 border-b">
                     <h3 class="text-lg font-semibold text-gray-900">Add New Award</h3>
                     <button class="text-gray-400 hover:text-gray-600" onclick="closeAddAwardModal()">
@@ -2111,9 +2148,9 @@ LILAC Awards - Keyboard Shortcuts:
     </div>
 
     <!-- Import Data Modal -->
-    <div id="import-data-modal" class="fixed inset-0 bg-black/50 z-[70] hidden">
+    <div id="import-data-modal" class="fixed inset-0 bg-black/50 z-[70] hidden" onclick="this.classList.add('hidden')">
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl" onclick="event.stopPropagation()">
                 <div class="flex items-center justify-between p-4 border-b">
                     <h3 class="text-lg font-semibold text-gray-900">Import Awards Data</h3>
                     <button class="text-gray-400 hover:text-gray-600" onclick="closeImportDataModal()">
@@ -2180,6 +2217,11 @@ LILAC Awards - Keyboard Shortcuts:
         } else {
             renderWhenReady();
         }
+        // Zero Awards Progress counters until data is uploaded
+        (function(){
+            const ids = ['total-awards','academic-count','research-count','leadership-count'];
+            ids.forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '0'; });
+        })();
     });
     
     // Also try on window load
@@ -2237,7 +2279,7 @@ LILAC Awards - Keyboard Shortcuts:
                     labels: ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr"],
                     datasets: [{
                         label: "Income",
-                        data: [5500, 2500, 10000, 6000, 14000, 1500, 7000, 20000],
+                        data: [0, 0, 0, 0, 0, 0, 0, 0],
                         borderColor: gradientStroke,
                         backgroundColor: gradientBkgrd,
                         pointBorderColor: 'rgba(255,255,255,0)',

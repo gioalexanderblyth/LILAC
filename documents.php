@@ -83,6 +83,11 @@
         .nav-text {
             transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
         }
+        .chip-filter{box-shadow:0 0 0 0 rgba(59,130,246,0);transform:translateZ(0)}
+        .chip-filter:hover{box-shadow:0 4px 10px -4px rgba(2,6,23,.12);transform:scale(1.05)}
+        .chip-active{background:#0f172a!important;color:#fff!important}
+        .chip-active:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.6)}
+        .chip-enter{transition:background-color .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease}
     </style>
     <script>
 
@@ -95,7 +100,15 @@
             category: '',
             sort_by: 'upload_date',
             sort_order: 'DESC',
-            view: 'all' // all, my, favorites, sharing, deleted
+            view: 'all', // all, my, favorites, sharing, deleted
+            // Advanced filters
+            file_group: 'all',
+            file_types: [],
+            date_from: '',
+            date_to: '',
+            size_min: '',
+            size_max: '',
+            categories: []
         };
         
         // Track file names to handle duplicates
@@ -149,26 +162,188 @@
             // Function to adjust layout
             function applySidebarLayout(isOpen) {
                 var main = document.getElementById('main-content');
+                var nav = document.querySelector('nav.modern-nav');
                 if (isOpen) {
                     if (main) main.classList.add('ml-64');
+                    if (nav) nav.classList.add('pl-64');
                 } else {
                     if (main) main.classList.remove('ml-64');
+                    if (nav) nav.classList.remove('pl-64');
                 }
             }
 
-            // Desktop-only: start with spacing applied
-            applySidebarLayout(true);
-            
-            // Listen to sidebar state changes
+            // Listen to sidebar state changes only; don't force spacing here
             window.addEventListener('sidebar:state', function (e) {
                 applySidebarLayout(!!(e && e.detail && e.detail.open));
             });
-            
-            // On resize keep spacing applied (desktop-only)
-            window.addEventListener('resize', function () {
-                applySidebarLayout(true);
+
+            // Remove any stale spacing classes before applying state
+            try {
+                var main0 = document.getElementById('main-content');
+                var nav0 = document.querySelector('nav.modern-nav');
+                if (main0) main0.classList.remove('ml-64');
+                if (nav0) nav0.classList.remove('pl-64');
+            } catch(_) {}
+
+            // CSS guard to prevent flash: neutralize margins until initialized
+            try {
+                var guard = document.getElementById('sidebar-guard-style');
+                if (!guard) {
+                    guard = document.createElement('style');
+                    guard.id = 'sidebar-guard-style';
+                    guard.textContent = 'nav.modern-nav{padding-left:0!important} #main-content{margin-left:0!important}';
+                    document.head.appendChild(guard);
+                }
+            } catch(_) {}
+
+            // Apply last known sidebar state on load so spacing matches immediately
+            try {
+                var saved = localStorage.getItem('sidebar_state') || 'closed';
+                applySidebarLayout(saved === 'open');
+                requestAnimationFrame(function(){ applySidebarLayout((localStorage.getItem('sidebar_state') || 'closed') === 'open'); try{document.getElementById('sidebar-guard-style')?.remove();}catch(_){} });
+            } catch (_) {}
+
+            // New: Quick chips behavior
+            document.querySelectorAll('.chip-filter').forEach(function(btn){
+                btn.classList.add('chip-enter');
+                btn.addEventListener('click', function(){
+                    var group = this.getAttribute('data-group') || 'all';
+                    currentFilters.file_group = group;
+                    currentFilters.page = 1;
+                    loadDocuments();
+                    updateActiveFilterChips();
+                    // visual state
+                    document.querySelectorAll('.chip-filter').forEach(function(b){ b.classList.remove('chip-active'); b.setAttribute('aria-pressed','false'); });
+                    this.classList.add('chip-active');
+                    this.setAttribute('aria-pressed','true');
+                    // subtle pop
+                    this.style.transform = 'scale(0.98)';
+                    setTimeout(()=>{ this.style.transform = 'scale(1)'; },120);
+                });
             });
+
+
+
+            // New: Filters panel
+            var filtersTrigger = document.getElementById('filters-trigger');
+            var filtersPanel = document.getElementById('filters-panel');
+            var filtersApply = document.getElementById('filters-apply');
+            var filtersReset = document.getElementById('filters-reset');
+            var filtersClose = document.getElementById('filters-close');
+            if (filtersTrigger && filtersPanel) {
+                filtersTrigger.addEventListener('click', function(){ filtersPanel.classList.toggle('hidden'); });
+                document.addEventListener('click', function(e){
+                    if (!filtersPanel.contains(e.target) && !filtersTrigger.contains(e.target)) { filtersPanel.classList.add('hidden'); }
+                });
+            }
+            if (filtersApply) {
+                filtersApply.addEventListener('click', function(){
+                    // categories from tag chips
+                    var selectedCats = Array.from(document.querySelectorAll('#filter-categories .selected')).map(function(el){ return el.textContent; });
+                    currentFilters.categories = selectedCats;
+                    // file types
+                    var types = [];
+                    document.querySelectorAll('.filter-type:checked').forEach(function(cb){
+                        var vals = (cb.value||'').split('|');
+                        vals.forEach(function(v){ if (v) types.push(v); });
+                    });
+                    currentFilters.file_types = types;
+                    // dates
+                    var df = document.getElementById('filter-date-from');
+                    var dt = document.getElementById('filter-date-to');
+                    currentFilters.date_from = df ? df.value : '';
+                    currentFilters.date_to = dt ? dt.value : '';
+                    currentFilters.page = 1;
+                    loadDocuments();
+                    updateActiveFilterChips();
+                    filtersPanel.classList.add('hidden');
+                });
+            }
+            if (filtersReset) {
+                filtersReset.addEventListener('click', function(){
+                    currentFilters.categories = [];
+                    currentFilters.file_types = [];
+                    currentFilters.date_from = '';
+                    currentFilters.date_to = '';
+                    // clear UI
+                    document.querySelectorAll('.filter-type').forEach(function(cb){ cb.checked = false; });
+                    var df = document.getElementById('filter-date-from'); if (df) df.value = '';
+                    var dt = document.getElementById('filter-date-to'); if (dt) dt.value = '';
+                    updateActiveFilterChips();
+                });
+            }
+            if (filtersClose) { filtersClose.addEventListener('click', function(){ filtersPanel.classList.add('hidden'); }); }
+
+            // Populate category chips inside filters
+            (function renderFilterCategories(){
+                var wrap = document.getElementById('filter-categories');
+                if (!wrap || !Array.isArray(availableCategories)) return;
+                wrap.innerHTML = '';
+                availableCategories.forEach(function(cat){
+                    var b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'px-2 py-1 text-xs rounded-full border hover:bg-gray-50';
+                    b.textContent = cat;
+                    b.addEventListener('click', function(){ b.classList.toggle('selected'); });
+                    wrap.appendChild(b);
+                });
+            })();
         });
+
+        function updateActiveFilterChips(){
+            var container = document.getElementById('active-filter-chips');
+            var badge = document.getElementById('filters-badge');
+            if (!container) return;
+            var chips = [];
+            if (currentFilters.file_group && currentFilters.file_group !== 'all') { chips.push({k:'group', label: currentFilters.file_group}); }
+            (currentFilters.categories||[]).forEach(function(c){ chips.push({k:'category', label:c}); });
+            (currentFilters.file_types||[]).forEach(function(t){ chips.push({k:'type', label:t}); });
+            if (currentFilters.date_from) { chips.push({k:'date_from', label:'from '+currentFilters.date_from}); }
+            if (currentFilters.date_to) { chips.push({k:'date_to', label:'to '+currentFilters.date_to}); }
+
+            container.innerHTML = '';
+            if (chips.length === 0) {
+                container.classList.add('hidden');
+                if (badge) badge.classList.add('hidden');
+                return;
+            }
+            container.classList.remove('hidden');
+            if (badge){ badge.classList.remove('hidden'); badge.textContent = String(chips.length); }
+            chips.forEach(function(ch){
+                var el = document.createElement('button');
+                el.className = 'px-2 py-1 text-xs rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-1';
+                el.innerHTML = '<span>'+ch.label+'</span><span aria-hidden="true">×</span>';
+                el.addEventListener('click', function(){
+                    // remove filter
+                    if (ch.k==='group') { currentFilters.file_group='all'; }
+                    if (ch.k==='category') { currentFilters.categories = currentFilters.categories.filter(function(c){ return c!==ch.label; }); }
+                    if (ch.k==='type') { currentFilters.file_types = currentFilters.file_types.filter(function(t){ return t!==ch.label; }); }
+                    if (ch.k==='date_from') { currentFilters.date_from=''; }
+                    if (ch.k==='date_to') { currentFilters.date_to=''; }
+
+                    currentFilters.page = 1;
+                    loadDocuments();
+                    updateActiveFilterChips();
+                });
+                container.appendChild(el);
+            });
+            // Clear all
+            var clearBtn = document.createElement('button');
+            clearBtn.className = 'px-2 py-1 text-xs rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700';
+            clearBtn.textContent = 'Clear all';
+            clearBtn.addEventListener('click', function(){
+                currentFilters.file_group='all';
+                currentFilters.categories=[];
+                currentFilters.file_types=[];
+                currentFilters.date_from='';
+                currentFilters.date_to='';
+
+                currentFilters.page = 1;
+                loadDocuments();
+                updateActiveFilterChips();
+            });
+            container.appendChild(clearBtn);
+        }
 
         function updateCurrentDate() {
             const now = new Date();
@@ -350,6 +525,19 @@
                 .then(data => {
                     if (data.success) {
                         availableCategories = data.categories;
+                        // Populate filter categories if panel exists
+                        const wrap = document.getElementById('filter-categories');
+                        if (wrap) {
+                            wrap.innerHTML = '';
+                            availableCategories.forEach(function(cat){
+                                const b = document.createElement('button');
+                                b.type = 'button';
+                                b.className = 'px-2 py-1 text-xs rounded-full border hover:bg-gray-50';
+                                b.textContent = cat;
+                                b.addEventListener('click', function(){ b.classList.toggle('selected'); });
+                                wrap.appendChild(b);
+                            });
+                        }
                     }
                 })
                 .catch(error => console.error('Error loading categories:', error));
@@ -374,6 +562,19 @@
             if (currentFilters.category) {
                 params.append('category', currentFilters.category);
             }
+            
+            // Advanced filters
+            if (currentFilters.file_group && currentFilters.file_group !== 'all') {
+                params.append('file_group', currentFilters.file_group);
+            }
+            if (Array.isArray(currentFilters.file_types)) {
+                currentFilters.file_types.forEach(t => params.append('file_type[]', t));
+            }
+            if (Array.isArray(currentFilters.categories)) {
+                currentFilters.categories.forEach(c => params.append('category[]', c));
+            }
+            if (currentFilters.date_from) { params.append('date_from', currentFilters.date_from); }
+            if (currentFilters.date_to) { params.append('date_to', currentFilters.date_to); }
             
             fetch('api/documents.php?' + params.toString())
                 .then(response => response.json())
@@ -1892,19 +2093,119 @@
             });
         }
 
-        async function classifyFileClientSide(file) {
+        function detectCategoryFromText(text) {
             try {
-                const name = (file.name || '').toLowerCase();
-                if (/\b(mou|moa|memorandum|agreement|kuma-mou)\b/i.test(name)) return 'MOUs & MOAs';
-                if (/\b(template|form|admission|application|registration|checklist|request)\b/i.test(name)) return 'Templates';
-                const isImage = /^image\//.test(file.type);
-                if (isImage && file.size < 5 * 1024 * 1024 && window.Tesseract) {
-                    const text = await Tesseract.recognize(file, 'eng').then(r => (r && r.data && r.data.text) ? r.data.text : '').catch(() => '');
-                    if (/\b(MOU|MOA|Memorandum of Understanding|Agreement)\b/i.test(text)) return 'MOUs & MOAs';
-                    if (/\b(Template|Form|Admission|Application|Registration|Checklist|Request)\b/i.test(text)) return 'Templates';
-                }
+                if (!text) return '';
+                if (/\b(MOU|MOA|Memorandum of Understanding|Agreement|Partnership|Renewal|KUMA-MOU)\b/i.test(text)) return 'MOUs & MOAs';
+                if (/\b(Registrar|Enrollment|Transcript|TOR|Certificate|COR|Student\s*Record|GWA|Grades)\b/i.test(text)) return 'Registrar Files';
+                if (/\b(Template|Form|Admission|Application|Registration|Checklist|Request)\b/i.test(text)) return 'Templates';
             } catch(e) {}
             return '';
+        }
+
+        async function classifyFileClientSide(file) {
+            // Returns { category: string, ocr_excerpt: string }
+            const result = { category: '', ocr_excerpt: '' };
+            try {
+                const name = (file.name || '').toLowerCase();
+                if (/\b(mou|moa|memorandum|agreement|kuma-mou)\b/i.test(name)) result.category = 'MOUs & MOAs';
+                if (/\b(template|form|admission|application|registration|checklist|request)\b/i.test(name)) result.category = result.category || 'Templates';
+                if (/\b(registrar|transcript|tor|certificate|cor|gwa|grades|enrollment|student[-_\s]?record)\b/i.test(name)) result.category = result.category || 'Registrar Files';
+
+                const isImage = /^image\//.test(file.type);
+                const isPDF = /pdf$/i.test(file.name) || file.type === 'application/pdf';
+
+                if (window.Tesseract) {
+                    if (isImage && file.size < 6 * 1024 * 1024) {
+                        const txt = await Tesseract.recognize(file, 'eng').then(r => (r && r.data && r.data.text) ? r.data.text : '').catch(() => '');
+                        if (txt) {
+                            result.ocr_excerpt = (txt || '').slice(0, 3000);
+                            const cat = detectCategoryFromText(txt);
+                            if (cat && !result.category) result.category = cat;
+                        }
+                    } else if (isPDF) {
+                        try {
+                            if (!window['pdfjsLib']) { /* pdf.js not available */ }
+                            else {
+                                const buf = await file.arrayBuffer();
+                                const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                                const maxPages = Math.min(2, pdf.numPages);
+                                let aggregate = '';
+                                for (let p = 1; p <= maxPages; p++) {
+                                    const page = await pdf.getPage(p);
+                                    const viewport = page.getViewport({ scale: 1.5 });
+                                    const canvas = document.createElement('canvas');
+                                    const ctx = canvas.getContext('2d');
+                                    canvas.width = viewport.width;
+                                    canvas.height = viewport.height;
+                                    await page.render({ canvasContext: ctx, viewport }).promise;
+                                    const txt = await Tesseract.recognize(canvas, 'eng').then(r => (r && r.data && r.data.text) ? r.data.text : '').catch(() => '');
+                                    if (txt) aggregate += '\n' + txt;
+                                }
+                                if (aggregate) {
+                                    result.ocr_excerpt = aggregate.slice(0, 3000);
+                                    const cat = detectCategoryFromText(aggregate);
+                                    if (cat && !result.category) result.category = cat;
+                                }
+                            }
+                        } catch(e) { /* ignore OCR errors */ }
+                    }
+                }
+            } catch(e) {}
+            return result;
+        }
+
+        // Upload individual file (async to await classification)
+        async function uploadSingleFile(file, index, onSuccess, onError) {
+            // No file size/type restrictions
+            try {
+                const fileName = file.name;
+                const baseFileName = fileName.replace(/\(\d+\)$/,'').trim();
+                const isDuplicate = currentDocuments.some(doc => {
+                    const docFileName = doc.filename || doc.document_name || doc.title || '';
+                    const docBaseFileName = docFileName.replace(/\(\d+\)$/,'').trim();
+                    return docBaseFileName.toLowerCase() === baseFileName.toLowerCase();
+                });
+                if (isDuplicate) {
+                    showNotification(`File "${baseFileName}" already exists (including any versions). Please rename the file or choose a different one.`, 'error');
+                    onError();
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('action','add');
+                formData.append('file', file);
+
+                // Generate non-duplicating document name
+                let documentName = file.name.replace(/\.[^/.]+$/, "");
+                let counter = 1;
+                const originalName = documentName;
+                while (existingFileNames.has(documentName.toLowerCase())) {
+                    documentName = `${originalName} (${counter})`;
+                    counter++;
+                }
+                existingFileNames.add(documentName.toLowerCase());
+                formData.append('document_name', documentName);
+
+                // Run client-side classification with OCR (limited)
+                let classification = { category: '', ocr_excerpt: '' };
+                try { classification = await classifyFileClientSide(file); } catch(e) {}
+                if (classification && classification.category) { formData.append('category', classification.category); }
+                if (classification && classification.ocr_excerpt) { formData.append('ocr_excerpt', classification.ocr_excerpt); }
+
+                const res = await fetch('api/documents.php', { method:'POST', body: formData });
+                const text = await res.text();
+                let data;
+                try { data = JSON.parse(text); } catch(e) { throw new Error('Invalid JSON response from server'); }
+
+                // Add to recent uploads immediately
+                const uploadData = { name: file.name, type: file.name.split('.').pop().toLowerCase(), progress: 100, file: file, fileSize: file.size, uploadDate: new Date().toISOString() };
+                addToRecentUploads(uploadData);
+
+                if (data && data.success) { onSuccess(); } else { onError(); }
+            } catch (error) {
+                onError();
+            }
         }
 
         function showUploadProgressModal(files) {
@@ -3239,20 +3540,18 @@
     </div>
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
-        <div class="flex items-center space-x-4">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
+        <div class="flex items-center space-x-4 pl-16">
             <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
             </button>
             
+            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Documents</h1>
+            
             <a href="dashboard.php" class="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer">
             </a>
-        </div>
-
-        <div class="absolute left-1/2 transform -translate-x-1/2">
-            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Documents</h1>
         </div>
 
         <div class="text-sm flex items-center space-x-4">
@@ -3287,10 +3586,54 @@
                 </button>
             </div>
             
-            <!-- Trash Button (replaces Create) -->
-            <button onclick="showTrashModal()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium text-sm flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                Trash
+            <!-- Filters Dropdown Trigger -->
+            <div class="relative">
+                <button id="filters-trigger" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M8 12h8m-6 8h4"></path></svg>
+                    Filters
+                    <span id="filters-badge" class="hidden ml-1 inline-flex items-center justify-center px-1.5 text-xs rounded-full bg-blue-600 text-white">0</span>
+                </button>
+                <div id="filters-panel" class="hidden absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-[70]">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                            <div id="filter-categories" class="flex flex-wrap gap-2 max-h-28 overflow-y-auto"></div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">File type</label>
+                            <div class="grid grid-cols-2 gap-2 text-sm">
+                                <label class="flex items-center gap-2"><input type="checkbox" class="filter-type" value="pdf"> PDF</label>
+                                <label class="flex items-center gap-2"><input type="checkbox" class="filter-type" value="doc|docx"> Word</label>
+                                <label class="flex items-center gap-2"><input type="checkbox" class="filter-type" value="jpg|jpeg|png"> Images</label>
+                                <label class="flex items-center gap-2"><input type="checkbox" class="filter-type" value="txt"> Text</label>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Date from</label>
+                                <input id="filter-date-from" type="date" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Date to</label>
+                                <input id="filter-date-to" type="date" class="w-full border border-gray-300 rounded-md px-2 py-1 text-sm">
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between pt-2">
+                            <button id="filters-reset" class="text-sm text-gray-600 hover:text-gray-800">Reset</button>
+                            <div class="space-x-2">
+                                <button id="filters-close" class="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">Close</button>
+                                <button id="filters-apply" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">Apply</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Upload Button (replaces Trash) -->
+            <button onclick="showUploadModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0l-4 4m4-4l4 4"/></svg>
+                Upload
             </button>
         </div>
     </nav>
@@ -3299,11 +3642,21 @@
     <?php include 'includes/sidebar.php'; ?>
 
         	<!-- Main Content -->
-	<div id="main-content" class="ml-64 p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
+	<div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
 		<!-- Content Area -->
 		<div class="">
             <!-- Documents Container -->
             <div id="documents-container" class="bg-white bg-opacity-80 backdrop-blur-xl rounded-3xl border border-white border-opacity-30 overflow-hidden shadow-2xl">
+                <!-- Quick Filter Chips -->
+                <div class="px-6 pt-4 pb-2 border-b border-gray-100 flex flex-wrap gap-2" role="group" aria-label="Quick filters">
+                    <button class="chip-filter px-4 py-1.5 text-sm rounded-full border border-gray-200 bg-white/80 text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all" data-group="all" aria-pressed="false">View all</button>
+                    <button class="chip-filter px-4 py-1.5 text-sm rounded-full border border-gray-200 bg-white/80 text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all" data-group="documents" aria-pressed="false">Documents</button>
+                    <button class="chip-filter px-4 py-1.5 text-sm rounded-full border border-gray-200 bg-white/80 text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all" data-group="spreadsheets" aria-pressed="false">Spreadsheets</button>
+                    <button class="chip-filter px-4 py-1.5 text-sm rounded-full border border-gray-200 bg-white/80 text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all" data-group="pdfs" aria-pressed="false">PDFs</button>
+                    <button class="chip-filter px-4 py-1.5 text-sm rounded-full border border-gray-200 bg-white/80 text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-all" data-group="images" aria-pressed="false">Images</button>
+                </div>
+                <!-- Active Filter Chips -->
+                <div id="active-filter-chips" class="px-6 pt-3 pb-1 hidden flex flex-wrap gap-2"></div>
                 <!-- Bulk Actions Bar -->
                 <div id="bulk-actions-bar" class="hidden bg-blue-50 border-b border-blue-200 px-6 py-3 rounded-t-3xl">
                     <div class="flex items-center justify-between">
@@ -3393,15 +3746,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Floating Upload Documents Button Above Footer -->
-    <div class="fixed bottom-20 right-4 z-50">
-        <button id="view-switch-btn" aria-label="Upload Documents" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="showUploadModal()">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-            </svg>
-        </button>
     </div>
 
     <!-- Footer -->

@@ -56,10 +56,22 @@ try {
         if (preg_match('/\b(MOU|MOA|MEMORANDUM OF UNDERSTANDING|AGREEMENT|KUMA-MOU)\b/i', $name)) {
             return 'MOUs & MOAs';
         }
+        // Registrar patterns
+        if (preg_match('/\b(REGISTRAR|TRANSCRIPT|TOR|CERTIFICATE|COR|GWA|GRADES|ENROLLMENT|STUDENT\s*RECORD)\b/i', $name)) {
+            return 'Registrar Files';
+        }
         // Template / Form patterns
         if (preg_match('/\b(TEMPLATE|FORM|FORMS|ADMISSION|APPLICATION|REGISTRATION|CHECKLIST|REQUEST)\b/i', $name)) {
             return 'Templates';
         }
+        return '';
+    }
+
+    function detect_category_from_text($text) {
+        if (!$text) return '';
+        if (preg_match('/\b(MOU|MOA|MEMORANDUM OF UNDERSTANDING|AGREEMENT|PARTNERSHIP|RENEWAL|KUMA-MOU)\b/i', $text)) return 'MOUs & MOAs';
+        if (preg_match('/\b(REGISTRAR|ENROLLMENT|TRANSCRIPT|TOR|CERTIFICATE|COR|STUDENT\s*RECORD|GWA|GRADES)\b/i', $text)) return 'Registrar Files';
+        if (preg_match('/\b(TEMPLATE|FORM|ADMISSION|APPLICATION|REGISTRATION|CHECKLIST|REQUEST)\b/i', $text)) return 'Templates';
         return '';
     }
 
@@ -80,7 +92,7 @@ try {
         $ext = strtolower(pathinfo($safeName, PATHINFO_EXTENSION));
         $allowed = ['pdf','doc','docx','txt','jpg','jpeg','png'];
         if ($ext && !in_array($ext, $allowed, true)) {
-            respond(false, ['message' => 'File type not allowed']);
+            // Still allow saving, but mark as other types
         }
 
         // Unique destination
@@ -98,6 +110,13 @@ try {
         }
         $description = $_POST['description'] ?? '';
 
+        // OCR text (optional excerpt from client)
+        $ocrText = $_POST['ocr_excerpt'] ?? '';
+        if ($category === '' && $ocrText !== '') {
+            $fallback = detect_category_from_text($ocrText);
+            if ($fallback !== '') { $category = $fallback; }
+        }
+
         $now = date('Y-m-d H:i:s');
         $id = $db['auto_id']++;
 
@@ -110,7 +129,8 @@ try {
             'category' => htmlspecialchars($category, ENT_QUOTES, 'UTF-8'),
             'description' => htmlspecialchars($description, ENT_QUOTES, 'UTF-8'),
             'upload_date' => $now,
-            'status' => 'Active'
+            'status' => 'Active',
+            'ocr_text' => $ocrText
         ];
         $db['documents'][] = $record;
         save_db($dbFile, $db);
@@ -122,6 +142,7 @@ try {
         foreach ($db['documents'] as &$doc) {
             $name = ($doc['document_name'] ?? '') . ' ' . ($doc['original_filename'] ?? '');
             $auto = detect_category_from_name($name);
+            if ($auto === '' && !empty($doc['ocr_text'])) { $auto = detect_category_from_text($doc['ocr_text']); }
             if ($auto !== '' && ($doc['category'] ?? '') !== $auto) {
                 $doc['category'] = $auto;
                 $updated++;
@@ -262,17 +283,90 @@ try {
         $sortBy = $_GET['sort_by'] ?? 'upload_date';
         $sortOrder = strtoupper($_GET['sort_order'] ?? 'DESC');
 
+        // Advanced filters
+        $fileGroup = $_GET['file_group'] ?? 'all';
+        $fileTypes = [];
+        if (isset($_GET['file_type']) && is_array($_GET['file_type'])) { $fileTypes = $_GET['file_type']; }
+        $categoriesMulti = (isset($_GET['category']) && is_array($_GET['category'])) ? $_GET['category'] : [];
+        $dateFrom = isset($_GET['date_from']) ? strtotime($_GET['date_from'].' 00:00:00') : 0;
+        $dateTo = isset($_GET['date_to']) ? strtotime($_GET['date_to'].' 23:59:59') : 0;
+        $sizeMin = isset($_GET['size_min']) ? intval($_GET['size_min']) : 0;
+        $sizeMax = isset($_GET['size_max']) ? intval($_GET['size_max']) : 0;
+
         $docs = $db['documents'];
-        if ($category !== '') {
+
+        // Category single (legacy)
+        if ($category !== '' && !is_array($category)) {
             $docs = array_values(array_filter($docs, function ($d) use ($category) {
                 return isset($d['category']) && $d['category'] === $category;
             }));
         }
+        // Category multi
+        if (!empty($categoriesMulti)) {
+            $set = array_flip($categoriesMulti);
+            $docs = array_values(array_filter($docs, function ($d) use ($set) {
+                $cat = $d['category'] ?? '';
+                return $cat !== '' && isset($set[$cat]);
+            }));
+        }
+        // Search (include ocr_text)
         if ($search !== '') {
             $q = mb_strtolower($search);
             $docs = array_values(array_filter($docs, function ($d) use ($q) {
-                $hay = mb_strtolower(($d['document_name'] ?? '') . ' ' . ($d['filename'] ?? '') . ' ' . ($d['description'] ?? ''));
+                $hay = mb_strtolower(($d['document_name'] ?? '') . ' ' . ($d['filename'] ?? '') . ' ' . ($d['description'] ?? '') . ' ' . ($d['ocr_text'] ?? ''));
                 return strpos($hay, $q) !== false;
+            }));
+        }
+        // File group mapping
+        if ($fileGroup !== 'all') {
+            $groupMap = [
+                'documents' => ['doc','docx','txt','rtf'],
+                'spreadsheets' => ['xls','xlsx','csv'],
+                'pdfs' => ['pdf'],
+                'images' => ['jpg','jpeg','png','gif','webp']
+            ];
+            $exts = $groupMap[$fileGroup] ?? [];
+            if (!empty($exts)) {
+                $set = array_flip($exts);
+                $docs = array_values(array_filter($docs, function ($d) use ($set) {
+                    $ext = strtolower(pathinfo($d['filename'] ?? '', PATHINFO_EXTENSION));
+                    return $ext && isset($set[$ext]);
+                }));
+            }
+        }
+        // Explicit file types
+        if (!empty($fileTypes)) {
+            $explicit = [];
+            foreach ($fileTypes as $ft) {
+                $parts = explode('|', (string)$ft);
+                foreach ($parts as $p) {
+                    $p = strtolower(trim($p));
+                    if ($p !== '') { $explicit[$p] = true; }
+                }
+            }
+            if (!empty($explicit)) {
+                $docs = array_values(array_filter($docs, function ($d) use ($explicit) {
+                    $ext = strtolower(pathinfo($d['filename'] ?? '', PATHINFO_EXTENSION));
+                    return $ext && isset($explicit[$ext]);
+                }));
+            }
+        }
+        // Date range
+        if ($dateFrom || $dateTo) {
+            $docs = array_values(array_filter($docs, function ($d) use ($dateFrom, $dateTo) {
+                $ts = isset($d['upload_date']) ? strtotime($d['upload_date']) : 0;
+                if ($dateFrom && $ts < $dateFrom) return false;
+                if ($dateTo && $ts > $dateTo) return false;
+                return true;
+            }));
+        }
+        // Size range
+        if ($sizeMin || $sizeMax) {
+            $docs = array_values(array_filter($docs, function ($d) use ($sizeMin, $sizeMax) {
+                $sz = intval($d['file_size'] ?? 0);
+                if ($sizeMin && $sz < $sizeMin) return false;
+                if ($sizeMax && $sz > $sizeMax) return false;
+                return true;
             }));
         }
         // Sorting

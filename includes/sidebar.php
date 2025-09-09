@@ -1,4 +1,4 @@
-<div id="sidebar" class="sidebar fixed top-0 left-0 h-screen bg-gradient-to-b from-blue-500 to-purple-600 text-white transition-transform duration-300 ease-in-out z-[70] transform flex flex-col shadow-2xl rounded-r-2xl">
+<div id="sidebar" class="sidebar fixed top-0 left-0 h-screen bg-gradient-to-b from-blue-500 to-purple-600 text-white transition-transform duration-300 ease-in-out z-[70] transform -translate-x-full flex flex-col shadow-2xl rounded-r-2xl">
            <div class="h-20 px-6 py-4 flex items-center justify-between">
          <div class="flex items-center justify-center flex-1">
              <img src="img/cpu-logo.png" alt="CPU Logo" class="w-12 h-12 object-contain cursor-pointer hover:scale-105 transition-transform duration-200" onclick="location.reload()"/>
@@ -192,10 +192,16 @@ document.addEventListener('DOMContentLoaded', function () {
   // Apply last known state synchronously from localStorage to avoid flicker
   (function applyLocalSidebarState(){
     try {
-      var localState = localStorage.getItem('sidebar_state');
-      if (localState === 'closed') {
+      var localState = localStorage.getItem('sidebar_state') || 'closed';
+      if (localState === 'open') {
+        sidebar.style.transform = '';
+        sidebar.classList.remove('-translate-x-full');
+        isOpen = true;
+        adjustDashboardLayout(true);
+        dispatchSidebarState(true, 'bootstrap');
+      } else {
+        // default closed
         if (window.innerWidth >= 768) {
-          // On desktop, we keep spacing but hide via transform to match state
           sidebar.style.transform = 'translateX(-100%)';
           isOpen = false;
           adjustDashboardLayout(false);
@@ -204,11 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
           isOpen = false;
           adjustDashboardLayout(false);
         }
-      } else if (localState === 'open') {
-        sidebar.style.transform = '';
-        sidebar.classList.remove('-translate-x-full');
-        isOpen = true;
-        adjustDashboardLayout(true);
+        dispatchSidebarState(false, 'bootstrap');
       }
     } catch(_) {}
   })();
@@ -219,14 +221,14 @@ document.addEventListener('DOMContentLoaded', function () {
       fetch('api/sidebar_state.php')
         .then(function(r){ return r.json(); })
         .then(function(d){
-          var state = (d && d.ok && d.sidebar_state) ? d.sidebar_state : 'open';
+          var state = (d && d.ok && d.sidebar_state) ? d.sidebar_state : 'closed';
           if (window.innerWidth >= 768) {
-            if (state === 'closed') { sidebar.style.transform = 'translateX(-100%)'; isOpen = false; adjustDashboardLayout(false); }
-            else { sidebar.style.transform = ''; isOpen = true; adjustDashboardLayout(true); }
+            if (state === 'open') { sidebar.style.transform = ''; isOpen = true; adjustDashboardLayout(true); }
+            else { sidebar.style.transform = 'translateX(-100%)'; isOpen = false; adjustDashboardLayout(false); }
           } else {
             // Mobile defaults to closed; overlay hidden
-            if (state === 'closed') { sidebar.classList.add('-translate-x-full'); isOpen = false; adjustDashboardLayout(false); }
-            else { sidebar.classList.remove('-translate-x-full'); isOpen = true; adjustDashboardLayout(true); }
+            if (state === 'open') { sidebar.classList.remove('-translate-x-full'); isOpen = true; adjustDashboardLayout(true); }
+            else { sidebar.classList.add('-translate-x-full'); isOpen = false; adjustDashboardLayout(false); }
           }
           try { localStorage.setItem('sidebar_state', state); } catch(e){}
           // Allow transitions after first paint with correct state

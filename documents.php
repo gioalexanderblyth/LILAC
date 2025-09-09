@@ -18,6 +18,7 @@
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
     <style>
+        html{font-size:14px}
         /* Use Inter font from modern-design-system.css */
         /* Font family is now consistent across all pages */
         
@@ -134,6 +135,7 @@
 
         // Initialize documents functionality
         document.addEventListener('DOMContentLoaded', function() {
+            try { document.documentElement.style.fontSize = '14px'; } catch(_) {}
             initializeEventListeners();
 
             // Load initial data
@@ -1547,12 +1549,12 @@
                     </div>
 
                     <div class="px-6 py-5 space-y-5 overflow-y-auto">
-                        <div id="drop-zone" class="border-2 border-dashed rounded-xl p-8 text-center bg-purple-50/50 border-purple-300">
+                        <div id="drop-zone" class="border-2 border-dashed rounded-xl p-8 text-center bg-gray-50 border-gray-300">
                                                          <div class="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center bg-white shadow">
-                                 <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8"/></svg>
+                                 <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8"/></svg>
                              </div>
-                                                          <p class="text-sm font-medium text-purple-700 cursor-pointer" onclick="document.getElementById('single-file-input').click()">Click to Upload</p>
-                             <p class="text-xs text-purple-600">or drag and drop</p>
+                                                          <p class="text-sm font-medium text-gray-800 cursor-pointer" onclick="document.getElementById('single-file-input').click()">Click to Upload</p>
+                             <p class="text-xs text-gray-500">or drag and drop</p>
                              
                              <p class="text-[11px] text-gray-400 mt-1">Supports any kinds of document</p>
                              <input id="single-file-input" type="file" multiple class="hidden" />
@@ -1562,7 +1564,7 @@
                     </div>
 
                     <div class="px-6 pb-6">
-                        <button id="begin-upload-btn" class="w-full bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white py-3 rounded-xl font-semibold disabled:opacity-50" disabled>Upload</button>
+                        <button id="begin-upload-btn" class="w-full bg-gray-800 text-white py-3 rounded-xl font-semibold disabled:opacity-50 hover:bg-gray-900 transition-colors" disabled>Upload</button>
                     </div>
                 </div>
             `;
@@ -1594,7 +1596,7 @@
                              <div class="min-w-0 flex-1">
                                 <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
                                 <div class="mt-1">
-                                                                         <div class="w-[420px] max-w-full h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="progress-bar h-full bg-purple-500 rounded-full transition-all duration-700 ease-out" style="width:${isDone?100:isFailed?0:0}%"></div></div>
+                                                                         <div class="w-[420px] max-w-full h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="progress-bar h-full bg-gray-700 rounded-full transition-all duration-700 ease-out" style="width:${isDone?100:isFailed?0:0}%"></div></div>
                                     <div class="flex items-center gap-2 mt-1 text-xs">
                                         <span class="text-gray-500">${Math.round(file.size/1024)}kb</span>
                                         <span class="text-gray-400">${isUploading? 'Uploading...' : isFailed? '<span class=\'text-red-600\'>Upload Failed</span>' : isDone? '<span class=\'text-green-600\'>Completed</span>' : ''}</span>
@@ -3001,7 +3003,7 @@
                         <p class="text-sm text-gray-500 mt-2">This action cannot be undone.</p>
                     </div>
                     <div class="flex gap-2">
-                        <button id="delete-confirm-btn-${docId}" type="button" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                        <button id="delete-confirm-btn-${docId}" type="button" class="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 active:bg-gray-700 active:text-white transition-colors">
                             Delete
                         </button>
                         <button type="button" onclick="closeDeleteModal()" class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">

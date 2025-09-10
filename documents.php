@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="document-categorizer.js"></script>
     <script>
         if (window['pdfjsLib']) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -15,10 +16,11 @@
     <title>LILAC Documents</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
+    <link rel="stylesheet" href="dashboard-theme.css">
+    <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
     <style>
-        html{font-size:14px}
         /* Use Inter font from modern-design-system.css */
         /* Font family is now consistent across all pages */
         
@@ -67,23 +69,7 @@
         
 
         
-        /* Remove focus ring/box on Documents link */
-        .documents-link:focus,
-        .documents-link:focus-visible,
-        .documents-link:active {
-            outline: none;
-            box-shadow: none;
-            border: none;
-        }
-        
-        /* Smooth transitions */
-        .nav-item {
-            transition: all 0.3s ease-in-out;
-        }
-        
-        .nav-text {
-            transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
-        }
+        /* Document-specific styling (sidebar styling moved to sidebar-enhanced.css) */
         .chip-filter{box-shadow:0 0 0 0 rgba(59,130,246,0);transform:translateZ(0)}
         .chip-filter:hover{box-shadow:0 4px 10px -4px rgba(2,6,23,.12);transform:scale(1.05)}
         .chip-active{background:#0f172a!important;color:#fff!important}
@@ -161,49 +147,8 @@
             // Disable all notifications permanently
             window.suppressNotifications();
             
-            // Function to adjust layout
-            function applySidebarLayout(isOpen) {
-                var main = document.getElementById('main-content');
-                var nav = document.querySelector('nav.modern-nav');
-                if (isOpen) {
-                    if (main) main.classList.add('ml-64');
-                    if (nav) nav.classList.add('pl-64');
-                } else {
-                    if (main) main.classList.remove('ml-64');
-                    if (nav) nav.classList.remove('pl-64');
-                }
-            }
-
-            // Listen to sidebar state changes only; don't force spacing here
-            window.addEventListener('sidebar:state', function (e) {
-                applySidebarLayout(!!(e && e.detail && e.detail.open));
-            });
-
-            // Remove any stale spacing classes before applying state
-            try {
-                var main0 = document.getElementById('main-content');
-                var nav0 = document.querySelector('nav.modern-nav');
-                if (main0) main0.classList.remove('ml-64');
-                if (nav0) nav0.classList.remove('pl-64');
-            } catch(_) {}
-
-            // CSS guard to prevent flash: neutralize margins until initialized
-            try {
-                var guard = document.getElementById('sidebar-guard-style');
-                if (!guard) {
-                    guard = document.createElement('style');
-                    guard.id = 'sidebar-guard-style';
-                    guard.textContent = 'nav.modern-nav{padding-left:0!important} #main-content{margin-left:0!important}';
-                    document.head.appendChild(guard);
-                }
-            } catch(_) {}
-
-            // Apply last known sidebar state on load so spacing matches immediately
-            try {
-                var saved = localStorage.getItem('sidebar_state') || 'closed';
-                applySidebarLayout(saved === 'open');
-                requestAnimationFrame(function(){ applySidebarLayout((localStorage.getItem('sidebar_state') || 'closed') === 'open'); try{document.getElementById('sidebar-guard-style')?.remove();}catch(_){} });
-            } catch (_) {}
+            // Sidebar layout is now handled globally by LILACSidebar
+            // No local sidebar management needed
 
             // New: Quick chips behavior
             document.querySelectorAll('.chip-filter').forEach(function(btn){
@@ -466,7 +411,7 @@
         }
 
         function switchView(view) {
-            console.log('Switching to view:', view);
+            // Switching to view
             
             // Update active view button
             document.querySelectorAll('[data-view]').forEach(btn => {
@@ -479,7 +424,7 @@
             
             // Update view mode based on the selected view
             currentViewMode = view;
-            console.log('Current view mode set to:', currentViewMode);
+            // View mode updated
             
             // Update view type
             currentFilters.viewType = view;
@@ -1315,6 +1260,119 @@
             if (m) m.classList.add('hidden');
         }
 
+        function showRuleManagementModal() {
+            const m = document.getElementById('ruleManagementModal');
+            if (m) {
+                m.classList.remove('hidden');
+                loadRuleCategories();
+            }
+        }
+
+        function hideRuleManagementModal() {
+            const m = document.getElementById('ruleManagementModal');
+            if (m) m.classList.add('hidden');
+        }
+
+        function loadRuleCategories() {
+            const container = document.getElementById('rule-categories-container');
+            if (!container || !window.documentCategorizer) return;
+
+            const categories = window.documentCategorizer.getCategories();
+            let html = '';
+
+            categories.forEach(category => {
+                const rules = window.documentCategorizer.getCategoryRules(category);
+                if (rules) {
+                    html += `
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-lg font-medium text-gray-900">${category}</h4>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm text-gray-500">Priority: ${rules.priority}</span>
+                                    <button onclick="deleteRule('${category}')" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h5 class="text-sm font-medium text-gray-700 mb-2">Keywords</h5>
+                                    <div class="flex flex-wrap gap-1">
+                                        ${rules.keywords.map(keyword => 
+                                            `<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">${keyword}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5 class="text-sm font-medium text-gray-700 mb-2">File Patterns</h5>
+                                    <div class="flex flex-wrap gap-1">
+                                        ${rules.filePatterns.map(pattern => 
+                                            `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">${pattern.source}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            container.innerHTML = html || '<p class="text-gray-500">No rules configured yet.</p>';
+        }
+
+        function addNewRule() {
+            const category = document.getElementById('new-rule-category').value.trim();
+            const priority = parseInt(document.getElementById('new-rule-priority').value);
+            const keywords = document.getElementById('new-rule-keywords').value.split(',').map(k => k.trim()).filter(k => k);
+            const patterns = document.getElementById('new-rule-patterns').value.split(',').map(p => p.trim()).filter(p => p);
+
+            if (!category || keywords.length === 0) {
+                showNotification('Please provide a category name and at least one keyword', 'error');
+                return;
+            }
+
+            if (!window.documentCategorizer) {
+                showNotification('Document categorizer not available', 'error');
+                return;
+            }
+
+            // Convert patterns to regex
+            const filePatterns = patterns.map(pattern => new RegExp(pattern, 'i'));
+
+            // Add the rule
+            window.documentCategorizer.addRule(category, {
+                keywords: keywords,
+                filePatterns: filePatterns,
+                priority: priority
+            });
+
+            // Clear form
+            document.getElementById('new-rule-category').value = '';
+            document.getElementById('new-rule-keywords').value = '';
+            document.getElementById('new-rule-patterns').value = '';
+            document.getElementById('new-rule-priority').value = '5';
+
+            // Reload categories
+            loadRuleCategories();
+            showNotification(`Rule for "${category}" added successfully`, 'success');
+        }
+
+        function deleteRule(category) {
+            if (!confirm(`Are you sure you want to delete the rule for "${category}"?`)) {
+                return;
+            }
+
+            if (!window.documentCategorizer) {
+                showNotification('Document categorizer not available', 'error');
+                return;
+            }
+
+            // Remove the rule (this would need to be implemented in the categorizer)
+            delete window.documentCategorizer.rules[category];
+            
+            // Reload categories
+            loadRuleCategories();
+            showNotification(`Rule for "${category}" deleted successfully`, 'success');
+        }
+
         // File type and icon functions
         function getFileExtension(filename) {
             return filename.split('.').pop().toLowerCase();
@@ -1561,6 +1619,17 @@
                         </div>
 
                         <div id="upload-list" class="space-y-3"></div>
+                        
+                        <!-- Auto-categorization toggle -->
+                        <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="auto-categorize" checked class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                <label for="auto-categorize" class="text-sm font-medium text-gray-700">Auto-categorize documents</label>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                <span id="categorization-status">Ready</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="px-6 pb-6">
@@ -1582,7 +1651,7 @@
                 uploadBtn.disabled = selectedFiles.length === 0;
             }
 
-            function makeRow(file, state) {
+            function makeRow(file, state, category = null) {
                 const id = 'row-' + Date.now();
                 const isUploading = state === 'uploading';
                 const isFailed = state === 'failed';
@@ -1590,13 +1659,26 @@
                 const row = document.createElement('div');
                 row.id = id;
                 row.className = 'bg-gray-50 rounded-xl px-4 py-3';
+                
+                // Category badge HTML
+                const categoryBadge = category ? `
+                    <div class="mt-1">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            📁 ${category}
+                        </span>
+                    </div>
+                ` : '';
+                
                 row.innerHTML = `
                     <div class="flex items-start justify-between">
-                                                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                             <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                            <div class="min-w-0 flex-1">
                                 <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
+                                ${categoryBadge}
                                 <div class="mt-1">
-                                                                         <div class="w-[420px] max-w-full h-1.5 bg-gray-200 rounded-full overflow-hidden"><div class="progress-bar h-full bg-gray-700 rounded-full transition-all duration-700 ease-out" style="width:${isDone?100:isFailed?0:0}%"></div></div>
+                                    <div class="w-[420px] max-w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div class="progress-bar h-full bg-gray-700 rounded-full transition-all duration-700 ease-out" style="width:${isDone?100:isFailed?0:0}%"></div>
+                                    </div>
                                     <div class="flex items-center gap-2 mt-1 text-xs">
                                         <span class="text-gray-500">${Math.round(file.size/1024)}kb</span>
                                         <span class="text-gray-400">${isUploading? 'Uploading...' : isFailed? '<span class=\'text-red-600\'>Upload Failed</span>' : isDone? '<span class=\'text-green-600\'>Completed</span>' : ''}</span>
@@ -1604,13 +1686,13 @@
                                 </div>
                             </div>
                         </div>
-                                                 <div class="flex items-center gap-2 ml-3">
-                             <button class="text-gray-400 hover:text-red-600 transition-colors" title="Delete" data-act="delete">
-                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                 </svg>
-                             </button>
-                         </div>
+                        <div class="flex items-center gap-2 ml-3">
+                            <button class="text-gray-400 hover:text-red-600 transition-colors" title="Delete" data-act="delete">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>`;
                 row.addEventListener('click', (e)=>{
                     const act = e.target.closest('[data-act]')?.getAttribute('data-act');
@@ -1633,21 +1715,64 @@
                 return row;
             }
 
-            function setFiles(files) {
+            async function setFiles(files) {
                 selectedFiles = Array.from(files);
                 resetList();
                 if (selectedFiles.length === 0) return;
-                selectedFiles.forEach((file, index) => {
-                    const row = makeRow(file, 'idle');
-                    list.appendChild(row);
-                    const bar = row.querySelector('.progress-bar');
-                    if (bar) {
-                        bar.style.width = '0%';
-                        requestAnimationFrame(() => {
-                            bar.style.width = '100%';
-                        });
+                
+                const autoCategorize = document.getElementById('auto-categorize')?.checked;
+                const statusElement = document.getElementById('categorization-status');
+                
+                if (autoCategorize && window.documentCategorizer) {
+                    statusElement.textContent = 'Analyzing files...';
+                    
+                    for (let i = 0; i < selectedFiles.length; i++) {
+                        const file = selectedFiles[i];
+                        let category = null;
+                        
+                        try {
+                            // Extract content and categorize
+                            const content = await window.documentCategorizer.extractContent(file);
+                            const result = await window.documentCategorizer.categorizeDocument(file, content);
+                            category = result.category;
+                            
+                            // Store category with file for later use
+                            file._category = category;
+                            file._confidence = result.confidence;
+                        } catch (error) {
+                            console.warn('Failed to categorize file:', file.name, error);
+                        }
+                        
+                        const row = makeRow(file, 'idle', category);
+                        list.appendChild(row);
+                        const bar = row.querySelector('.progress-bar');
+                        if (bar) {
+                            bar.style.width = '0%';
+                            requestAnimationFrame(() => {
+                                bar.style.width = '100%';
+                            });
+                        }
+                        
+                        // Update status
+                        statusElement.textContent = `Analyzed ${i + 1}/${selectedFiles.length} files`;
                     }
-                });
+                    
+                    statusElement.textContent = 'Analysis complete';
+                } else {
+                    // No categorization, just add files normally
+                    selectedFiles.forEach((file, index) => {
+                        const row = makeRow(file, 'idle');
+                        list.appendChild(row);
+                        const bar = row.querySelector('.progress-bar');
+                        if (bar) {
+                            bar.style.width = '0%';
+                            requestAnimationFrame(() => {
+                                bar.style.width = '100%';
+                            });
+                        }
+                    });
+                }
+                
                 uploadBtn.disabled = false;
             }
 
@@ -2189,11 +2314,26 @@
                 existingFileNames.add(documentName.toLowerCase());
                 formData.append('document_name', documentName);
 
-                // Run client-side classification with OCR (limited)
-                let classification = { category: '', ocr_excerpt: '' };
-                try { classification = await classifyFileClientSide(file); } catch(e) {}
-                if (classification && classification.category) { formData.append('category', classification.category); }
-                if (classification && classification.ocr_excerpt) { formData.append('ocr_excerpt', classification.ocr_excerpt); }
+                // Use the new document categorizer
+                let category = file._category || '';
+                let confidence = file._confidence || 0;
+                
+                // If no category was determined during file selection, try to categorize now
+                if (!category && window.documentCategorizer) {
+                    try {
+                        const content = await window.documentCategorizer.extractContent(file);
+                        const result = await window.documentCategorizer.categorizeDocument(file, content);
+                        category = result.category;
+                        confidence = result.confidence;
+                    } catch (e) {
+                        console.warn('Failed to categorize file during upload:', e);
+                    }
+                }
+                
+                if (category) {
+                    formData.append('category', category);
+                    formData.append('category_confidence', confidence.toString());
+                }
 
                 const res = await fetch('api/documents.php', { method:'POST', body: formData });
                 const text = await res.text();
@@ -3632,11 +3772,21 @@
                 </div>
             </div>
             
-            <!-- Upload Button (replaces Trash) -->
-            <button onclick="showUploadModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0l-4 4m4-4l4 4"/></svg>
-                Upload
-            </button>
+            <!-- Action Buttons -->
+            <div class="flex gap-2">
+                <button onclick="showUploadModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0l-4 4m4-4l4 4"/></svg>
+                    Upload
+                </button>
+                <button onclick="showTrashModal()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Trash
+                </button>
+                <button onclick="showRuleManagementModal()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Rules
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -3750,6 +3900,54 @@
         </div>
     </div>
 
+    <!-- Rule Management Modal -->
+    <div id="ruleManagementModal" class="fixed inset-0 bg-black bg-opacity-50 z-[70] hidden" onclick="hideRuleManagementModal()">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <h3 class="text-xl font-semibold text-gray-900">Document Categorization Rules</h3>
+                    <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300" onclick="hideRuleManagementModal()">Close</button>
+                </div>
+                <div class="p-6 max-h-[70vh] overflow-y-auto">
+                    <div class="space-y-6">
+                        <!-- Rule Categories -->
+                        <div id="rule-categories-container">
+                            <!-- Categories will be loaded here -->
+                        </div>
+                        
+                        <!-- Add New Rule Section -->
+                        <div class="border-t pt-6">
+                            <h4 class="text-lg font-medium text-gray-900 mb-4">Add New Rule</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                                    <input type="text" id="new-rule-category" placeholder="e.g., Research Papers" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Priority (1-10)</label>
+                                    <input type="number" id="new-rule-priority" min="1" max="10" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Keywords (comma-separated)</label>
+                                    <input type="text" id="new-rule-keywords" placeholder="e.g., research, study, analysis, paper" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">File Name Patterns (comma-separated)</label>
+                                    <input type="text" id="new-rule-patterns" placeholder="e.g., research, study, analysis" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <button onclick="addNewRule()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                                        Add Rule
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
@@ -3757,15 +3955,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Hamburger button toggles sidebar
-            var hamburger = document.getElementById('hamburger-toggle');
-            if (hamburger) {
-                hamburger.addEventListener('click', function() {
-                    try {
-                        window.dispatchEvent(new CustomEvent('sidebar:toggle'));
-                    } catch (e) {}
-                });
-            }
+            // Hamburger button is now handled globally by LILACSidebar
 
             // Responsive floating button on scroll
             let lastScrollTop = 0;
@@ -3791,17 +3981,7 @@
             });
         });
         
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            if (!sidebar) return;
-            // Toggle hidden/visible by translating X
-            sidebar.classList.toggle('-translate-x-full');
-            // Adjust navbar left padding and main content margin to reclaim space
-            const nav = document.querySelector('nav.modern-nav');
-            if (nav) nav.classList.toggle('pl-64');
-            const mainContainer = document.getElementById('main-content');
-            if (mainContainer) mainContainer.classList.toggle('ml-64');
-        }
+        // toggleSidebar function is now handled globally by LILACSidebar
     </script>
 
 </body>

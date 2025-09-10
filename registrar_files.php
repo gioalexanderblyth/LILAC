@@ -7,6 +7,8 @@
     <title>LILAC Registrar Files</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
+    <link rel="stylesheet" href="dashboard-theme.css">
+    <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
     <script>
@@ -685,7 +687,7 @@
 <body class="bg-gray-50">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
         <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -707,18 +709,37 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        var hamburger = document.getElementById('hamburger-toggle');
-        if (hamburger) {
-            hamburger.addEventListener('click', function() {
-                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-            });
+        // Hamburger and desktop toggle buttons are now handled globally by LILACSidebar
+    
+    // toggleSidebar function is now handled globally by LILACSidebar
+    function toggleSidebar_DISABLED() {
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        if (!sidebar) return;
+        
+        // Toggle hidden/visible by translating X
+        sidebar.classList.toggle('-translate-x-full');
+        
+        // Toggle backdrop on mobile
+        if (backdrop && window.innerWidth < 1024) {
+            backdrop.classList.toggle('hidden');
         }
-        var desktopToggle = document.getElementById('desktop-menu-toggle');
-        if (desktopToggle) {
-            desktopToggle.addEventListener('click', function() {
-                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-            });
+        
+        // On mobile, adjust main content margin
+        const mainContainer = document.getElementById('main-content');
+        if (mainContainer) {
+            // Only adjust margin on mobile (when sidebar is hidden by default)
+            if (window.innerWidth < 1024) { // lg breakpoint
+                mainContainer.classList.toggle('ml-0');
+            }
         }
+        
+        // Adjust navbar left padding on desktop
+        const nav = document.querySelector('nav.modern-nav');
+        if (nav && window.innerWidth >= 1024) { // lg breakpoint
+            nav.classList.toggle('pl-64');
+        }
+    }
 
         // Responsive floating button on scroll
         let lastScrollTop = 0;
@@ -757,26 +778,11 @@
     </script>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 p-4 pt-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-all duration-300 ease-in-out">
-        <!-- Header Section -->
-        <div class="mb-6">
-            <div class="relative overflow-hidden bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white rounded-2xl p-4 shadow-xl">
-                <div class="absolute inset-0 bg-black opacity-10"></div>
-                <div class="absolute -top-2 -right-2 w-16 h-16 bg-white opacity-10 rounded-full"></div>
-                <div class="absolute -bottom-4 -left-4 w-20 h-20 bg-white opacity-5 rounded-full"></div>
-                <div class="relative z-10">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h1 class="text-3xl font-black mb-2 bg-gradient-to-r from-white to-red-100 bg-clip-text text-transparent">
-                                Registrar Center
-                            </h1>
-                            <p class="text-red-100 text-base font-medium">Upload • Archive • Manage</p>
-                        </div>
-                        <div class="hidden md:block">
-                            <div class="w-16 h-16 bg-gradient-to-br from-white to-red-200 rounded-full opacity-20 animate-pulse"></div>
-                        </div>
-                    </div>
-                </div>
+    <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
+        <!-- Header Actions Only -->
+        <div class="mb-4">
+            <div class="flex items-center justify-end">
+                <button id="upload-registrar-header-btn" class="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm" onclick="showRegistrarUploadModal()">Upload</button>
             </div>
         </div>
 
@@ -858,7 +864,7 @@
 
         <!-- Files Grid -->
         <div class="bg-white rounded-lg shadow">
-            <div class="p-6 border-b border-gray-200">
+            <div class="p-6 border-b border-gray-200 flex items-center justify-between">
                 <h2 class="text-xl font-semibold text-gray-900">Your Registrar Files</h2>
             </div>
             <div class="p-6">
@@ -872,14 +878,7 @@
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
-    <!-- Floating Upload Registrar File Button Above Footer -->
-    <div class="fixed bottom-20 right-4 z-50">
-        <button id="view-switch-btn" aria-label="Upload Registrar File" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="showRegistrarUploadModal()">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-            </svg>
-        </button>
-    </div>
+    
 
     <!-- Footer -->
     <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">

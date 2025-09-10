@@ -7,6 +7,8 @@
     <title>LILAC Awards</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
+    <link rel="stylesheet" href="dashboard-theme.css">
+    <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
@@ -529,7 +531,7 @@
                     }
                 })
                 .catch(error => {
-                    console.log('Using simulated monthly trend data');
+                    // Using simulated monthly trend data
                     // Fallback to simulated data
                     updateMonthlyTrendChart();
                 })
@@ -539,7 +541,7 @@
                         loadingElement.classList.add('hidden');
                     }
                 });
-                }
+        }
         
         // Awards Breakdown donut updater (zero by default)
         function updateAwardsDonutForPeriod(period) {
@@ -1469,37 +1471,18 @@ LILAC Awards - Keyboard Shortcuts:
 <body class="bg-gray-50">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] bg-white border-b border-gray-200 p-4 h-14 flex items-center relative">
-        <!-- Left Side - Menu Buttons -->
-        <div class="flex items-center space-x-4">
-            <button id="menu-toggle" onclick="openSidebar()" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700" title="Open Sidebar">
-                <svg id="menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-            </button>
-            <button id="desktop-menu-toggle" onclick="openSidebar()" class="hidden md:flex items-center p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700" title="Open sidebar">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
+        <div class="flex items-center space-x-4 pl-16">
+            <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
             </button>
-        </div>
-        
-        <!-- Center - Title -->
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div class="text-center text-gray-900">
-                <div class="text-lg font-bold">Awards Progress</div>
-            </div>
-        </div>
-        
-        <!-- Right Side - Date and Actions -->
-        <div class="flex items-center space-x-4 ml-auto">
-            <div class="flex items-center space-x-2 text-gray-700">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                </svg>
-                <span id="current-date" class="text-sm"></span>
-            </div>
             
+            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Awards Progress</h1>
+            
+            <a href="dashboard.php" class="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer">
+            </a>
         </div>
     </nav>
 
@@ -1509,7 +1492,7 @@ LILAC Awards - Keyboard Shortcuts:
     <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-0 md:ml-64 p-4 pt-0 min-h-screen bg-white transition-all duration-300 ease-in-out">
+    <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
 
         
 
@@ -1527,7 +1510,9 @@ LILAC Awards - Keyboard Shortcuts:
                             Award Match Analysis
                         </button>
                     </nav>
-                    
+                    <div class="flex items-center gap-2">
+                        <button id="add-award-btn" aria-label="Upload" class="px-3 py-1.5 bg-purple-600 text-white rounded-md shadow hover:bg-purple-700 transition-colors text-sm" onclick="showAddAwardModal()">Upload</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2013,13 +1998,6 @@ LILAC Awards - Keyboard Shortcuts:
 
 
     <!-- Floating Add Award Button Above Footer -->
-    <div class="fixed bottom-20 right-4 z-50">
-        <button id="view-switch-btn" aria-label="Add Award" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="showAddAwardModal()">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
-            </svg>
-        </button>
-    </div>
 
     <!-- Footer -->
     <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
@@ -2232,7 +2210,7 @@ LILAC Awards - Keyboard Shortcuts:
     });
 
     function renderMonthlyTrendChart() {
-        console.log('renderMonthlyTrendChart called');
+        // Rendering monthly trend chart
         const canvasEl = document.getElementById('monthlyTrendChart');
         if (!canvasEl) {
             createFallbackChart();
@@ -2402,194 +2380,16 @@ LILAC Awards - Keyboard Shortcuts:
                 // Ctrl/Cmd + B to toggle sidebar
                 if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
                     e.preventDefault();
-                    toggleMenu();
-                }
-            });
-    </script>
-
-    <script>
-        // Sidebar state management
-        let sidebarOpen = window.innerWidth >= 768; // Default open on desktop
-        
-        // Sidebar toggle function
-        function toggleMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('menu-overlay');
-            const mainContent = document.getElementById('main-content');
-            
-            if (sidebar && overlay && mainContent) {
-                const isHidden = sidebar.classList.contains('-translate-x-full');
-                
-                if (isHidden) {
-                    // Show sidebar
-                    openSidebar();
-                } else {
-                    // Hide sidebar
-                    closeSidebar();
-                }
-            }
-        }
-
-        // Function to close sidebar
-        function closeSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('menu-overlay');
-            const mainContent = document.getElementById('main-content');
-            const menuIcon = document.getElementById('menu-icon');
-            
-            if (sidebar && overlay && mainContent) {
-                // Force off-canvas state
-                sidebar.classList.add('-translate-x-full');
-                sidebar.style.transform = 'translateX(-100%)';
-                overlay.classList.add('hidden');
-                mainContent.classList.remove('ml-64', 'sidebar-open');
-                mainContent.classList.add('ml-0', 'sidebar-closed');
-                sidebarOpen = false;
-                
-                // Update menu icon
-                if (menuIcon) {
-                    menuIcon.style.transform = 'rotate(0deg)';
-                }
-                
-                // Resize charts after sidebar change
-                resizeChartsAfterSidebarChange();
-            }
-        }
-
-        // Function to open sidebar
-        function openSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('menu-overlay');
-            const mainContent = document.getElementById('main-content');
-            const menuIcon = document.getElementById('menu-icon');
-            
-            if (sidebar && overlay && mainContent) {
-                // Force visible state
-                sidebar.classList.remove('-translate-x-full');
-                sidebar.style.transform = '';
-                overlay.classList.remove('hidden');
-                mainContent.classList.remove('ml-0', 'sidebar-closed');
-                mainContent.classList.add('ml-64', 'sidebar-open');
-                sidebarOpen = true;
-                
-                // Update menu icon
-                if (menuIcon) {
-                    menuIcon.style.transform = 'rotate(90deg)';
-                }
-                
-                // Resize charts after sidebar change
-                resizeChartsAfterSidebarChange();
-            }
-        }
-
-        // Function to force chart resizing after sidebar state change
-        function resizeChartsAfterSidebarChange() {
-            setTimeout(() => {
-                if (window.monthlyTrendChart && typeof Chart !== 'undefined') {
-                    window.monthlyTrendChart.resize();
-                }
-                if (window.categoryChart && typeof Chart !== 'undefined') {
-                    window.categoryChart.resize();
-                }
-                
-                // Force re-render of category chart to ensure proper sizing
-                if (window.categoryChart && typeof Chart !== 'undefined') {
-                    const ctx = document.getElementById('awardsCategoryChart');
-                    if (ctx) {
-                        const rect = ctx.getBoundingClientRect();
-                        ctx.width = rect.width;
-                        ctx.height = rect.height;
-                        window.categoryChart.resize();
-                    }
-                }
-            }, 350); // Wait for CSS transition to complete
-        }
-
-        // Setup sidebar functionality when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            const menuToggle = document.getElementById('menu-toggle');
-            const overlay = document.getElementById('menu-overlay');
-            
-            if (menuToggle) {
-                menuToggle.addEventListener('click', toggleMenu);
-            }
-            
-            if (overlay) {
-                overlay.addEventListener('click', closeSidebar);
-            }
-
-            // Responsive floating button on scroll
-            let lastScrollTop = 0;
-            const floatingBtn = document.getElementById('view-switch-btn');
-            const floatingBtnContainer = floatingBtn?.parentElement;
-            
-            window.addEventListener('scroll', function() {
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                
-                if (floatingBtnContainer) {
-                    if (scrollTop > lastScrollTop && scrollTop > 100) {
-                        // Scrolling down - move button up (current position above footer)
-                        floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
-                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                    if (window.toggleSidebar) {
+                        window.toggleSidebar();
                     } else {
-                        // Scrolling up - move button down (old position at bottom)
-                        floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
-                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
-                    }
-                }
-                
-                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-            });
-
-            // Listen for sidebar toggle events from other components
-            window.addEventListener('sidebar:toggle', function() {
-                if (sidebarOpen) {
-                    closeSidebar();
-                } else {
-                    openSidebar();
-                }
-            });
-
-            // Initialize state per viewport
-            if (window.innerWidth >= 768) {
-                openSidebar();
-            } else {
-                closeSidebar();
-            }
-
-            // Handle window resize
-            window.addEventListener('resize', function() {
-                if (window.innerWidth >= 768) {
-                    // Desktop: ensure sidebar is visible and content is properly positioned
-                    if (!sidebarOpen) {
-                        const mainContent = document.getElementById('main-content');
-                        if (mainContent) {
-                            mainContent.classList.remove('ml-0', 'sidebar-closed');
-                            mainContent.classList.add('ml-64', 'sidebar-open');
-                        }
-                    }
-                } else {
-                    // Mobile: ensure sidebar is hidden and content takes full width
-                    if (sidebarOpen) {
-                        closeSidebar();
+                        try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (_) {}
                     }
                 }
             });
-
-            // Initialize sidebar state based on screen size
-            if (window.innerWidth < 768) {
-                closeSidebar();
-            } else {
-                // Desktop: ensure proper initial state
-                const mainContent = document.getElementById('main-content');
-                if (mainContent) {
-                    mainContent.classList.remove('sidebar-closed');
-                    mainContent.classList.add('sidebar-open');
-                }
-            }
-            
-        });
     </script>
+
+    
 
     <script>
         function showAddAwardModal(){ openAddAwardModal(); }

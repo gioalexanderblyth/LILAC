@@ -7,6 +7,8 @@
     <title>MOUs & MOAs</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
+    <link rel="stylesheet" href="dashboard-theme.css">
+    <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -903,7 +905,7 @@
 <body class="bg-gray-50">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
         <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -925,18 +927,38 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        var hamburger = document.getElementById('hamburger-toggle');
-        if (hamburger) {
-            hamburger.addEventListener('click', function() {
-                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-            });
+        // Hamburger and desktop toggle buttons are now handled globally by LILACSidebar
+    });
+    
+    // toggleSidebar function is now handled globally by LILACSidebar
+    function toggleSidebar_DISABLED() {
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        if (!sidebar) return;
+        
+        // Toggle hidden/visible by translating X
+        sidebar.classList.toggle('-translate-x-full');
+        
+        // Toggle backdrop on mobile
+        if (backdrop && window.innerWidth < 1024) {
+            backdrop.classList.toggle('hidden');
         }
-        var desktopToggle = document.getElementById('desktop-menu-toggle');
-        if (desktopToggle) {
-            desktopToggle.addEventListener('click', function() {
-                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-            });
+        
+        // On mobile, adjust main content margin
+        const mainContainer = document.getElementById('main-content');
+        if (mainContainer) {
+            // Only adjust margin on mobile (when sidebar is hidden by default)
+            if (window.innerWidth < 1024) { // lg breakpoint
+                mainContainer.classList.toggle('ml-0');
+            }
         }
+        
+        // Adjust navbar left padding on desktop
+        const nav = document.querySelector('nav.modern-nav');
+        if (nav && window.innerWidth >= 1024) { // lg breakpoint
+            nav.classList.toggle('pl-64');
+        }
+    }
 
         // Responsive floating button on scroll
         let lastScrollTop = 0;
@@ -975,26 +997,11 @@
     </script>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 p-4 pt-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-all duration-300 ease-in-out text-sm">
+    <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out text-sm">
         <!-- Header Section -->
         <div class="mb-4">
-            <div class="relative overflow-hidden bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white rounded-xl p-3.5 shadow-lg">
-                <div class="absolute inset-0 bg-black opacity-10"></div>
-                <div class="absolute -top-2 -right-2 w-16 h-16 bg-white opacity-10 rounded-full"></div>
-                <div class="absolute -bottom-4 -left-4 w-20 h-20 bg-white opacity-5 rounded-full"></div>
-                <div class="relative z-10">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h1 class="text-2xl font-extrabold mb-1 bg-gradient-to-r from-white to-purple-100 bg-clip-text text-transparent">
-                                Partnership Center
-                            </h1>
-                            <p class="text-purple-100 text-sm font-medium">MOUs • MOAs • Partnerships</p>
-                        </div>
-                        <div class="hidden md:block">
-                            <div class="w-16 h-16 bg-gradient-to-br from-white to-purple-200 rounded-full opacity-20 animate-pulse"></div>
-                        </div>
-                    </div>
-                </div>
+            <div class="flex items-center justify-end">
+                <button id="create-mou-header-btn" class="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm" onclick="openCreateMOUModal()">Upload</button>
             </div>
         </div>
 
@@ -1018,156 +1025,75 @@
         <div id="expiration-alerts"></div>
 
 
-        <!-- Enhanced Search and Filter Section -->
-        <div class="mb-8">
-            <div class="group relative">
-                <div class="absolute -inset-0.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-                <div class="relative bg-white bg-opacity-90 backdrop-blur-xl rounded-2xl p-5 shadow-xl border border-white border-opacity-40">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h2 class="text-xl font-extrabold text-gray-800 bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                                Search & Filter MOUs
-                            </h2>
-                            <p class="text-gray-600 text-xs mt-1">Find and organize your partnership agreements</p>
-                        </div>
-                        <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center shadow-md">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-
-                    <!-- Search Bar -->
-                    <div class="mb-4">
-                            <div class="relative group">
-                                <div class="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-                                <svg class="h-6 w-6 text-cyan-500 group-focus-within:text-cyan-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                    </svg>
-                                </div>
-                            <input type="text" id="search-mous" placeholder="Search MOUs by organization, type, description, or any keyword..."
-                                   class="w-full pl-14 pr-10 py-3.5 bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-xl focus:border-cyan-500 focus:bg-white focus:ring-0 text-gray-900 placeholder-gray-500 transition-all duration-300">
-
-                        </div>
-                    </div>
-
-                    <!-- Filter Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                        <!-- Status Filter -->
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Status</label>
-                            <div class="relative">
-                                <select id="status-filter" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-cyan-500 focus:ring-0 text-gray-900 transition-all duration-300 appearance-none cursor-pointer text-xs">
-                                <option value="all">All Statuses</option>
-                                    <option value="Active">🟢 Active</option>
-                                    <option value="Expired">🔴 Expired</option>
-                                    <option value="Pending">🟡 Pending</option>
-                            </select>
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Type Filter -->
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Agreement Type</label>
-                            <div class="relative">
-                                <select id="type-filter" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-cyan-500 focus:ring-0 text-gray-900 transition-all duration-300 appearance-none cursor-pointer text-xs">
-                                    <option value="all">All Types</option>
-                                    <optgroup label="📚 Academic">
-                                        <option value="MOU-Academic">Academic Partnership</option>
-                                        <option value="Student-Exchange">Student Exchange</option>
-                                        <option value="Research-Collaboration">Research</option>
-                                    </optgroup>
-                                    <optgroup label="🌍 International">
-                                        <option value="International-MOU">International MOU</option>
-                                        <option value="Study-Abroad">Study Abroad</option>
-                                    </optgroup>
-                                    <optgroup label="🏭 Industry">
-                                        <option value="Industry-Partnership">Industry Partnership</option>
-                                        <option value="Internship-Agreement">Internship</option>
-                                    </optgroup>
-                                    <optgroup label="📝 General">
-                                        <option value="MOU">General MOU</option>
-                                        <option value="MOA">General MOA</option>
-                                    </optgroup>
-                                </select>
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Date Range Filter -->
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Date Range</label>
-                            <div class="relative">
-                                <select id="date-filter" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-cyan-500 focus:ring-0 text-gray-900 transition-all duration-300 appearance-none cursor-pointer text-xs">
-                                    <option value="all">All Dates</option>
-                                    <option value="this-year">📅 This Year</option>
-                                    <option value="last-year">📅 Last Year</option>
-                                    <option value="expiring-soon">⚠️ Expiring Soon</option>
-                                    <option value="expired">❌ Expired</option>
-                                </select>
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Sort Options -->
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Sort By</label>
-                            <div class="relative">
-                                <select id="sort-filter" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-cyan-500 focus:ring-0 text-gray-900 transition-all duration-300 appearance-none cursor-pointer text-xs">
-                                    <option value="date-desc">📅 Newest First</option>
-                                    <option value="date-asc">📅 Oldest First</option>
-                                    <option value="name-asc">🔤 A to Z</option>
-                                    <option value="name-desc">🔤 Z to A</option>
-                                    <option value="expiry-asc">⏰ Expiring Soon</option>
-                                </select>
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
+        <!-- Balanced Search + Filters -->
+        <div class="mb-4">
+            <div class="bg-white rounded-lg border border-gray-200 p-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 relative">
+                        <input type="text" id="search-mous" placeholder="Search MOUs..." class="w-64 md:w-96 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:border-cyan-500 focus:ring-0 text-gray-900 placeholder-gray-500">
+                        <div class="relative">
+                            <button id="filter-toggle" class="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50" onclick="toggleFiltersPanel(event)">Filter</button>
+                            <div id="filters-panel" class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-md shadow-lg p-3 hidden z-20">
+                                <div class="space-y-2">
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-700 mb-1">Status</label>
+                                        <select id="status-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
+                                            <option value="all">All Statuses</option>
+                                            <option value="Active">Active</option>
+                                            <option value="Expired">Expired</option>
+                                            <option value="Pending">Pending</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-700 mb-1">Agreement Type</label>
+                                        <select id="type-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
+                                            <option value="all">All Types</option>
+                                            <option value="MOU-Academic">Academic Partnership</option>
+                                            <option value="Student-Exchange">Student Exchange</option>
+                                            <option value="Research-Collaboration">Research</option>
+                                            <option value="International-MOU">International MOU</option>
+                                            <option value="Study-Abroad">Study Abroad</option>
+                                            <option value="Industry-Partnership">Industry Partnership</option>
+                                            <option value="Internship-Agreement">Internship</option>
+                                            <option value="MOU">General MOU</option>
+                                            <option value="MOA">General MOA</option>
+                                        </select>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-gray-700 mb-1">Date Range</label>
+                                            <select id="date-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
+                                                <option value="all">All Dates</option>
+                                                <option value="this-year">This Year</option>
+                                                <option value="last-year">Last Year</option>
+                                                <option value="expiring-soon">Expiring Soon</option>
+                                                <option value="expired">Expired</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-gray-700 mb-1">Sort By</label>
+                                            <select id="sort-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
+                                                <option value="date-desc">Newest First</option>
+                                                <option value="date-asc">Oldest First</option>
+                                                <option value="name-asc">A to Z</option>
+                                                <option value="name-desc">Z to A</option>
+                                                <option value="expiry-asc">Expiring Soon</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-1">
+                                        <button id="clear-filters" class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs hidden" onclick="clearAllFilters()">Clear Filters</button>
+                                        <button class="px-2.5 py-1.5 bg-black text-white rounded-md text-xs" onclick="toggleFiltersPanel(event)">Close</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Action Buttons -->
-                    <div class="flex flex-wrap gap-3 justify-between items-center">
-                        <div class="flex flex-wrap gap-3">
-                            <button id="clear-filters" onclick="clearAllFilters()" 
-                                    class="group flex items-center space-x-2 px-5 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
-                                <svg class="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                                <span>Clear Filters</span>
-                            </button>
-                            
-                            <button id="export-results" onclick="exportResults()" 
-                                    class="group flex items-center space-x-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg">
-                                <svg class="w-4 h-4 group-hover:translate-y-[-2px] transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                </svg>
-                                <span>Export Results</span>
-                            </button>
-                        </div>
-
-                        <div class="flex items-center space-x-4 text-sm text-gray-600">
-                            <div class="flex items-center space-x-2">
-                                <div class="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></div>
-                                <span class="font-semibold">Results: <span id="results-count">0</span></span>
-                            </div>
-                        </div>
+                    <div class="flex items-center gap-2">
+                        <button id="export-results" aria-label="Export" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Export</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1185,11 +1111,7 @@
                             <h2 class="text-xl font-extrabold text-gray-800">Your MOUs & MOAs</h2>
                             <p class="text-gray-600 text-xs mt-1">Manage your partnership agreements</p>
                         </div>
-                        <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center shadow-md">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                            </svg>
-                        </div>
+                        
                     </div>
                 </div>
                 <div class="p-8">
@@ -1363,14 +1285,7 @@
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
-    <!-- Floating Create MOU Button Above Footer -->
-    <div class="fixed bottom-20 right-4 z-50">
-        <button id="view-switch-btn" aria-label="Create MOU" class="bg-purple-600 text-white w-12 h-12 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center" onclick="openCreateMOUModal()">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-        </button>
-    </div>
+    
 
     <!-- Footer -->
     <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
@@ -1378,6 +1293,12 @@
     </footer>
 
     <script>
+        function toggleFiltersPanel(e){
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            var panel = document.getElementById('filters-panel');
+            if (!panel) return;
+            panel.classList.toggle('hidden');
+        }
         // Mobile navigation function
         function toggleMenu() {
             const sidebar = document.getElementById('sidebar');

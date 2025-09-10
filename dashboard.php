@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
     <link rel="stylesheet" href="dashboard-theme.css">
+    <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
     <script>
@@ -17,26 +18,8 @@
             generateCalendar();
             updateCurrentDate();
             // Function to adjust layout
-function applySidebarLayout(isOpen) {
-    var main = document.getElementById('main-content');
-    if (isOpen) {
-        if (main) main.classList.add('ml-64');
-    } else {
-        if (main) main.classList.remove('ml-64');
-    }
-}
-
-            // Desktop-only: start with spacing applied
-            applySidebarLayout(true);
-            
-            // Listen to sidebar state changes
-window.addEventListener('sidebar:state', function (e) {
-    applySidebarLayout(!!(e && e.detail && e.detail.open));
-});
-            // On resize keep spacing applied (desktop-only)
-            window.addEventListener('resize', function () {
-                applySidebarLayout(true);
-            });
+// Sidebar layout is now handled globally by LILACSidebar
+// No local sidebar management needed
             
             // Update date every minute
             setInterval(updateCurrentDate, 60000);
@@ -69,31 +52,27 @@ window.addEventListener('sidebar:state', function (e) {
             // Show loading skeletons first
             showLoadingSkeletons();
             
-            // Fetch data from multiple sources
+            // Fetch data from existing APIs
             Promise.all([
-                fetch('api/dashboard.php?action=get_overview'),
-                fetch('api/scheduler.php?action=get_upcoming'),
-                fetch('api/events_activities.php?action=get_upcoming')
+                fetch('api/scheduler.php?action=get_upcoming').then(function(r){ return r.json(); }).catch(function(){ return { success: false }; }),
+                fetch('api/documents.php?action=get_all&limit=3&sort_by=upload_date&sort_order=DESC').then(function(r){ return r.json(); }).catch(function(){ return { success: false }; }),
+                fetch('api/mous.php?action=get_all').then(function(r){ return r.json(); }).catch(function(){ return { success: false }; })
             ])
-            .then(responses => Promise.all(responses.map(r => r.json())))
-            .then(([dashboardData, meetingsData, eventsData]) => {
-                if (dashboardData.success) {
-                    // Merge meetings and events data
-                    const mergedData = {
-                        ...dashboardData.data,
-                        meetings: {
-                            ...dashboardData.data.meetings,
-                            upcoming: meetingsData.success ? meetingsData.meetings : []
-                        },
-                        events: eventsData.success ? eventsData.events : []
-                    };
-                    updateDashboard(mergedData);
-                } else {
-                    console.error('API Error:', dashboardData.message);
-                    showDashboardError();
-                }
+            .then(function(results) {
+                var meetingsData = results[0];
+                var documentsData = results[1];
+                var mousData = results[2];
+
+                const mergedData = {
+                    meetings: { upcoming: (meetingsData && meetingsData.success) ? (meetingsData.meetings || []) : [] },
+                    documents: { recent: (documentsData && documentsData.success) ? (documentsData.documents || []) : [] },
+                    mous: { active: ((mousData && mousData.success) ? (mousData.mous || []) : []).filter(function(m){ return (m.status || '') === 'Active'; }) },
+                    awards: { recent: [] },
+                    templates: []
+                };
+                updateDashboard(mergedData);
             })
-            .catch(error => {
+            .catch(function(error){
                 console.error('Error loading dashboard data:', error);
                 showDashboardError();
             });
@@ -207,13 +186,11 @@ window.addEventListener('sidebar:state', function (e) {
             if (latestMOUContainer) {
                 if (mous.length > 0) {
                     const latestMOU = mous.sort((a, b) => new Date(b.signed_date) - new Date(a.signed_date))[0];
-                    latestMOUContainer.innerHTML = `
-                        <p class="text-sm text-green-700 font-medium text-center">Latest: ${latestMOU.organization}</p>
-                    `;
+                    latestMOUContainer.innerHTML = 
+                        '<p class="text-sm text-green-700 font-medium text-center">Latest: ' + latestMOU.organization + '</p>';
                 } else {
-                    latestMOUContainer.innerHTML = `
-                        <p class="text-sm text-green-700 font-medium text-center">Create an MOU to get started</p>
-                    `;
+                    latestMOUContainer.innerHTML = 
+                        '<p class="text-sm text-green-700 font-medium text-center">Create an MOU to get started</p>';
                 }
             }
 
@@ -222,13 +199,11 @@ window.addEventListener('sidebar:state', function (e) {
             if (latestAwardContainer) {
                 if (awards.length > 0) {
                     const latestAward = awards.sort((a, b) => new Date(b.date_received) - new Date(a.date_received))[0];
-                    latestAwardContainer.innerHTML = `
-                        <p class="text-sm text-purple-700 font-medium text-center">Recent: ${latestAward.title}</p>
-                    `;
+                    latestAwardContainer.innerHTML = 
+                        '<p class="text-sm text-purple-700 font-medium text-center">Recent: ' + latestAward.title + '</p>';
                 } else {
-                    latestAwardContainer.innerHTML = `
-                        <p class="text-sm text-purple-700 font-medium text-center">Add an award to get started</p>
-                    `;
+                    latestAwardContainer.innerHTML = 
+                        '<p class="text-sm text-purple-700 font-medium text-center">Add an award to get started</p>';
                 }
             }
         }
@@ -307,6 +282,7 @@ window.addEventListener('sidebar:state', function (e) {
                             <p class="font-medium text-gray-600">${templatesCount} Templates Available</p>
                             <a href="templates.php" class="text-sm text-blue-600 hover:text-blue-800">View all templates →</a>
                     </div>
+                `;
                 }
             }
         }
@@ -324,8 +300,8 @@ window.addEventListener('sidebar:state', function (e) {
             if (recentUploadsElement) {
                 if (documentsCount > 0) {
                     const latestDoc = data.documents.recent[0];
-                    recentUploadsElement.textContent = `Latest: ${latestDoc.document_name || latestDoc.title}`;
-            } else {
+                    recentUploadsElement.textContent = 'Latest: ' + (latestDoc.document_name || latestDoc.title);
+                } else {
                     recentUploadsElement.textContent = 'Upload a document to get started';
                 }
             }
@@ -342,7 +318,7 @@ window.addEventListener('sidebar:state', function (e) {
             if (nextMeetingElement) {
                 if (meetingsCount > 0) {
                     const nextMeeting = data.meetings.upcoming[0];
-                    nextMeetingElement.textContent = `Next: ${nextMeeting.title}`;
+                    nextMeetingElement.textContent = 'Next: ' + nextMeeting.title;
                 } else {
                     nextMeetingElement.textContent = 'Schedule a meeting to get started';
                 }
@@ -370,28 +346,28 @@ window.addEventListener('sidebar:state', function (e) {
             const mousProgress = Math.min((mousCount / targets.mous) * 100, 100);
             const mousProgressBar = document.querySelector('.bg-gradient-to-r.from-green-400.to-emerald-500');
             if (mousProgressBar) {
-                mousProgressBar.style.width = `${mousProgress}%`;
+                mousProgressBar.style.width = mousProgress + '%';
             }
 
             // Update Awards progress bar
             const awardsProgress = Math.min((awardsCount / targets.awards) * 100, 100);
             const awardsProgressBar = document.querySelector('.bg-gradient-to-r.from-purple-400.to-pink-500');
             if (awardsProgressBar) {
-                awardsProgressBar.style.width = `${awardsProgress}%`;
+                awardsProgressBar.style.width = awardsProgress + '%';
             }
 
             // Update Documents progress bar
             const documentsProgress = Math.min((documentsCount / targets.documents) * 100, 100);
             const documentsProgressBar = document.querySelector('.bg-gradient-to-r.from-blue-400.to-cyan-500');
             if (documentsProgressBar) {
-                documentsProgressBar.style.width = `${documentsProgress}%`;
+                documentsProgressBar.style.width = documentsProgress + '%';
             }
 
             // Update Meetings progress bar
             const meetingsProgress = Math.min((meetingsCount / targets.meetings) * 100, 100);
             const meetingsProgressBar = document.querySelector('.bg-gradient-to-r.from-orange-400.to-red-500');
             if (meetingsProgressBar) {
-                meetingsProgressBar.style.width = `${meetingsProgress}%`;
+                meetingsProgressBar.style.width = meetingsProgress + '%';
             }
         }
 
@@ -461,57 +437,83 @@ window.addEventListener('sidebar:state', function (e) {
             // Meetings list skeleton
             const meetingsList = document.getElementById('meetings-list');
             if (meetingsList) {
-                meetingsList.innerHTML = `
-                    <div class="space-y-3">
-                        ${Array(3).fill().map(() => `
-                            <div class="p-4 bg-gray-50 rounded-xl border animate-pulse">
-                                <div class="flex items-start justify-between">
-                                    <div class="flex-1">
-                                        <div class="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                                        <div class="h-3 bg-gray-300 rounded w-1/2 mb-1"></div>
-                                        <div class="h-3 bg-gray-300 rounded w-1/3"></div>
-                                    </div>
-                                    <div class="h-6 bg-gray-300 rounded w-12"></div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+                var skeletonItems = [];
+                for (var i = 0; i < 3; i++) {
+                    skeletonItems.push(
+                        '<div class="p-4 bg-gray-50 rounded-xl border animate-pulse">' +
+                            '<div class="flex items-start justify-between">' +
+                                '<div class="flex-1">' +
+                                    '<div class="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>' +
+                                    '<div class="h-3 bg-gray-300 rounded w-1/2 mb-1"></div>' +
+                                    '<div class="h-3 bg-gray-300 rounded w-1/3"></div>' +
+                                '</div>' +
+                                '<div class="h-6 bg-gray-300 rounded w-12"></div>' +
+                            '</div>' +
+                        '</div>'
+                    );
+                }
+                meetingsList.innerHTML = 
+                    '<div class="space-y-3">' +
+                        skeletonItems.join('') +
+                    '</div>';
             }
 
             // Documents list skeleton
             const documentsList = document.getElementById('documents-list');
             if (documentsList) {
-                documentsList.innerHTML = `
-                    <div class="space-y-3">
-                        ${Array(3).fill().map(() => `
-                            <div class="p-4 bg-gray-50 rounded-xl border animate-pulse">
-                                <div class="flex items-start justify-between">
-                                    <div class="flex-1">
-                                        <div class="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                                        <div class="h-3 bg-gray-300 rounded w-1/2"></div>
-                                    </div>
-                                    <div class="h-6 bg-gray-300 rounded w-12"></div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+                var docSkeletonItems = [];
+                for (var j = 0; j < 3; j++) {
+                    docSkeletonItems.push(
+                        '<div class="p-4 bg-gray-50 rounded-xl border animate-pulse">' +
+                            '<div class="flex items-start justify-between">' +
+                                '<div class="flex-1">' +
+                                    '<div class="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>' +
+                                    '<div class="h-3 bg-gray-300 rounded w-1/2"></div>' +
+                                '</div>' +
+                                '<div class="h-6 bg-gray-300 rounded w-12"></div>' +
+                            '</div>' +
+                        '</div>'
+                    );
+                }
+                documentsList.innerHTML = 
+                    '<div class="space-y-3">' +
+                        docSkeletonItems.join('') +
+                    '</div>';
             }
         }
 
-        function getTimeAgo(date) {
+        function getTimeAgo(input) {
+            let dateObj = null;
+            if (input instanceof Date) {
+                dateObj = input;
+            } else if (typeof input === 'number') {
+                dateObj = new Date(input);
+            } else if (typeof input === 'string') {
+                const parsed = Date.parse(input);
+                if (!isNaN(parsed)) {
+                    dateObj = new Date(parsed);
+                } else {
+                    // Already a human-readable label like "2 minutes ago"
+                    return input;
+                }
+            }
+
+            if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+                return '';
+            }
+
             const now = new Date();
-            const diffInSeconds = Math.floor((now - date) / 1000);
+            const diffInSeconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
+            if (!isFinite(diffInSeconds)) return '';
             const diffInMinutes = Math.floor(diffInSeconds / 60);
             const diffInHours = Math.floor(diffInMinutes / 60);
             const diffInDays = Math.floor(diffInHours / 24);
 
             if (diffInSeconds < 60) return 'just now';
-            if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-            if (diffInHours < 24) return `${diffInHours}h ago`;
-            if (diffInDays < 7) return `${diffInDays}d ago`;
-            return date.toLocaleDateString();
+            if (diffInMinutes < 60) return diffInMinutes + 'm ago';
+            if (diffInHours < 24) return diffInHours + 'h ago';
+            if (diffInDays < 7) return diffInDays + 'd ago';
+            return dateObj.toLocaleDateString();
         }
 
         // Calendar Functions
@@ -526,7 +528,7 @@ window.addEventListener('sidebar:state', function (e) {
 
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'];
-            currentMonthYearEl.textContent = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            currentMonthYearEl.textContent = monthNames[date.getMonth()] + ' ' + date.getFullYear();
 
             calendarDaysEl.innerHTML = '';
             const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -582,7 +584,7 @@ window.addEventListener('sidebar:state', function (e) {
                 month: 'long',
                 day: 'numeric'
             });
-            selectedDateEl.textContent = `Events for ${formattedDate}`;
+            selectedDateEl.textContent = 'Events for ' + formattedDate;
             dayEventsEl.innerHTML = '<p class="text-gray-500 text-xs">No events scheduled</p>';
         }
 
@@ -597,8 +599,19 @@ window.addEventListener('sidebar:state', function (e) {
         let isSelectMode = false;
 
         // Notification System Functions
-        function toggleNotifications() {
+        function toggleNotifications(event) {
+            console.log('toggleNotifications called');
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
             const dropdown = document.getElementById('notification-dropdown');
+            if (!dropdown) {
+                console.log('Notification dropdown not found');
+                return;
+            }
+            
             const isHidden = dropdown.classList.contains('hidden');
             
             if (isHidden) {
@@ -614,128 +627,124 @@ window.addEventListener('sidebar:state', function (e) {
         }
 
         function loadNotifications() {
+            console.log('Loading notifications...');
             // Only initialize test notifications if currentNotifications is empty
             if (currentNotifications.length === 0) {
                 const testNotifications = [
                     {
-                        type: 'meeting',
-                        title: 'Team Meeting',
-                        message: 'Weekly team sync in 2 hours',
-                        time: new Date(Date.now() + 2 * 60 * 60 * 1000),
-                        priority: 'high',
-                        location: 'Conference Room A',
-                        description: 'Discuss project progress, upcoming deadlines, and team coordination for the week ahead.',
-                        attendees: ['John Doe', 'Jane Smith', 'Mike Johnson']
+                        id: 1,
+                        title: "New Document Uploaded",
+                        message: "A new document has been uploaded to the system",
+                        time: "2 minutes ago",
+                        priority: "high",
+                        read: false
                     },
                     {
-                        type: 'event',
-                        title: 'Conference Call',
-                        message: 'Client presentation tomorrow',
-                        time: new Date(Date.now() + 24 * 60 * 60 * 1000),
-                        priority: 'medium',
-                        location: 'Virtual Meeting',
-                        description: 'Present quarterly results to key stakeholders and discuss future collaboration opportunities.',
-                        attendees: ['Client Team', 'Management', 'Sales Team']
+                        id: 2,
+                        title: "Meeting Reminder",
+                        message: "You have a meeting scheduled in 30 minutes",
+                        time: "25 minutes ago",
+                        priority: "medium",
+                        read: false
                     },
                     {
-                        type: 'reminder',
-                        title: 'Document Review',
-                        message: 'Review quarterly reports',
-                        time: new Date(Date.now() + 4 * 60 * 60 * 1000),
-                        priority: 'medium',
-                        description: 'Review and approve quarterly financial reports before submission deadline.',
-                        documents: ['Q4_Financial_Report.pdf', 'Budget_Analysis.xlsx']
+                        id: 3,
+                        title: "System Update",
+                        message: "LILAC system has been updated with new features",
+                        time: "1 hour ago",
+                        priority: "low",
+                        read: true
                     }
                 ];
-                
-                // Store notifications globally
                 currentNotifications = testNotifications;
+                
+                // Update notification badge
+                updateNotificationBadge();
             }
             
-            // Display the current notifications (preserving read status)
-            displayNotifications(currentNotifications);
-            
-            // Also try to fetch real notifications from API (but don't replace test ones for now)
-            Promise.all([
-                fetch('api/scheduler.php?action=get_upcoming'),
-                fetch('api/events_activities.php?action=get_upcoming')
-            ])
-            .then(responses => Promise.all(responses.map(r => r.json())))
-            .then(([meetingsData, eventsData]) => {
-                const realNotifications = [];
-                
-                // Process meetings
-                if (meetingsData.success && meetingsData.meetings) {
-                    meetingsData.meetings.forEach(meeting => {
-                        const meetingDate = new Date(meeting.meeting_date + 'T' + meeting.meeting_time);
-                        const now = new Date();
-                        const timeDiff = meetingDate - now;
-                        const hoursUntil = timeDiff / (1000 * 60 * 60);
-                        
-                        if (hoursUntil > 0 && hoursUntil <= 24) {
-                            realNotifications.push({
-                                type: 'meeting',
-                                title: meeting.title,
-                                message: `Meeting in ${Math.round(hoursUntil)} hours`,
-                                time: meetingDate,
-                                priority: hoursUntil <= 2 ? 'high' : 'medium'
-                            });
-                        }
-                    });
-                }
-                
-                // Process events
-                if (eventsData.success && eventsData.events) {
-                    eventsData.events.forEach(event => {
-                        const eventDate = new Date(event.event_date + 'T' + event.event_time);
-                        const now = new Date();
-                        const timeDiff = eventDate - now;
-                        const hoursUntil = timeDiff / (1000 * 60 * 60);
-                        
-                        if (hoursUntil > 0 && hoursUntil <= 48) {
-                            realNotifications.push({
-                                type: 'event',
-                                title: event.title,
-                                message: `Event in ${Math.round(hoursUntil)} hours`,
-                                time: eventDate,
-                                priority: hoursUntil <= 4 ? 'high' : 'medium'
-                            });
-                        }
-                    });
-                }
-                
-                // If we have real notifications, merge them with existing ones (preserving read status)
-                if (realNotifications.length > 0) {
-                    // Merge real notifications with existing ones, avoiding duplicates
-                    const existingIds = new Set(currentNotifications.map(n => n.title + n.time.getTime()));
-                    realNotifications.forEach(notification => {
-                        const notificationId = notification.title + notification.time.getTime();
-                        if (!existingIds.has(notificationId)) {
-                            currentNotifications.push(notification);
-                        }
-                    });
-                    displayNotifications(currentNotifications);
-                }
-            })
-            .catch(error => {
-                console.error('Error loading real notifications:', error);
-                // Keep the test notifications that are already displayed
-            });
+            // Render notifications in the dropdown
+            renderNotifications();
         }
+        
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notification-badge');
+            const unreadCount = currentNotifications.filter(n => !n.read).length;
+            
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+        
+        function renderNotifications() {
+            const notificationList = document.getElementById('notification-list');
+            if (!notificationList) return;
+            
+            if (currentNotifications.length === 0) {
+                notificationList.innerHTML = 
+                    '<div class="p-8 text-center text-gray-500">' +
+                        '<svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM10.5 3.75a6 6 0 0 1 8.25 8.25l-8.25-8.25zM3.75 10.5a6 6 0 0 1 8.25-8.25l-8.25 8.25z"></path>' +
+                        '</svg>' +
+                        '<p class="text-sm">No notifications</p>' +
+                    '</div>';
+                return;
+            }
+            
+            const notificationsHTML = currentNotifications.map(function(notification, index) {
+                var readClass = !notification.read ? 'bg-blue-50' : '';
+                var dotClass = !notification.read ? 'bg-blue-500' : 'bg-gray-300';
+                var priorityClass = notification.priority === 'high' ? 'bg-red-100 text-red-800' :
+                                  notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-green-100 text-green-800';
+                
+                return '<div class="p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ' + readClass + '" onclick="markAsRead(' + index + ')">' +
+                    '<div class="flex items-start space-x-3">' +
+                        '<div class="w-2 h-2 mt-2 rounded-full ' + dotClass + '"></div>' +
+                        '<div class="flex-1 min-w-0">' +
+                            '<p class="text-sm font-medium text-gray-900">' + notification.title + '</p>' +
+                            '<p class="text-sm text-gray-600 mt-1">' + notification.message + '</p>' +
+                            '<p class="text-xs text-gray-400 mt-1">' + notification.time + '</p>' +
+                        '</div>' +
+                        '<div class="flex-shrink-0">' +
+                            '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ' + priorityClass + '">' +
+                                notification.priority +
+                            '</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+            
+            notificationList.innerHTML = notificationsHTML;
+        }
+        
+        function markAsRead(index) {
+            if (currentNotifications[index]) {
+                currentNotifications[index].read = true;
+                updateNotificationBadge();
+                renderNotifications();
+            }
+        }
+
+        // Initialize notifications on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNotificationBadge();
+        });
 
         function displayNotifications(notifications) {
             const notificationList = document.getElementById('notification-list');
             const badge = document.getElementById('notification-badge');
             
             if (notifications.length === 0) {
-                notificationList.innerHTML = `
-                    <div class="p-4 text-center text-gray-500">
-                        <svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM10.5 3.75a6 6 0 0 1 8.25 8.25l-8.25-8.25zM3.75 10.5a6 6 0 0 1 8.25-8.25l-8.25 8.25z"></path>
-                        </svg>
-                        <p>No notifications</p>
-                    </div>
-                `;
+                notificationList.innerHTML = 
+                    '<div class="p-4 text-center text-gray-500">' +
+                        '<svg class="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM10.5 3.75a6 6 0 0 1 8.25 8.25l-8.25-8.25zM3.75 10.5a6 6 0 0 1 8.25-8.25l-8.25 8.25z"></path>' +
+                        '</svg>' +
+                        '<p>No notifications</p>' +
+                    '</div>';
                 badge.classList.add('hidden');
                 
                 // Hide select all button when no notifications
@@ -779,39 +788,43 @@ window.addEventListener('sidebar:state', function (e) {
                 const timeAgo = getTimeAgo(notification.time);
                 const isSelected = selectedNotifications.has(index);
                 
-                return `
-                    <div class="p-4 border-l-4 ${priorityColor} hover:bg-gray-50 transition-colors relative group ${notification.priority === 'read' ? 'opacity-75' : ''}" 
-                         data-notification-id="${index}">
-                        <div class="flex items-start justify-between">
-                            <div class="flex items-start space-x-3 flex-1">
-                                ${isSelectMode ? `
-                                    <input type="checkbox" 
-                                           class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" 
-                                           ${isSelected ? 'checked' : ''}
-                                           onchange="toggleNotificationSelection(${index}, this.checked)"
-                                           onclick="event.stopPropagation()">
-                                ` : ''}
-                                <div class="flex-1 cursor-pointer" onclick="showNotificationDetails(${index})">
-                                    <h4 class="font-semibold ${notification.priority === 'read' ? 'text-gray-600' : 'text-gray-900'} text-sm">${notification.title}</h4>
-                                    <p class="text-sm ${notification.priority === 'read' ? 'text-gray-500' : 'text-gray-600'} mt-1">${notification.message}</p>
-                                    <p class="text-xs text-gray-400 mt-1">${timeAgo}</p>
-                                </div>
-                            </div>
-                            <div class="ml-2 flex items-center space-x-2">
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${priorityClass}">
-                                    ${priorityText}
-                                </span>
-                                <button onclick="event.stopPropagation(); deleteNotification(${index})" 
-                                        class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-200 hover:border-red-200"
-                                        title="Delete notification">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                var opacityClass = notification.priority === 'read' ? 'opacity-75' : '';
+                var titleClass = notification.priority === 'read' ? 'text-gray-600' : 'text-gray-900';
+                var messageClass = notification.priority === 'read' ? 'text-gray-500' : 'text-gray-600';
+                var checkedAttr = isSelected ? 'checked' : '';
+                
+                var checkboxHtml = isSelectMode ? 
+                    '<input type="checkbox" ' +
+                        'class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" ' +
+                        checkedAttr + ' ' +
+                        'onchange="toggleNotificationSelection(' + index + ', this.checked)" ' +
+                        'onclick="event.stopPropagation()">' : '';
+                
+                return '<div class="p-4 border-l-4 ' + priorityColor + ' hover:bg-gray-50 transition-colors relative group ' + opacityClass + '" ' +
+                         'data-notification-id="' + index + '">' +
+                        '<div class="flex items-start justify-between">' +
+                            '<div class="flex items-start space-x-3 flex-1">' +
+                                checkboxHtml +
+                                '<div class="flex-1 cursor-pointer" onclick="showNotificationDetails(' + index + ')">' +
+                                    '<h4 class="font-semibold ' + titleClass + ' text-sm">' + notification.title + '</h4>' +
+                                    '<p class="text-sm ' + messageClass + ' mt-1">' + notification.message + '</p>' +
+                                    '<p class="text-xs text-gray-400 mt-1">' + timeAgo + '</p>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="ml-2 flex items-center space-x-2">' +
+                                '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ' + priorityClass + '">' +
+                                    priorityText +
+                                '</span>' +
+                                '<button onclick="event.stopPropagation(); deleteNotification(' + index + ')" ' +
+                                        'class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-200 hover:border-red-200" ' +
+                                        'title="Delete notification">' +
+                                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>' +
+                                    '</svg>' +
+                                '</button>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
             }).join('');
             
             // Update badge - only show for unread (high priority) notifications that haven't been marked as read
@@ -865,22 +878,20 @@ window.addEventListener('sidebar:state', function (e) {
             if (isSelectMode) {
                 // Enter select mode - toggle ON
                 selectAllBtn.className = 'p-2 bg-red-100 hover:bg-red-200 rounded-lg transition-colors border border-red-200 hover:border-red-300';
-                selectAllBtn.innerHTML = `
-                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                `;
+                selectAllBtn.innerHTML = 
+                    '<svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>' +
+                    '</svg>';
                 selectAllBtn.title = 'Cancel Selection';
                 bulkActionsFooter.classList.remove('hidden');
                 selectedNotifications.clear();
             } else {
                 // Exit select mode - toggle OFF
                 selectAllBtn.className = 'p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300';
-                selectAllBtn.innerHTML = `
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
-                </svg>
-            `;
+                selectAllBtn.innerHTML = 
+                    '<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>' +
+                    '</svg>';
                 selectAllBtn.title = 'Select All';
                 bulkActionsFooter.classList.add('hidden');
                 selectedNotifications.clear();
@@ -905,7 +916,7 @@ window.addEventListener('sidebar:state', function (e) {
         function updateSelectedCount() {
             const selectedCount = document.getElementById('selected-count');
             if (selectedCount) {
-                selectedCount.textContent = `${selectedNotifications.size} selected`;
+                selectedCount.textContent = selectedNotifications.size + ' selected';
             }
         }
 
@@ -1010,11 +1021,10 @@ window.addEventListener('sidebar:state', function (e) {
             const bulkActionsFooter = document.getElementById('bulk-actions-footer');
             
             selectAllBtn.className = 'p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300';
-            selectAllBtn.innerHTML = `
-                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
-                </svg>
-            `;
+            selectAllBtn.innerHTML = 
+                '<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>' +
+                '</svg>';
             selectAllBtn.title = 'Select All';
             bulkActionsFooter.classList.add('hidden');
             
@@ -1036,129 +1046,127 @@ window.addEventListener('sidebar:state', function (e) {
             document.getElementById('notification-dropdown').classList.add('hidden');
 
             // Create modal HTML
-            const modalHTML = `
-                <div id="notification-details-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center p-4">
-                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 max-h-[90vh] transform transition-all duration-300 scale-95 opacity-0 flex flex-col" id="notification-modal-content">
-                        <!-- Header -->
-                        <div class="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-                                                            <div class="flex items-center space-x-3">
-                                    <div class="w-10 h-10 rounded-full flex items-center justify-center ${
-                                        notification.priority === 'high' ? 'bg-red-100' : 
-                                        notification.priority === 'medium' ? 'bg-blue-100' : 'bg-gray-100'
-                                    }">
-                                        <svg class="w-5 h-5 ${
-                                            notification.priority === 'high' ? 'text-red-600' : 
-                                            notification.priority === 'medium' ? 'text-blue-600' : 'text-gray-600'
-                                        }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM10.5 3.75a6 6 0 0 1 8.25 8.25l-8.25-8.25zM3.75 10.5a6 6 0 0 1 8.25-8.25l-8.25 8.25z"></path>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="text-lg font-bold text-gray-900">${notification.title}</h3>
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                            notification.priority === 'high' ? 'bg-red-100 text-red-800' : 
-                                            notification.priority === 'medium' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
-                                        }">
-                                            ${notification.priority === 'high' ? 'Urgent' : 
-                                             notification.priority === 'medium' ? 'Info' : 'Read'}
-                                        </span>
-                                    </div>
-                            </div>
-                            <button onclick="closeNotificationDetails()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
+            // Calculate classes based on priority
+            var iconBgClass = notification.priority === 'high' ? 'bg-red-100' : 
+                             notification.priority === 'medium' ? 'bg-blue-100' : 'bg-gray-100';
+            var iconColorClass = notification.priority === 'high' ? 'text-red-600' : 
+                                notification.priority === 'medium' ? 'text-blue-600' : 'text-gray-600';
+            var priorityBadgeClass = notification.priority === 'high' ? 'bg-red-100 text-red-800' : 
+                                   notification.priority === 'medium' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600';
+            var priorityText = notification.priority === 'high' ? 'Urgent' : 
+                             notification.priority === 'medium' ? 'Info' : 'Read';
+            
+            // Build optional sections
+            var locationSection = notification.location ? 
+                '<div>' +
+                    '<h4 class="font-semibold text-gray-900 mb-2">Location</h4>' +
+                    '<p class="text-gray-700">' + notification.location + '</p>' +
+                '</div>' : '';
+                
+            var descriptionSection = notification.description ? 
+                '<div>' +
+                    '<h4 class="font-semibold text-gray-900 mb-2">Description</h4>' +
+                    '<p class="text-gray-700">' + notification.description + '</p>' +
+                '</div>' : '';
+                
+            var attendeesSection = '';
+            if (notification.attendees) {
+                var attendeesList = notification.attendees.map(function(attendee) {
+                    return '<span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">' + attendee + '</span>';
+                }).join('');
+                attendeesSection = '<div>' +
+                    '<h4 class="font-semibold text-gray-900 mb-2">Attendees</h4>' +
+                    '<div class="flex flex-wrap gap-2">' + attendeesList + '</div>' +
+                '</div>';
+            }
+            
+            var documentsSection = '';
+            if (notification.documents) {
+                var documentsList = notification.documents.map(function(doc) {
+                    return '<div class="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg">' +
+                        '<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>' +
+                        '</svg>' +
+                        '<span class="text-sm text-gray-700">' + doc + '</span>' +
+                    '</div>';
+                }).join('');
+                documentsSection = '<div>' +
+                    '<h4 class="font-semibold text-gray-900 mb-2">Related Documents</h4>' +
+                    '<div class="space-y-2">' + documentsList + '</div>' +
+                '</div>';
+            }
 
-                        <!-- Scrollable Content -->
-                        <div class="flex-1 overflow-y-auto p-6">
-                            <div class="space-y-4">
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 mb-2">Message</h4>
-                                    <p class="text-gray-700 leading-relaxed">${notification.message}</p>
-                                </div>
-                                
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900 mb-2">Type</h4>
-                                        <p class="text-gray-700 capitalize">${notification.type}</p>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900 mb-2">Priority</h4>
-                                        <p class="text-gray-700 capitalize">${notification.priority}</p>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 mb-2">Time</h4>
-                                    <p class="text-gray-700">${notification.time.toLocaleString()}</p>
-                                    <p class="text-sm text-gray-500 mt-1">${getTimeAgo(notification.time)}</p>
-                                </div>
-
-                                ${notification.location ? `
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900 mb-2">Location</h4>
-                                        <p class="text-gray-700">${notification.location}</p>
-                                    </div>
-                                ` : ''}
-
-                                ${notification.description ? `
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900 mb-2">Description</h4>
-                                        <p class="text-gray-700">${notification.description}</p>
-                                    </div>
-                                ` : ''}
-
-                                ${notification.attendees ? `
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900 mb-2">Attendees</h4>
-                                        <div class="flex flex-wrap gap-2">
-                                            ${notification.attendees.map(attendee => `
-                                                <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">${attendee}</span>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                ` : ''}
-
-                                ${notification.documents ? `
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900 mb-2">Related Documents</h4>
-                                        <div class="space-y-2">
-                                            ${notification.documents.map(doc => `
-                                                <div class="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg">
-                                                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                                    </svg>
-                                                    <span class="text-sm text-gray-700">${doc}</span>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-
-                        <!-- Footer -->
-                        <div class="flex items-center justify-between p-6 border-t border-gray-200 flex-shrink-0">
-                            <button onclick="deleteNotification(${index}); closeNotificationDetails();" 
-                                    class="px-4 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors border border-red-200">
-                                Delete
-                            </button>
-                            <button onclick="closeNotificationDetails()" 
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
+            const modalHTML = 
+                '<div id="notification-details-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center p-4">' +
+                    '<div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 max-h-[90vh] transform transition-all duration-300 scale-95 opacity-0 flex flex-col" id="notification-modal-content">' +
+                        '<!-- Header -->' +
+                        '<div class="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">' +
+                            '<div class="flex items-center space-x-3">' +
+                                '<div class="w-10 h-10 rounded-full flex items-center justify-center ' + iconBgClass + '">' +
+                                    '<svg class="w-5 h-5 ' + iconColorClass + '" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM10.5 3.75a6 6 0 0 1 8.25 8.25l-8.25-8.25zM3.75 10.5a6 6 0 0 1 8.25-8.25l-8.25 8.25z"></path>' +
+                                    '</svg>' +
+                                '</div>' +
+                                '<div>' +
+                                    '<h3 class="text-lg font-bold text-gray-900">' + notification.title + '</h3>' +
+                                    '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ' + priorityBadgeClass + '">' +
+                                        priorityText +
+                                    '</span>' +
+                                '</div>' +
+                            '</div>' +
+                            '<button onclick="closeNotificationDetails()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">' +
+                                '<svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>' +
+                                '</svg>' +
+                            '</button>' +
+                        '</div>' +
+                        '<!-- Scrollable Content -->' +
+                        '<div class="flex-1 overflow-y-auto p-6">' +
+                            '<div class="space-y-4">' +
+                                '<div>' +
+                                    '<h4 class="font-semibold text-gray-900 mb-2">Message</h4>' +
+                                    '<p class="text-gray-700 leading-relaxed">' + notification.message + '</p>' +
+                                '</div>' +
+                                '<div class="grid grid-cols-2 gap-4">' +
+                                    '<div>' +
+                                        '<h4 class="font-semibold text-gray-900 mb-2">Type</h4>' +
+                                        '<p class="text-gray-700 capitalize">' + notification.type + '</p>' +
+                                    '</div>' +
+                                    '<div>' +
+                                        '<h4 class="font-semibold text-gray-900 mb-2">Priority</h4>' +
+                                        '<p class="text-gray-700 capitalize">' + notification.priority + '</p>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div>' +
+                                    '<h4 class="font-semibold text-gray-900 mb-2">Time</h4>' +
+                                    '<p class="text-gray-700">' + notification.time.toLocaleString() + '</p>' +
+                                    '<p class="text-sm text-gray-500 mt-1">' + getTimeAgo(notification.time) + '</p>' +
+                                '</div>' +
+                                locationSection +
+                                descriptionSection +
+                                attendeesSection +
+                                documentsSection +
+                            '</div>' +
+                        '</div>' +
+                        '<!-- Footer -->' +
+                        '<div class="flex items-center justify-between p-6 border-t border-gray-200 flex-shrink-0">' +
+                            '<button onclick="deleteNotification(' + index + '); closeNotificationDetails();" ' +
+                                    'class="px-4 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors border border-red-200">' +
+                                'Delete' +
+                            '</button>' +
+                            '<button onclick="closeNotificationDetails()" ' +
+                                    'class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">' +
+                                'Close' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
 
             // Add modal to body
             document.body.insertAdjacentHTML('beforeend', modalHTML);
 
             // Animate in
-            setTimeout(() => {
+            setTimeout(function() {
                 const modalContent = document.getElementById('notification-modal-content');
                 if (modalContent) {
                     modalContent.classList.remove('scale-95', 'opacity-0');
@@ -1176,7 +1184,7 @@ window.addEventListener('sidebar:state', function (e) {
                     modalContent.classList.remove('scale-100', 'opacity-100');
                 }
                 
-                setTimeout(() => {
+                setTimeout(function() {
                     modal.remove();
                 }, 300);
             }
@@ -1201,23 +1209,13 @@ window.addEventListener('sidebar:state', function (e) {
         });
 
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            if (!sidebar) return;
-            // Toggle hidden/visible by translating X
-            sidebar.classList.toggle('-translate-x-full');
-            // Adjust navbar left padding and main content margin to reclaim space
-            const nav = document.querySelector('nav.modern-nav');
-            if (nav) nav.classList.toggle('pl-64');
-            const mainContainer = document.getElementById('main-content');
-            if (mainContainer) mainContainer.classList.toggle('ml-64');
-        }
+        // toggleSidebar function is now handled globally by LILACSidebar
     </script>
 </head>
 
 <body class="bg-gray-50">
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
         <div class="flex items-center space-x-4">
             <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1236,7 +1234,7 @@ window.addEventListener('sidebar:state', function (e) {
          <div class="text-sm flex items-center space-x-4">
             <!-- Notification Bell -->
             <div class="relative">
-                <button id="notification-bell" onclick="toggleNotifications()" class="btn btn-sm relative">
+                <button type="button" id="notification-bell" onclick="toggleNotifications(event)" class="btn btn-sm relative">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                         <!-- Notification bell icon -->
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25-2.84 9.74-2.84 9.74A1 1 0 0 0 3 20h18a1 1 0 0 0 .84-1.26S19 14.25 19 9c0-3.87-3.13-7-7-7z"/>
@@ -1295,7 +1293,7 @@ window.addEventListener('sidebar:state', function (e) {
             
             <!-- User Profile -->
             <div id="user-profile-container" class="relative">
-                <button id="user-profile-btn" class="flex items-center space-x-2 btn my-1 btn-sm">
+                <button type="button" id="user-profile-btn" onclick="toggleUserDropdown(event)" class="flex items-center space-x-2 btn my-1 btn-sm">
                     <div class="w-9 h-9 bg-gradient-to-r from-amber-600 to-amber-800 rounded-xl flex items-center justify-center shadow-lg border border-amber-700">
                         <span class="text-white text-sm font-bold">LD</span>
                     </div>
@@ -1373,7 +1371,7 @@ window.addEventListener('sidebar:state', function (e) {
     <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 p-4 pt-4 min-h-screen bg-muted transition-all duration-300 ease-in-out">
+    <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
                 <!-- Welcome Section -->
         <div class="soft-card p-4 rounded-3xl mb-3 flex flex-col md:flex-row items-start md:items-center justify-between">
             <div>
@@ -1762,6 +1760,23 @@ window.addEventListener('sidebar:state', function (e) {
      </footer>
 
     <script>
+        // User Profile Dropdown Function
+        function toggleUserDropdown(event) {
+            console.log('toggleUserDropdown called');
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            const userDropdown = document.getElementById('user-dropdown');
+            if (userDropdown) {
+                console.log('Toggling user dropdown');
+                userDropdown.classList.toggle('hidden');
+            } else {
+                console.log('User dropdown not found');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // User profile dropdown functionality
             const userProfileBtn = document.getElementById('user-profile-btn');
@@ -1769,16 +1784,19 @@ window.addEventListener('sidebar:state', function (e) {
             
             if (userProfileBtn && userDropdown) {
                 let hideTimer;
-                userProfileBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    userDropdown.classList.toggle('hidden');
+                
+                // Click outside to close dropdown
+                document.addEventListener('click', function(e) {
+                    if (!userProfileBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.add('hidden');
+                    }
                 });
                 
                 // Hover to open/close with small delay to allow moving into menu
                 const container = document.getElementById('user-profile-container');
                 if (container) {
-                    const clearHide = () => { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } };
-                    const scheduleHide = () => { hideTimer = setTimeout(() => userDropdown.classList.add('hidden'), 200); };
+                    const clearHide = function() { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } };
+                    const scheduleHide = function() { hideTimer = setTimeout(function() { userDropdown.classList.add('hidden'); }, 200); };
                     container.addEventListener('mouseenter', function() {
                         clearHide();
                         userDropdown.classList.remove('hidden');
@@ -1804,13 +1822,7 @@ window.addEventListener('sidebar:state', function (e) {
                 generateCalendar(currentCalendarDate);
             };
 
-            // Hamburger button toggles sidebar
-            var hamburger = document.getElementById('hamburger-toggle');
-            if (hamburger) {
-                hamburger.addEventListener('click', function() {
-                    try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-                });
-            }
+            // Hamburger button is now handled globally by LILACSidebar
 
             // Initialize standard calendar (if present)
             try { generateCalendar(currentCalendarDate); } catch (e) {}

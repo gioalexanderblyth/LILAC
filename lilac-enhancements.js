@@ -172,8 +172,11 @@ class LILACNotifications {
             const onConfirm = modal.dataset.onConfirm;
             if (onConfirm) {
                 try {
-                    // Execute the callback function
-                    eval('(' + onConfirm + ')()');
+                    // Execute the callback function safely
+                    const callback = this.getCallbackFunction(onConfirm);
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 } catch (e) {
                     console.error('Error executing confirm callback:', e);
                 }
@@ -188,13 +191,42 @@ class LILACNotifications {
             const onCancel = modal.dataset.onCancel;
             if (onCancel) {
                 try {
-                    // Execute the callback function
-                    eval('(' + onCancel + ')()');
+                    // Execute the callback function safely
+                    const callback = this.getCallbackFunction(onCancel);
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 } catch (e) {
                     console.error('Error executing cancel callback:', e);
                 }
             }
             this.dismissConfirm(modalId);
+        }
+    }
+
+    getCallbackFunction(callbackString) {
+        // Safely parse callback functions without using eval
+        try {
+            // Check if it's a function reference (e.g., "functionName")
+            if (typeof window[callbackString] === 'function') {
+                return window[callbackString];
+            }
+            
+            // Check if it's a method call (e.g., "object.method")
+            const parts = callbackString.split('.');
+            if (parts.length === 2) {
+                const obj = window[parts[0]];
+                if (obj && typeof obj[parts[1]] === 'function') {
+                    return obj[parts[1]].bind(obj);
+                }
+            }
+            
+            // For security, we don't support arbitrary code execution
+            console.warn('Unsafe callback function detected:', callbackString);
+            return null;
+        } catch (e) {
+            console.error('Error parsing callback function:', e);
+            return null;
         }
     }
 

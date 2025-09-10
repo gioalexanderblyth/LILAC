@@ -104,9 +104,14 @@ try {
 
         $documentName = $_POST['document_name'] ?? ($_POST['title'] ?? pathinfo($safeName, PATHINFO_FILENAME));
         $category = trim((string)($_POST['category'] ?? ''));
+        $categoryConfidence = floatval($_POST['category_confidence'] ?? 0);
+        
         if ($category === '') {
             $auto = detect_category_from_name($documentName . ' ' . $safeName);
-            if ($auto !== '') { $category = $auto; }
+            if ($auto !== '') { 
+                $category = $auto;
+                $categoryConfidence = 0.5; // Default confidence for server-side detection
+            }
         }
         $description = $_POST['description'] ?? '';
 
@@ -114,7 +119,10 @@ try {
         $ocrText = $_POST['ocr_excerpt'] ?? '';
         if ($category === '' && $ocrText !== '') {
             $fallback = detect_category_from_text($ocrText);
-            if ($fallback !== '') { $category = $fallback; }
+            if ($fallback !== '') { 
+                $category = $fallback;
+                $categoryConfidence = 0.3; // Lower confidence for OCR-based detection
+            }
         }
 
         $now = date('Y-m-d H:i:s');
@@ -127,6 +135,7 @@ try {
             'original_filename' => $safeName,
             'file_size' => intval(filesize($dest)),
             'category' => htmlspecialchars($category, ENT_QUOTES, 'UTF-8'),
+            'category_confidence' => $categoryConfidence,
             'description' => htmlspecialchars($description, ENT_QUOTES, 'UTF-8'),
             'upload_date' => $now,
             'status' => 'Active',

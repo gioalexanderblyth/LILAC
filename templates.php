@@ -7,6 +7,8 @@
     <title>LILAC Templates</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
+    <link rel="stylesheet" href="dashboard-theme.css">
+    <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
     <script>
@@ -854,7 +856,7 @@ Approved by: ________________
 <body class="bg-gray-50">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
         <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -876,18 +878,38 @@ Approved by: ________________
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        var hamburger = document.getElementById('hamburger-toggle');
-        if (hamburger) {
-            hamburger.addEventListener('click', function() {
-                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-            });
+        // Hamburger and desktop toggle buttons are now handled globally by LILACSidebar
+    });
+    
+    // toggleSidebar function is now handled globally by LILACSidebar
+    function toggleSidebar_DISABLED() {
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        if (!sidebar) return;
+        
+        // Toggle hidden/visible by translating X
+        sidebar.classList.toggle('-translate-x-full');
+        
+        // Toggle backdrop on mobile
+        if (backdrop && window.innerWidth < 1024) {
+            backdrop.classList.toggle('hidden');
         }
-        var desktopToggle = document.getElementById('desktop-menu-toggle');
-        if (desktopToggle) {
-            desktopToggle.addEventListener('click', function() {
-                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-            });
+        
+        // On mobile, adjust main content margin
+        const mainContainer = document.getElementById('main-content');
+        if (mainContainer) {
+            // Only adjust margin on mobile (when sidebar is hidden by default)
+            if (window.innerWidth < 1024) { // lg breakpoint
+                mainContainer.classList.toggle('ml-0');
+            }
         }
+        
+        // Adjust navbar left padding on desktop
+        const nav = document.querySelector('nav.modern-nav');
+        if (nav && window.innerWidth >= 1024) { // lg breakpoint
+            nav.classList.toggle('pl-64');
+        }
+    }
 
         // Update date in top-right
         function updateCurrentDate() {
@@ -903,7 +925,7 @@ Approved by: ________________
     </script>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 p-4 pt-4 min-h-screen bg-white transition-all duration-300 ease-in-out">
+    <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
         <!-- Top Actions Row -->
         <div class="hidden"></div>
 

@@ -6,6 +6,8 @@
     <title>LILAC Scheduler</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
+    <link rel="stylesheet" href="dashboard-theme.css">
+    <link rel="stylesheet" href="sidebar-enhanced.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -93,7 +95,7 @@
     <script src="lilac-enhancements.js?v=1.1"></script>
     <script>
         // Force cache refresh - version 1.1
-        console.log('Scheduler script loaded - version 1.1');
+        // Scheduler script loaded
         
         // Ensure LILAC enhancements are loaded
         if (typeof window.lilacNotifications === 'undefined') {
@@ -101,7 +103,7 @@
             // Wait for the enhancement system to initialize
             const checkLILAC = setInterval(() => {
                 if (typeof window.lilacNotifications !== 'undefined') {
-                    console.log('LILAC notifications loaded successfully');
+                    // LILAC notifications loaded
                     clearInterval(checkLILAC);
                 }
             }, 100);
@@ -126,23 +128,7 @@
         console.log('Event filters:', eventFilters);
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Ensure sidebar state is applied immediately on this page as well
-            try {
-                var localState = localStorage.getItem('sidebar_state');
-                var sidebarEl = document.getElementById('sidebar');
-                if (sidebarEl && localState) {
-                    if (localState === 'closed') {
-                        if (window.innerWidth >= 768) {
-                            sidebarEl.style.transform = 'translateX(-100%)';
-                        } else {
-                            sidebarEl.classList.add('-translate-x-full');
-                        }
-                    } else if (localState === 'open') {
-                        sidebarEl.style.transform = '';
-                        sidebarEl.classList.remove('-translate-x-full');
-                    }
-                }
-            } catch(_) {}
+            // Sidebar state is now handled globally by LILACSidebar
             loadMeetings();
             initializeCalendar();
             renderMiniCalendar();
@@ -176,9 +162,7 @@
             }, 500);
             
             // Debug LILAC notifications initialization
-            console.log('DOM loaded - LILAC notifications check:');
-            console.log('window.lilacNotifications:', window.lilacNotifications);
-            console.log('window.lilacNotifications.confirm:', window.lilacNotifications?.confirm);
+            // DOM loaded - LILAC notifications initialized
         });
 
         function updateCurrentDate() {
@@ -255,17 +239,13 @@
                     clickedDateString = e.target.dataset.date; // Set global variable
                     const clickedDay = e.target.textContent.trim();
                     
-                    console.log('DEBUG: Clicked element:', e.target);
-                    console.log('DEBUG: Clicked date string:', clickedDateString);
-                    console.log('DEBUG: Clicked day number:', clickedDay);
-                    console.log('DEBUG: Global clickedDateString after setting:', clickedDateString);
+                    // Date selection logic
                     
                     // Create date without timezone issues by parsing the date string directly
                     const [year, month, day] = clickedDateString.split('-').map(Number);
                     const date = new Date(year, month - 1, day); // month is 0-indexed
                     
-                    console.log('DEBUG: Created date object:', date);
-                    console.log('DEBUG: Date toISOString:', date.toISOString());
+                    // Date object created
                     
                     selectedDate = date;
                     
@@ -276,7 +256,7 @@
                     const clickedYear = date.getFullYear();
                     
                     if (clickedMonth !== currentMonth || clickedYear !== currentYear) {
-                        console.log('DEBUG: Navigating to different month/year:', clickedMonth, clickedYear);
+                        // Navigating to different month/year
                         // Update the calendar to show the clicked date's month
                         selectedDate = date;
                     }
@@ -284,7 +264,7 @@
                     // Force immediate re-render to show selection
                     setTimeout(() => {
                         renderCalendar(); // Re-render calendar to update selection
-                        console.log('DEBUG: Calendar re-rendered with clickedDateString:', clickedDateString);
+                        // Calendar re-rendered
                     }, 10);
                     
                     // Also update the weekly view date selection
@@ -292,9 +272,7 @@
                     
                     // Always update the weekly view to show the week containing the clicked date
                     currentWeek = new Date(date);
-                    console.log('DEBUG: Updated currentWeek to:', currentWeek);
-                    console.log('DEBUG: currentWeek.toISOString():', currentWeek.toISOString());
-                    console.log('DEBUG: Week start will be:', getWeekStart(currentWeek).toISOString().split('T')[0]);
+                    // Updated currentWeek
                     
                     // Force the calendar view to be active and update the weekly view
                     setActiveView('calendar');
@@ -302,7 +280,7 @@
                     // Force the schedule to re-render with the new week immediately
                     setTimeout(() => {
                         renderSchedule();
-                        console.log('DEBUG: Schedule re-rendered immediately');
+                        // Schedule re-rendered
                         
                         // Force update the date range display manually
                         const dateRangeElement = document.getElementById('date-range');
@@ -320,13 +298,13 @@
                                 day: 'numeric',
                                 year: 'numeric'
                             })}`;
-                            console.log('DEBUG: Manually updated date range to:', dateRangeElement.textContent);
+                            // Date range updated
                         }
                         
                         // Also re-render after a short delay to ensure DOM updates
                         setTimeout(() => {
                             renderSchedule();
-                            console.log('DEBUG: Schedule re-rendered again after delay');
+                            // Schedule re-rendered after delay
                         }, 100);
                     }, 10);
                 }
@@ -414,12 +392,12 @@
             // Store selected date for potential use (like adding events to specific date)
             window.selectedDate = dateString;
             
-            console.log('Selected date:', dateString);
+            // Date selected
         }
 
         // Function to show event details modal
         function showEventDetails(id, title, description, date, startTime, endTime, isAllDay, color) {
-            console.log('showEventDetails called with:', { id, title, description, date, startTime, endTime, isAllDay, color });
+            // Showing event details
             // Store event data for edit/delete operations
             window.currentEventData = { id, title, description, date, startTime, endTime, isAllDay, color };
             
@@ -663,8 +641,7 @@
 
         // Function to handle edit event submission
         function handleEditEventSubmit() {
-            console.log('=== EDIT EVENT SUBMISSION DEBUG ===');
-            console.log('handleEditEventSubmit called');
+            // Edit event submission
             const eventData = window.currentEventData;
             console.log('Event data:', eventData);
             console.log('Edit mode:', window.isEditMode);
@@ -1109,8 +1086,7 @@
                 return passes;
             });
             
-            console.log('=== CALENDAR DEBUG ===');
-            console.log('Current week:', weekStart.toISOString().split('T')[0], 'to', weekEnd.toISOString().split('T')[0]);
+            // Calendar rendering
             console.log('Total meetings loaded:', currentMeetings.length);
             console.log('All meetings:', currentMeetings);
             console.log('Filtered meetings:', filteredMeetings);
@@ -1728,8 +1704,7 @@
             const remindersContainer = document.getElementById('reminders-list');
             if (!remindersContainer) return;
 
-            console.log('=== REMINDERS DEBUG ===');
-            console.log('Current meetings for reminders:', currentMeetings);
+            // Reminders processing
             
             const now = new Date();
             console.log('Current time:', now);
@@ -1971,8 +1946,7 @@
         function handleSubmitButtonClick(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('=== BUTTON CLICK DEBUG ===');
-            console.log('Submit button clicked!');
+            // Submit button clicked
             console.log('Button text:', e.target.textContent);
             console.log('Edit mode:', window.isEditMode);
             console.log('Edit event ID:', window.editEventId);
@@ -2066,8 +2040,7 @@
         function handleAddEventSubmit(e) {
             e.preventDefault();
             
-            console.log('=== FORM SUBMISSION DEBUG ===');
-            console.log('handleAddEventSubmit called');
+            // Form submission
             console.log('Edit mode check:', { isEditMode: window.isEditMode, editEventId: window.editEventId });
             console.log('Form elements:', {
                 eventName: document.getElementById('event-name')?.value,
@@ -3866,53 +3839,36 @@
                 menuToggle.addEventListener('click', toggleMenu);
             }
             
-            if (hamburgerToggle) {
-                hamburgerToggle.addEventListener('click', function() {
-                    try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-                });
-            }
+            // Hamburger button is now handled globally by LILACSidebar
 
-            if (overlay) {
-                overlay.addEventListener('click', function() {
-                    try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (e) {}
-                    overlay.classList.add('hidden');
-                });
-            }
-
-            // Keep overlay visibility in sync with sidebar open/close state
-            window.addEventListener('sidebar:state', function(e) {
-                const o = document.getElementById('menu-overlay');
-                if (!o) return;
-                if (e && e.detail && e.detail.open) {
-                    o.classList.remove('hidden');
-                } else {
-                    o.classList.add('hidden');
-                }
-            });
+            // Overlay click is now handled globally by LILACSidebar
         });
+        
+        // toggleSidebar function is now handled globally by LILACSidebar
     </script>
 </head>
 <body class="bg-gray-50 dark:bg-[#222831] transition-colors duration-200">
 	<!-- Navigation Bar -->
-	<nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-3 h-14 flex items-center justify-between pl-64 relative transition-all duration-300 ease-in-out" style="will-change:auto">
-		<div class="flex items-center space-x-4">
-			<button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-1/2 -translate-y-1/2 left-4 z-[70]" title="Toggle sidebar">
-				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	<nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
+		<div class="flex items-center space-x-4 pl-16">
+			<button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
+				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
 				</svg>
 			</button>
-		</div>
-		<div class="absolute left-1/2 transform -translate-x-1/2">
+			
 			<h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Scheduler</h1>
+			
+			<a href="dashboard.php" class="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer">
+			</a>
 		</div>
-		<div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center space-x-4"></div>
 	</nav>
 
 	<!-- Sidebar -->
 	<?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
-    <div id="main-content" class="ml-64 px-6 pt-2 pb-6 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 transition-all duration-300 ease-in-out" style="will-change:auto">
+    <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
 
 
 

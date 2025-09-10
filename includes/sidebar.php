@@ -1,9 +1,12 @@
-<div id="sidebar" class="sidebar fixed top-0 left-0 h-screen bg-gradient-to-b from-blue-500 to-purple-600 text-white transition-transform duration-300 ease-in-out z-[70] transform -translate-x-full flex flex-col shadow-2xl rounded-r-2xl">
+<!-- Mobile backdrop/overlay -->
+<div id="sidebar-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-[60] hidden lg:hidden"></div>
+
+<div id="sidebar" class="sidebar fixed top-0 left-0 w-64 h-screen bg-gradient-to-b from-blue-500 to-purple-600 text-white transition-transform duration-300 ease-in-out z-[70] flex flex-col shadow-2xl rounded-r-2xl -translate-x-full">
            <div class="h-20 px-6 py-4 flex items-center justify-between">
          <div class="flex items-center justify-center flex-1">
              <img src="img/cpu-logo.png" alt="CPU Logo" class="w-12 h-12 object-contain cursor-pointer hover:scale-105 transition-transform duration-200" onclick="location.reload()"/>
          </div>
-         <button id="sidebar-close" class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white border border-white/30 rounded-lg p-1.5 transition-all duration-200 shadow-md" title="Close sidebar" onclick="try{window.dispatchEvent(new CustomEvent('sidebar:toggle'))}catch(e){}">
+         <button id="sidebar-close" class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white border border-white/30 rounded-lg p-1.5 transition-all duration-200 shadow-md" title="Close sidebar">
            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
            </svg>
@@ -60,12 +63,10 @@
     </a>
   </nav>
   
-  <!-- Section Divider -->
   <div class="px-6 py-2">
     <div class="border-t border-white/20"></div>
   </div>
   
-  <!-- Connection Status -->
   <div class="px-6 py-4 mt-auto">
     <div id="connection-status" class="flex items-center justify-center space-x-2 text-sm">
       <div id="online-indicator" class="flex items-center space-x-2 text-green-300">
@@ -79,172 +80,225 @@
     </div>
   </div>
 </div>
+
 <script>
-// Function to highlight the current page in navigation - DISABLED
-// Now only hover effects will show highlights
-function highlightCurrentPage() {
-  // Remove any existing active classes to disable highlighting
-  const navItems = document.querySelectorAll('.nav-item');
-  navItems.forEach(item => {
-    item.classList.remove('active', 'bg-white/30', 'shadow-lg');
-    const textSpan = item.querySelector('.nav-text');
-    if (textSpan) {
-      textSpan.classList.remove('font-bold');
-    }
-  });
-  
-  // No active highlighting - only hover effects will be visible
-}
-
-function logoutLILAC() {
-  localStorage.clear();
-  sessionStorage.clear();
-  window.location.href = 'index.html';
-}
-document.addEventListener('DOMContentLoaded', function () {
-  // Highlight current page in navigation
-  highlightCurrentPage();
-  
-  var sidebar = document.getElementById('sidebar');
-  if (!sidebar) return;
-
-  // Temporarily disable transitions to avoid initial flicker until state is applied
-  try {
-    document.documentElement.classList.add('sidebar-prep');
-    var prepStyle = document.getElementById('sidebar-prep-style');
-    if (!prepStyle) {
-      prepStyle = document.createElement('style');
-      prepStyle.id = 'sidebar-prep-style';
-      prepStyle.textContent = '.sidebar-prep #sidebar, .sidebar-prep nav.modern-nav, .sidebar-prep #main-content { transition: none !important; }';
-      document.head.appendChild(prepStyle);
-    }
-  } catch (_) {}
-
-  var EDGE_OPEN_PX = 24; // open when cursor is within 24px of left edge
-  var EDGE_CLOSE_PX = 300; // close when cursor moves beyond 300px from left edge
-  var isOpen = true;
-  function dispatchSidebarState(isOpen, mode) {
-    try {
-      window.dispatchEvent(new CustomEvent('sidebar:state', { detail: { open: !!isOpen, mode: mode } }));
-      document.body.classList[isOpen ? 'add' : 'remove']('sidebar-open');
-    } catch (err) { /* noop */ }
-  }
-  function adjustDashboardLayout(isOpen) {
-    var main = document.getElementById('main-content');
-    var nav = document.querySelector('nav.modern-nav');
-    if (main) main.classList.add('transition-all','duration-300','ease-in-out');
-    if (nav) nav.classList.add('transition-all','duration-300','ease-in-out');
-    // Reflect current state on both desktop and mobile
-    if (isOpen) {
-      if (main) main.classList.add('ml-64');
-      if (nav) nav.classList.add('pl-64');
-    } else {
-      if (main) main.classList.remove('ml-64');
-      if (nav) nav.classList.remove('pl-64');
-    }
-  }
-  function openSidebarDesktop() { sidebar.style.transform = ''; isOpen = true; dispatchSidebarState(true, 'desktop'); adjustDashboardLayout(true); }
-  function closeSidebarDesktop() {
-    sidebar.style.transform = 'translateX(-100%)';
-    isOpen = false;
-    dispatchSidebarLayoutTransition();
-    dispatchSidebarState(false, 'desktop');
-    adjustDashboardLayout(false);
-  }
-
-  function dispatchSidebarLayoutTransition(){
-    var main = document.getElementById('main-content');
-    var nav = document.querySelector('nav.modern-nav');
-    if (main) { main.classList.add('transition-all','duration-300'); }
-    if (nav) { nav.classList.add('transition-all','duration-300'); }
-  }
-
-  // Listen for explicit toggle requests (from hamburger button)
-  window.addEventListener('sidebar:toggle', function () {
-    if (isOpen) {
-      closeSidebarDesktop();
-      try { localStorage.setItem('sidebar_state', 'closed'); } catch(e){}
-      try { fetch('api/sidebar_state.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sidebar_state: 'closed' }) }); } catch(e){}
-    } else {
-      openSidebarDesktop();
-      try { localStorage.setItem('sidebar_state', 'open'); } catch(e){}
-      try { fetch('api/sidebar_state.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sidebar_state: 'open' }) }); } catch(e){}
-    }
-  });
-
-  window.addEventListener('resize', function () {
-    // Apply last known state on resize; do not force open
-    var state = 'open';
-    try { state = localStorage.getItem('sidebar_state') || (isOpen ? 'open' : 'closed'); } catch(_) {}
-    if (state === 'closed') {
-      sidebar.classList.add('-translate-x-full');
-      sidebar.style.transform = 'translateX(-100%)';
-      isOpen = false;
-    } else {
-      sidebar.classList.remove('-translate-x-full');
-      sidebar.style.transform = '';
-      isOpen = true;
-    }
-    dispatchSidebarState(isOpen, 'desktop');
-    adjustDashboardLayout(isOpen);
-  });
-
-  // Apply last known state synchronously from localStorage to avoid flicker
-  (function applyLocalSidebarState(){
-    try {
-      var localState = localStorage.getItem('sidebar_state') || 'closed';
-      if (localState === 'open') {
-        sidebar.style.transform = '';
-        sidebar.classList.remove('-translate-x-full');
-        isOpen = true;
-        adjustDashboardLayout(true);
-        dispatchSidebarState(true, 'bootstrap');
-      } else {
-        // default closed
-        if (window.innerWidth >= 768) {
-          sidebar.style.transform = 'translateX(-100%)';
-          isOpen = false;
-          adjustDashboardLayout(false);
-        } else {
-          sidebar.classList.add('-translate-x-full');
-          isOpen = false;
-          adjustDashboardLayout(false);
+// Global Sidebar Management System
+window.LILACSidebar = {
+    initialized: false,
+    isOpen: false,
+    
+    init: function() {
+        if (this.initialized) return;
+        this.initialized = true;
+        
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        
+        if (!sidebar) {
+            console.warn('Sidebar element not found');
+            return;
         }
-        dispatchSidebarState(false, 'bootstrap');
-      }
-    } catch(_) {}
-  })();
-
-  // Fetch persisted state from server and finalize (remove prep class once applied)
-  (function initSidebarState(){
-    try {
-      fetch('api/sidebar_state.php')
-        .then(function(r){ return r.json(); })
-        .then(function(d){
-          var state = (d && d.ok && d.sidebar_state) ? d.sidebar_state : 'closed';
-          if (window.innerWidth >= 768) {
-            if (state === 'open') { sidebar.style.transform = ''; isOpen = true; adjustDashboardLayout(true); }
-            else { sidebar.style.transform = 'translateX(-100%)'; isOpen = false; adjustDashboardLayout(false); }
-          } else {
-            // Mobile defaults to closed; overlay hidden
-            if (state === 'open') { sidebar.classList.remove('-translate-x-full'); isOpen = true; adjustDashboardLayout(true); }
-            else { sidebar.classList.add('-translate-x-full'); isOpen = false; adjustDashboardLayout(false); }
-          }
-          try { localStorage.setItem('sidebar_state', state); } catch(e){}
-          // Allow transitions after first paint with correct state
-          setTimeout(function(){ try { document.documentElement.classList.remove('sidebar-prep'); } catch(_){} }, 0);
-        })
-        .catch(function(){
-          dispatchSidebarState(true, 'desktop');
-          adjustDashboardLayout(true);
-          setTimeout(function(){ try { document.documentElement.classList.remove('sidebar-prep'); } catch(_){} }, 0);
+        
+        // Load saved state or default to open on desktop, closed on mobile
+        this.loadState().then(() => {
+            this.applyState();
+            this.setupEventListeners();
         });
-    } catch (e) {
-      dispatchSidebarState(true, 'desktop');
-      adjustDashboardLayout(true);
-      try { document.documentElement.classList.remove('sidebar-prep'); } catch(_){}
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            this.applyState();
+        });
+    },
+    
+    loadState: async function() {
+        try {
+            const response = await fetch('api/sidebar_state.php');
+            const data = await response.json();
+            if (data.ok) {
+                this.isOpen = data.sidebar_state === 'open';
+            } else {
+                // Default state based on screen size
+                this.isOpen = window.innerWidth >= 1024;
+            }
+        } catch (error) {
+            console.warn('Could not load sidebar state:', error);
+            this.isOpen = window.innerWidth >= 1024;
+        }
+    },
+    
+    saveState: async function() {
+        try {
+            await fetch('api/sidebar_state.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sidebar_state: this.isOpen ? 'open' : 'closed' })
+            });
+        } catch (error) {
+            console.warn('Could not save sidebar state:', error);
+        }
+    },
+    
+    applyState: function() {
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        const mainContainer = document.getElementById('main-content');
+        const nav = document.querySelector('nav.modern-nav');
+        
+        if (!sidebar) return;
+        
+        const isDesktop = window.innerWidth >= 1024;
+        
+        // Apply sidebar visibility - always respect the isOpen state
+        if (this.isOpen) {
+            sidebar.classList.remove('-translate-x-full');
+        } else {
+            sidebar.classList.add('-translate-x-full');
+        }
+        
+        // Handle backdrop (only on mobile)
+        if (backdrop) {
+            if (!isDesktop && this.isOpen) {
+                backdrop.classList.remove('hidden');
+            } else {
+                backdrop.classList.add('hidden');
+            }
+        }
+        
+        // Handle main content margin (only on desktop when sidebar is open)
+        if (mainContainer) {
+            if (isDesktop && this.isOpen) {
+                mainContainer.classList.add('ml-64');
+            } else {
+                mainContainer.classList.remove('ml-64');
+            }
+        }
+        
+        // Handle navigation padding (only on desktop when sidebar is open)
+        if (nav) {
+            if (isDesktop && this.isOpen) {
+                nav.classList.add('pl-64');
+            } else {
+                nav.classList.remove('pl-64');
+            }
+        }
+        
+        // Dispatch custom event for other components
+        window.dispatchEvent(new CustomEvent('sidebar:state', { 
+            detail: { isOpen: this.isOpen, isDesktop: isDesktop } 
+        }));
+    },
+    
+    toggle: function() {
+        this.isOpen = !this.isOpen;
+        this.applyState();
+        this.saveState();
+        
+        // On mobile, close sidebar automatically after navigation
+        if (window.innerWidth < 1024 && this.isOpen) {
+            // Auto-close after 5 seconds on mobile
+            setTimeout(() => {
+                if (window.innerWidth < 1024) {
+                    this.close();
+                }
+            }, 5000);
+        }
+    },
+    
+    open: function() {
+        if (!this.isOpen) {
+            this.toggle();
+        }
+    },
+    
+    close: function() {
+        if (this.isOpen) {
+            this.toggle();
+        }
+    },
+    
+    setupEventListeners: function() {
+        // Setup hamburger button if it exists
+        const hamburger = document.getElementById('hamburger-toggle');
+        if (hamburger) {
+            hamburger.addEventListener('click', (e) => {
+                // Add click animation (zoom out like documents page)
+                hamburger.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    hamburger.style.transform = '';
+                }, 120);
+                this.toggle();
+            });
+        }
+        
+        // Setup close button
+        const closeBtn = document.getElementById('sidebar-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                // Add click animation
+                closeBtn.style.transform = 'scale(0.98)';
+                setTimeout(() => {
+                    closeBtn.style.transform = '';
+                }, 120);
+                this.close();
+            });
+        }
+        
+        // Setup backdrop click
+        const backdrop = document.getElementById('sidebar-backdrop');
+        if (backdrop) {
+            backdrop.addEventListener('click', () => this.close());
+        }
+        
+        // Auto-close on navigation for mobile
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (link && window.innerWidth < 1024 && this.isOpen) {
+                // Small delay to allow navigation to start
+                setTimeout(() => this.close(), 100);
+            }
+        });
     }
-  })();
+};
 
+// Global toggle function for backward compatibility
+window.toggleSidebar = function() {
+    if (window.LILACSidebar) {
+        window.LILACSidebar.toggle();
+    }
+};
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    window.LILACSidebar.init();
+    
+    // Add active class to current page navigation item
+    const currentPage = window.location.pathname.split('/').pop() || 'dashboard.php';
+    const navItems = document.querySelectorAll('#sidebar .nav-item');
+    
+    // Remove active class from all items first
+    navItems.forEach(item => item.classList.remove('active'));
+    
+    // Find and highlight the current page
+    navItems.forEach(item => {
+        const href = item.getAttribute('href');
+        if (href) {
+            const hrefPage = href.split('/').pop();
+            if (hrefPage === currentPage) {
+                item.classList.add('active');
+            }
+        }
+        
+        // Add click animation (zoom out then back up like documents page)
+        item.addEventListener('click', function(e) {
+            // Apply the scale down effect
+            this.style.transform = 'translateX(2px) scale(0.98)';
+            
+            // Reset after animation
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 120);
+        });
+    });
 });
-</script> 
+</script>

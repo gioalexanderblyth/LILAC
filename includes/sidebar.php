@@ -68,16 +68,6 @@
   </div>
   
   <div class="px-6 py-4 mt-auto">
-    <div id="connection-status" class="flex items-center justify-center space-x-2 text-sm">
-      <div id="online-indicator" class="flex items-center space-x-2 text-green-300">
-        <div class="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-        <span class="font-medium">Online</span>
-      </div>
-      <div id="offline-indicator" class="flex items-center space-x-2 text-orange-300" style="display: none;">
-        <div class="w-2 h-2 bg-orange-300 rounded-full"></div>
-        <span class="font-medium">Offline</span>
-      </div>
-    </div>
   </div>
 </div>
 

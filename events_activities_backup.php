@@ -287,7 +287,7 @@
                             </div>
                             <div class="p-3">
                                 <span class="text-purple-600 text-xs font-medium">ACTIVITIES</span>
-                                <h3 class="font-semibold text-gray-900 mt-1 mb-2 text-sm">Pre-Service Student Teacher Exchange in Southeast Asia Project</h3>
+                                <h3 class="font-semibold text-gray-900 mt-1 mb-2 text-sm">Beginner's Guide To Becoming A Professional Frontend Developer</h3>
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-1">
                                         <div class="flex -space-x-1">
@@ -311,7 +311,7 @@
                             <div class="h-32 bg-gradient-to-br from-gray-800 to-gray-900 relative">
                                 <div class="absolute inset-0 bg-black bg-opacity-20"></div>
                                 <div class="absolute bottom-2 left-2 text-white">
-                                    <p class="text-xs font-medium">4th REGIONAL AWARDS</p>
+                                    <p class="text-xs font-medium">CODE EDITOR INTERFACE</p>
                                 </div>
                                 <!-- Delete Button -->
                                 <button class="delete-card absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete this card">
@@ -322,7 +322,7 @@
                             </div>
                             <div class="p-3">
                                 <span class="text-purple-600 text-xs font-medium">EVENTS</span>
-                                <h3 class="font-semibold text-gray-900 mt-1 mb-2 text-sm">Exclusivity and Sustainability</h3>
+                                <h3 class="font-semibold text-gray-900 mt-1 mb-2 text-sm">Beginner's Guide To Becoming A Professional Backend Developer</h3>
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-1">
                                         <div class="flex -space-x-1">
@@ -346,7 +346,7 @@
                             <div class="h-32 bg-gradient-to-br from-blue-500 to-blue-600 relative">
                                 <div class="absolute inset-0 bg-black bg-opacity-20"></div>
                                 <div class="absolute bottom-2 left-2 text-white">
-                                    <p class="text-xs font-medium">ASEAN UNIVERSITIES EXHIBITION AND FORUM</p>
+                                    <p class="text-xs font-medium">How To Create Your Online Course Step 3</p>
                                 </div>
                                 <!-- Delete Button -->
                                 <button class="delete-card absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete this card">
@@ -357,7 +357,7 @@
                             </div>
                             <div class="p-3">
                                 <span class="text-purple-600 text-xs font-medium">ACTIVITIES</span>
-                                <h3 class="font-semibold text-gray-900 mt-1 mb-2 text-sm">Pre-Service Student Teacher Exchange in Southeast Asia Project</h3>
+                                <h3 class="font-semibold text-gray-900 mt-1 mb-2 text-sm">Beginner's Guide To Becoming A Professional Frontend Developer</h3>
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-1">
                                         <div class="flex -space-x-1">
@@ -411,9 +411,78 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-
-
-
+                                <tr data-sample-row="true">
+                                    <td class="px-3 py-2">
+                                        <p class="font-medium text-gray-900 text-sm">Annual Tech Conference 2024</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <p class="text-gray-900 text-sm">CPU IT Department</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <p class="text-gray-900 text-sm">CPU Auditorium</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <p class="text-gray-600 text-sm">Jan 25, 2024</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">Upcoming</span>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <button class="delete-row-btn text-gray-400 cursor-not-allowed p-1" title="Sample event - cannot be deleted" disabled>
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr data-sample-row="true">
+                                    <td class="px-3 py-2">
+                                        <p class="font-medium text-gray-900 text-sm">Student Orientation Program</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <p class="text-gray-900 text-sm">Student Affairs</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <p class="text-gray-900 text-sm">Main Campus</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <p class="text-gray-600 text-sm">Jan 12, 2024</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">Completed</span>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <button class="delete-row-btn text-gray-400 cursor-not-allowed p-1" title="Sample event - cannot be deleted" disabled>
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr data-sample-row="true">
+                                    <td class="px-3 py-2">
+                                        <p class="font-medium text-gray-900 text-sm">Research Symposium</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <p class="text-gray-900 text-sm">Research Office</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <p class="text-gray-900 text-sm">Library Hall</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <p class="text-gray-600 text-sm">Feb 15, 2024</p>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">Upcoming</span>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <button class="delete-row-btn text-gray-400 cursor-not-allowed p-1" title="Sample event - cannot be deleted" disabled>
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -1598,6 +1667,5 @@
 </body>
 
 </html> 
-
 
 

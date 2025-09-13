@@ -169,6 +169,37 @@
             });
         }
 
+        function syncFromDocuments() {
+            const syncBtn = document.getElementById('sync-mous-btn');
+            const originalText = syncBtn.innerHTML;
+            
+            // Show loading state
+            syncBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Syncing...';
+            syncBtn.disabled = true;
+            
+            fetch('api/mous.php?action=sync_from_documents')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message || `Synced ${data.synced || 0} documents`, 'success');
+                    // Reload documents to show the synced ones
+                    loadDocuments();
+                    loadStats();
+                } else {
+                    showNotification(data.message || 'Sync failed', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Sync error:', error);
+                showNotification('Network error during sync', 'error');
+            })
+            .finally(() => {
+                // Restore button state
+                syncBtn.innerHTML = originalText;
+                syncBtn.disabled = false;
+            });
+        }
+
         function extractMOUType(documentName) {
             if (!documentName) return 'MOU';
             
@@ -352,13 +383,19 @@
                                     </svg>
                                     View
                                 </button>
+                                ${doc.file_name ? `<button onclick="viewMOUFile(${doc.id}, '${doc.file_name}')" class="text-green-600 hover:text-green-900 font-medium flex items-center" title="View File">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                    </svg>
+                                    File
+                                </button>` : ''}
                                 <button onclick="editMOU(${doc.id})" class="text-indigo-600 hover:text-indigo-900 font-medium flex items-center" title="Edit">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                     </svg>
                                     Edit
                                 </button>
-                                <button onclick="deleteMOU(${doc.id})" class="text-red-600 hover:text-red-900 font-medium flex items-center" title="Delete">
+                                <button onclick="showDeleteModal(${doc.id}, '${doc.partner_name}')" class="text-red-600 hover:text-red-900 font-medium flex items-center" title="Delete">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                     </svg>
@@ -462,9 +499,14 @@
                                 <p class="font-medium text-gray-900">${mou.file_name}</p>
                                 <p class="text-sm text-gray-500">MOU/MOA document</p>
                             </div>
-                            <button onclick="downloadMOUFile(${mou.id}, '${mou.file_name}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                                Download
-                            </button>
+                            <div class="flex gap-2">
+                                <button onclick="viewMOUFile(${mou.id}, '${mou.file_name}')" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                                    View
+                                </button>
+                                <button onclick="downloadMOUFile(${mou.id}, '${mou.file_name}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                                    Download
+                                </button>
+                            </div>
                         </div>
                     `;
                 } else {
@@ -491,6 +533,89 @@
             showNotification(`Downloading ${fileName}...`, 'info');
             // In a real implementation, this would trigger the actual file download
             // window.open(`api/mous.php?action=download&id=${id}`, '_blank');
+        }
+
+        // Document viewer functions
+        function viewMOUFile(id, fileName) {
+            const mou = currentDocuments.find(m => m.id == id);
+            if (mou) {
+                showDocumentViewer(mou);
+            } else {
+                showNotification('MOU not found', 'error');
+            }
+        }
+
+        function getFileExtension(filename) {
+            return filename.split('.').pop().toLowerCase();
+        }
+
+        function showDocumentViewer(doc) {
+            const title = doc.partner_name || 'MOU Document';
+            let filePath = doc.file_name || '';
+            const ext = getFileExtension(filePath || '');
+
+            if (filePath && !filePath.startsWith('uploads/') && !filePath.startsWith('/uploads/')) {
+                filePath = `uploads/${filePath}`;
+            }
+
+            const overlay = document.getElementById('document-viewer-overlay');
+            const titleEl = document.getElementById('document-viewer-title');
+            const contentEl = document.getElementById('document-viewer-content');
+            const downloadBtn = document.getElementById('document-viewer-download');
+            const openBtn = document.getElementById('document-viewer-open');
+
+            if (!overlay || !titleEl || !contentEl || !downloadBtn) return;
+
+            titleEl.textContent = title;
+            contentEl.innerHTML = '';
+
+            if (ext === 'pdf') {
+                const pdfUrl = new URL(filePath, window.location.origin).href;
+                const iframe = document.createElement('iframe');
+                iframe.src = pdfUrl;
+                iframe.style.width = '100%';
+                iframe.style.height = 'calc(100% - 0px)';
+                iframe.style.display = 'block';
+                contentEl.appendChild(iframe);
+                
+                openBtn.onclick = function() { window.open(pdfUrl, '_blank'); };
+            } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) {
+                const imgUrl = new URL(filePath, window.location.origin).href;
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '100%';
+                img.style.objectFit = 'contain';
+                img.style.display = 'block';
+                img.style.margin = '0 auto';
+                contentEl.appendChild(img);
+                
+                openBtn.onclick = function() { window.open(imgUrl, '_blank'); };
+            } else if (['doc','docx','ppt','pptx','xls','xlsx'].includes(ext)) {
+                const isLocalhost = ['localhost','127.0.0.1','::1'].includes(location.hostname);
+                if (isLocalhost) {
+                    const info = document.createElement('div');
+                    info.className = 'text-center text-gray-600';
+                    info.textContent = 'Preview for Office files is not available on localhost. Please use Download to view the file.';
+                    contentEl.appendChild(info);
+                } else {
+                    const absoluteUrl = new URL(filePath, window.location.origin).href;
+                    const officeUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(absoluteUrl);
+                    const iframe = document.createElement('iframe');
+                    iframe.src = officeUrl;
+                    iframe.style.width = '100%';
+                    iframe.style.height = 'calc(100% - 0px)';
+                    iframe.style.display = 'block';
+                    contentEl.appendChild(iframe);
+                }
+                openBtn.onclick = function() { window.open(new URL(filePath, window.location.origin).href, '_blank'); };
+            } else {
+                contentEl.innerHTML = '<div class="text-center text-gray-600">Preview not supported for this file type. Please download to view.</div>';
+                openBtn.onclick = function() { window.open(new URL(filePath, window.location.origin).href, '_blank'); };
+            }
+
+            downloadBtn.onclick = function() { downloadMOUFile(doc.id, doc.file_name); };
+            overlay.classList.remove('hidden');
         }
 
         // Track editing state
@@ -896,9 +1021,7 @@
                 .catch(err => console.error('Failed to fetch upcoming expirations', err));
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Upcoming expiration toasts disabled on this page per request
-        });
+        // Upcoming expiration toasts disabled on this page per request
     </script>
 </head>
 
@@ -993,14 +1116,19 @@
         }
         updateCurrentDate();
         setInterval(updateCurrentDate, 60000);
-    });
     </script>
 
     <!-- Main Content -->
     <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out text-sm">
         <!-- Header Section -->
         <div class="mb-4">
-            <div class="flex items-center justify-end">
+            <div class="flex items-center justify-end gap-2">
+                <button id="sync-mous-btn" class="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2" onclick="syncFromDocuments()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Sync
+                </button>
                 <button id="create-mou-header-btn" class="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm" onclick="openCreateMOUModal()">Upload</button>
             </div>
         </div>
@@ -1274,18 +1402,15 @@
             document.getElementById('createMOUModal').classList.add('hidden');
         }
         // Submit handler already wired to #mou-form (handleFormSubmit)
-        document.addEventListener('DOMContentLoaded', function(){
+        document.addEventListener('DOMContentLoaded', function() {
             var form = document.getElementById('mou-form');
-            if (form) {
-                // Duplicate submit listener removed to avoid double submission
-            }
+            // Duplicate submit listener removed to avoid double submission
         });
+        console.log('Script ending before line 1288');
     </script>
 
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
-
-    
 
     <!-- Footer -->
     <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
@@ -1293,6 +1418,7 @@
     </footer>
 
     <script>
+        console.log('Script starting at line 1293');
         function toggleFiltersPanel(e){
             if (e) { e.preventDefault(); e.stopPropagation(); }
             var panel = document.getElementById('filters-panel');
@@ -1560,6 +1686,30 @@
             }
         });
     </script>
+
+    <!-- Document Viewer Modal -->
+    <div id="document-viewer-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-[80] hidden" onclick="this.classList.add('hidden')">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between px-4 py-3 border-b">
+                    <h3 id="document-viewer-title" class="text-lg font-semibold text-gray-900"></h3>
+                    <div class="flex items-center gap-2">
+                        <button id="document-viewer-open" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Open in New Tab</button>
+                        <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 bg-gray-50 p-2 overflow-y-auto overflow-x-hidden min-h-0">
+                    <div id="document-viewer-content" class="w-full h-full overflow-y-auto overflow-x-hidden"></div>
+                </div>
+                <div class="flex items-center justify-end gap-2 px-4 py-3 border-t">
+                    <button id="document-viewer-download" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Download</button>
+                    <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 

@@ -55,12 +55,6 @@
       </svg>
       <span class="nav-text text-white font-semibold group-hover:font-bold transition-all duration-200">Templates</span>
     </a>
-    <a href="registrar_files.php" class="nav-item modern-nav-item flex items-center px-4 py-3 rounded-xl hover:bg-white/20 active:bg-white/30 transition-all duration-200 text-white group" data-tooltip="Registrar Files">
-      <svg class="w-5 h-5 mr-4 flex-shrink-0 text-white group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
-      </svg>
-      <span class="nav-text text-white font-semibold group-hover:font-bold transition-all duration-200">Registrar Files</span>
-    </a>
   </nav>
   
   <div class="px-6 py-2">

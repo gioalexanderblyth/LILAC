@@ -210,15 +210,15 @@
                 addEventBtn.addEventListener('click', showAddEventModal);
             }
 
-            // Responsive floating button on scroll
+            // Responsive floating button on scroll (only if button exists)
             let lastScrollTop = 0;
             const floatingBtn = document.getElementById('view-switch-btn');
             const floatingBtnContainer = floatingBtn?.parentElement;
             
-            window.addEventListener('scroll', function() {
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                
-                if (floatingBtnContainer) {
+            if (floatingBtn && floatingBtnContainer) {
+                window.addEventListener('scroll', function() {
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    
                     if (scrollTop > lastScrollTop && scrollTop > 100) {
                         // Scrolling down - move button up (current position above footer)
                         floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
@@ -228,10 +228,10 @@
                         floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
                         floatingBtnContainer.style.transition = 'bottom 0.3s ease';
                     }
-                }
-                
-                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-            });
+                    
+                    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+                });
+            }
 
             // Calendar day clicks
             document.addEventListener('click', function(e) {
@@ -1857,33 +1857,67 @@
             const trashView = document.getElementById('trash-view');
 
             if (view === 'calendar') {
-                // Update floating button
-                viewSwitchBtn.setAttribute('data-current-view', 'calendar');
-                calendarIcon.classList.remove('hidden');
-                meetingsIcon.classList.add('hidden');
-                viewSwitchText.textContent = 'Schedule a Meeting';
+                // Update floating button (if it exists)
+                if (viewSwitchBtn) {
+                    viewSwitchBtn.setAttribute('data-current-view', 'calendar');
+                }
+                if (calendarIcon) {
+                    calendarIcon.classList.remove('hidden');
+                }
+                if (meetingsIcon) {
+                    meetingsIcon.classList.add('hidden');
+                }
+                if (viewSwitchText) {
+                    viewSwitchText.textContent = 'Schedule a Meeting';
+                }
                 
                 // Show calendar view
-                calendarView.style.display = 'block';
-                meetingsView.style.display = 'none';
-                trashView.style.display = 'none';
+                if (calendarView) {
+                    calendarView.style.display = 'block';
+                }
+                if (meetingsView) {
+                    meetingsView.style.display = 'none';
+                }
+                if (trashView) {
+                    trashView.style.display = 'none';
+                }
             } else if (view === 'meetings') {
-                // Update floating button
-                viewSwitchBtn.setAttribute('data-current-view', 'meetings');
-                meetingsIcon.classList.remove('hidden');
-                calendarIcon.classList.add('hidden');
-                viewSwitchText.textContent = 'Calendar View';
+                // Update floating button (if it exists)
+                if (viewSwitchBtn) {
+                    viewSwitchBtn.setAttribute('data-current-view', 'meetings');
+                }
+                if (meetingsIcon) {
+                    meetingsIcon.classList.remove('hidden');
+                }
+                if (calendarIcon) {
+                    calendarIcon.classList.add('hidden');
+                }
+                if (viewSwitchText) {
+                    viewSwitchText.textContent = 'Calendar View';
+                }
                 
                 // Show meetings view
-                meetingsView.style.display = 'block';
-                calendarView.style.display = 'none';
-                trashView.style.display = 'none';
+                if (meetingsView) {
+                    meetingsView.style.display = 'block';
+                }
+                if (calendarView) {
+                    calendarView.style.display = 'none';
+                }
+                if (trashView) {
+                    trashView.style.display = 'none';
+                }
                 loadDocuments(); // Load meetings for the table view
             } else if (view === 'trash') {
                 // Show trash view (no button update needed since trash has its own button)
-                trashView.style.display = 'block';
-                calendarView.style.display = 'none';
-                meetingsView.style.display = 'none';
+                if (trashView) {
+                    trashView.style.display = 'block';
+                }
+                if (calendarView) {
+                    calendarView.style.display = 'none';
+                }
+                if (meetingsView) {
+                    meetingsView.style.display = 'none';
+                }
                 loadTrashMeetings(); // Load trash meetings
             }
         }

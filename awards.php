@@ -630,9 +630,13 @@
                 leadership: 0
             };
             
-            document.getElementById('academic-count').textContent = categories.academic;
-            document.getElementById('research-count').textContent = categories.research;
-            document.getElementById('leadership-count').textContent = categories.leadership;
+            const academicCountEl = document.getElementById('academic-count');
+            const researchCountEl = document.getElementById('research-count');
+            const leadershipCountEl = document.getElementById('leadership-count');
+            
+            if (academicCountEl) academicCountEl.textContent = categories.academic;
+            if (researchCountEl) researchCountEl.textContent = categories.research;
+            if (leadershipCountEl) leadershipCountEl.textContent = categories.leadership;
             
             // Update total count if element is present
             const total = categories.academic + categories.research + categories.leadership;
@@ -1190,7 +1194,7 @@
                 const documentsData = await documentsResponse.json();
                 
                 // Get all events
-                const eventsResponse = await fetch('api/events.php?action=get_all');
+                const eventsResponse = await fetch('api/enhanced_management.php?action=get_all_events');
                 const eventsData = await eventsResponse.json();
                 
                 const contentList = document.getElementById('available-content-list');

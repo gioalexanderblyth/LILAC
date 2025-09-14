@@ -1,284 +1,592 @@
 <?php
-// Lightweight Events API with JSON storage
-// Similar to scheduler.php but specifically for events and activities
+/**
+ * Events API for Award Management System
+ * Handles event creation, analysis, and award classification
+ */
+
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
-    exit;
+    exit();
 }
 
-$rootDir = dirname(__DIR__);
-$dataDir = $rootDir . DIRECTORY_SEPARATOR . 'data';
-$uploadsDir = $rootDir . DIRECTORY_SEPARATOR . 'uploads';
-$dbFile = $dataDir . DIRECTORY_SEPARATOR . 'events.json';
-
-// Ensure storage exists
-if (!is_dir($dataDir)) { @mkdir($dataDir, 0777, true); }
-if (!is_dir($uploadsDir)) { @mkdir($uploadsDir, 0777, true); }
-if (!file_exists($dbFile)) { 
-    file_put_contents($dbFile, json_encode([
-        'auto_id' => 1, 
-        'events' => [],
-        'activities' => []
-    ], JSON_PRETTY_PRINT)); 
+function respond($success, $data = []) {
+    echo json_encode(['success' => $success] + $data);
+    exit();
 }
 
-function respond_ok($payload = []) { 
-    echo json_encode(array_merge(['success' => true], $payload)); 
-    exit; 
-}
-
-function respond_err($message, $extra = []) { 
-    echo json_encode(array_merge(['success' => false, 'message' => $message], $extra)); 
-    exit; 
-}
-
-function load_db($dbFile) {
-    $raw = @file_get_contents($dbFile);
-    $data = json_decode($raw, true);
-    if (!is_array($data)) { 
-        $data = ['auto_id' => 1, 'events' => [], 'activities' => []]; 
+function load_events_db() {
+    $dbFile = '../data/events.json';
+    if (!file_exists($dbFile)) {
+        return ['auto_id' => 1, 'events' => []];
     }
-    if (!isset($data['auto_id'])) { $data['auto_id'] = 1; }
-    if (!isset($data['events']) || !is_array($data['events'])) { $data['events'] = []; }
-    if (!isset($data['activities']) || !is_array($data['activities'])) { $data['activities'] = []; }
-    return $data;
+    
+    $content = file_get_contents($dbFile);
+    if ($content === false) {
+        error_log("Failed to read events.json file");
+        return ['auto_id' => 1, 'events' => []];
+    }
+    
+    $decoded = json_decode($content, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("JSON decode error in events.json: " . json_last_error_msg());
+        return ['auto_id' => 1, 'events' => []];
+    }
+    
+    return $decoded;
 }
 
-function save_db($dbFile, $data) { 
-    file_put_contents($dbFile, json_encode($data, JSON_PRETTY_PRINT)); 
+function save_events_db($db, $dbFile) {
+    return file_put_contents($dbFile, json_encode($db, JSON_PRETTY_PRINT));
 }
 
-function normalize_date($d) {
-    if (!$d) return date('Y-m-d');
-    $ts = strtotime($d);
-    if ($ts === false) return date('Y-m-d');
-    return date('Y-m-d', $ts);
+function sanitize_input($input) {
+    return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
 }
 
-$action = $_GET['action'] ?? ($_POST['action'] ?? 'get_all');
+function detect_award_from_content($title, $description, $ocrText = '') {
+    $text = strtolower($title . ' ' . $description . ' ' . $ocrText);
+    
+    $awardKeywords = [
+        'Internationalization (IZN) Leadership Award' => [
+            'leadership', 'internationalization', 'global', 'strategic', 'vision', 'innovation',
+            'partnership', 'collaboration', 'exchange', 'program', 'initiative', 'development',
+            'international', 'cross-cultural', 'cultural', 'diversity', 'inclusion', 'mentorship',
+            'champion', 'bold', 'innovation', 'cultivate', 'global citizens', 'lifelong learning',
+            'purpose', 'ethical', 'inclusive leadership'
+        ],
+        'Outstanding International Education Program Award' => [
+            'education', 'program', 'curriculum', 'academic', 'course', 'learning',
+            'teaching', 'pedagogy', 'instruction', 'training', 'development', 'skill',
+            'knowledge', 'expertise', 'competency', 'qualification', 'certification',
+            'expand', 'access', 'global opportunities', 'foster', 'collaborative', 'innovation',
+            'embrace', 'inclusivity', 'beyond'
+        ],
+        'Emerging Leadership Award' => [
+            'emerging', 'new', 'innovative', 'pioneering', 'cutting-edge', 'advanced',
+            'modern', 'contemporary', 'current', 'latest', 'recent', 'fresh',
+            'breakthrough', 'revolutionary', 'transformative', 'disruptive', 'creative',
+            'innovation', 'strategic', 'inclusive', 'growth', 'empowerment', 'others'
+        ],
+        'Best Regional Office for Internationalization Award' => [
+            'regional', 'region', 'local', 'area', 'district', 'province', 'state',
+            'territory', 'zone', 'office', 'branch', 'center', 'centre', 'hub',
+            'comprehensive', 'complete', 'full', 'total', 'entire', 'whole',
+            'cooperation', 'collaboration', 'partnership', 'alliance', 'network',
+            'coordination', 'coordinate', 'manage', 'administration', 'governance',
+            'impact', 'effect', 'result', 'outcome', 'achievement', 'success',
+            'measurable', 'quantifiable', 'assessable', 'evaluable'
+        ],
+        'Global Citizenship Award' => [
+            'citizenship', 'citizen', 'community', 'society', 'social', 'civic',
+            'public', 'civil', 'democratic', 'participatory', 'engagement', 'involvement',
+            'participation', 'contribution', 'service', 'volunteer', 'activism',
+            'advocacy', 'awareness', 'consciousness', 'understanding', 'knowledge',
+            'cultural', 'intercultural', 'multicultural', 'diversity', 'inclusion',
+            'ignite', 'intercultural', 'understanding', 'empower', 'changemakers',
+            'cultivate', 'active', 'engagement'
+        ]
+    ];
+    
+    $scores = [];
+    foreach ($awardKeywords as $award => $keywords) {
+        $score = 0;
+        foreach ($keywords as $keyword) {
+            $score += substr_count($text, $keyword);
+        }
+        $scores[$award] = $score;
+    }
+    
+    $bestMatch = array_keys($scores, max($scores))[0];
+    $confidence = max($scores) > 0 ? min(max($scores) / 5, 1.0) : 0;
+    
+    return [
+        'award' => $bestMatch,
+        'confidence' => $confidence,
+        'scores' => $scores
+    ];
+}
 
 try {
-    $db = load_db($dbFile);
+    $action = $_POST['action'] ?? $_GET['action'] ?? '';
+    $db = load_events_db();
+    $dbFile = '../data/events.json';
 
-    switch ($action) {
-        case 'add':
-            $name = trim((string)($_POST['name'] ?? ''));
-            $organizer = trim((string)($_POST['organizer'] ?? ''));
-            $place = trim((string)($_POST['place'] ?? ''));
-            $date = normalize_date($_POST['date'] ?? '');
-            $status = trim((string)($_POST['status'] ?? 'upcoming'));
-            $type = trim((string)($_POST['type'] ?? 'activities'));
-            $description = trim((string)($_POST['description'] ?? ''));
-            $image_file = trim((string)($_POST['image_file'] ?? ''));
-            $ocr_text = trim((string)($_POST['ocr_text'] ?? ''));
-            $confidence = (float)($_POST['confidence'] ?? 0);
-
-            if ($name === '') { 
-                respond_err('Event name is required'); 
+    if ($action === 'add') {
+        $title = sanitize_input($_POST['title'] ?? '');
+        $description = sanitize_input($_POST['description'] ?? '');
+        $awardType = sanitize_input($_POST['award_type'] ?? '');
+        
+        if (empty($title)) {
+            respond(false, ['message' => 'Event title is required']);
+        }
+        
+        // Handle image upload if provided
+        $imagePath = '';
+        $ocrText = '';
+        
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $uploadsDir = '../uploads/events';
+            if (!is_dir($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
             }
-
-            // Handle file upload if present
-            $saved_file_path = '';
-            if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
-                $originalName = $_FILES['file']['name'];
-                $safeName = preg_replace('/[^A-Za-z0-9._-]/', '_', $originalName);
+            
+            $originalName = $_FILES['image']['name'];
+            $safeName = sanitize_input($originalName);
                 $ext = strtolower(pathinfo($safeName, PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
                 
-                // Generate unique filename
-                $unique = uniqid('event_', true) . ($ext ? ('.' . $ext) : '');
+            if (in_array($ext, $allowed)) {
+                $unique = uniqid('event_', true) . '.' . $ext;
                 $dest = $uploadsDir . DIRECTORY_SEPARATOR . $unique;
                 
-                if (move_uploaded_file($_FILES['file']['tmp_name'], $dest)) {
-                    $saved_file_path = $unique;
-                    $image_file = $originalName; // Store original name for reference
-                } else {
-                    respond_err('Failed to save uploaded file');
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $dest)) {
+                    $imagePath = $unique;
+                    
+                    // Perform OCR on the image (basic implementation)
+                    // In production, you would use a proper OCR service
+                    $ocrText = 'OCR text extraction would be performed here';
                 }
             }
-
-            $newEvent = [
-                'id' => $db['auto_id'],
-                'name' => $name,
-                'organizer' => $organizer,
-                'place' => $place,
-                'date' => $date,
-                'status' => $status,
-                'type' => $type,
+        }
+        
+        // Auto-classify award if not provided
+        if (empty($awardType)) {
+            $analysis = detect_award_from_content($title, $description, $ocrText);
+            if ($analysis['confidence'] > 0.3) {
+                $awardType = $analysis['award'];
+            }
+        }
+        
+        $now = date('Y-m-d H:i:s');
+        $id = $db['auto_id']++;
+        
+        $event = [
+            'id' => $id,
+            'title' => $title,
                 'description' => $description,
-                'image_file' => $image_file,
-                'saved_file_path' => $saved_file_path,
-                'ocr_text' => $ocr_text,
-                'confidence' => $confidence,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-
-            // Add to the appropriate array based on type
-            if ($type === 'events') {
-                $db['events'][] = $newEvent;
-            } else {
-                $db['activities'][] = $newEvent;
-            }
-
-            $db['auto_id']++;
-            save_db($dbFile, $db);
-            respond_ok(['event' => $newEvent]);
-            break;
-
-        case 'get_all':
-            // Return both events and activities
-            $allItems = array_merge($db['events'], $db['activities']);
-            // Sort by created_at descending (newest first)
-            usort($allItems, function($a, $b) {
-                return strtotime($b['created_at']) - strtotime($a['created_at']);
-            });
-            respond_ok(['events' => $allItems]);
-            break;
-
-        case 'get_by_type':
-            $type = $_GET['type'] ?? $_POST['type'] ?? 'all';
-            if ($type === 'all') {
-                $items = array_merge($db['events'], $db['activities']);
-            } else {
-                $items = $db[$type] ?? [];
-            }
-            // Sort by created_at descending
-            usort($items, function($a, $b) {
-                return strtotime($b['created_at']) - strtotime($a['created_at']);
-            });
-            respond_ok(['events' => $items]);
-            break;
-
-        case 'delete':
-            $id = (int)($_POST['id'] ?? $_GET['id'] ?? 0);
-            if ($id <= 0) { 
-                respond_err('Valid ID is required'); 
-            }
-
-            $found = false;
-            $deletedEvent = null;
-            
-            // Check events array
-            foreach ($db['events'] as $key => $event) {
-                if ($event['id'] == $id) {
-                    $deletedEvent = $event;
-                    unset($db['events'][$key]);
-                    $db['events'] = array_values($db['events']); // Re-index
-                    $found = true;
-                    break;
-                }
-            }
-            
-            // Check activities array if not found in events
-            if (!$found) {
-                foreach ($db['activities'] as $key => $activity) {
-                    if ($activity['id'] == $id) {
-                        $deletedEvent = $activity;
-                        unset($db['activities'][$key]);
-                        $db['activities'] = array_values($db['activities']); // Re-index
-                        $found = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!$found) { 
-                respond_err('Event not found'); 
-            }
-
-            // Delete associated file if it exists
-            if ($deletedEvent && isset($deletedEvent['saved_file_path']) && $deletedEvent['saved_file_path']) {
-                $filePath = $uploadsDir . DIRECTORY_SEPARATOR . $deletedEvent['saved_file_path'];
-                if (file_exists($filePath)) {
-                    if (unlink($filePath)) {
-                        $fileDeleted = true;
-                    } else {
-                        // Log warning but don't fail the deletion
-                        error_log("Warning: Could not delete file: " . $filePath);
-                        $fileDeleted = false;
-                    }
-                } else {
-                    $fileDeleted = false; // File didn't exist
-                }
-            } else {
-                $fileDeleted = null; // No file to delete
-            }
-
-            save_db($dbFile, $db);
-            
-            $response = ['message' => 'Event deleted successfully'];
-            if ($fileDeleted === true) {
-                $response['file_deleted'] = true;
-            } elseif ($fileDeleted === false) {
-                $response['file_deleted'] = false;
-                $response['file_warning'] = 'Associated file could not be deleted';
-            }
-            
-            respond_ok($response);
-            break;
-
-        case 'update':
-            $id = (int)($_POST['id'] ?? 0);
-            if ($id <= 0) { 
-                respond_err('Valid ID is required'); 
-            }
-
-            $found = false;
-            $updatedEvent = null;
-
-            // Check events array
-            foreach ($db['events'] as $key => $event) {
-                if ($event['id'] == $id) {
-                    $db['events'][$key]['name'] = trim((string)($_POST['name'] ?? $event['name']));
-                    $db['events'][$key]['organizer'] = trim((string)($_POST['organizer'] ?? $event['organizer']));
-                    $db['events'][$key]['place'] = trim((string)($_POST['place'] ?? $event['place']));
-                    $db['events'][$key]['date'] = normalize_date($_POST['date'] ?? $event['date']);
-                    $db['events'][$key]['status'] = trim((string)($_POST['status'] ?? $event['status']));
-                    $db['events'][$key]['description'] = trim((string)($_POST['description'] ?? $event['description']));
-                    $db['events'][$key]['updated_at'] = date('Y-m-d H:i:s');
-                    $updatedEvent = $db['events'][$key];
-                    $found = true;
-                    break;
-                }
-            }
-            
-            // Check activities array if not found in events
-            if (!$found) {
-                foreach ($db['activities'] as $key => $activity) {
-                    if ($activity['id'] == $id) {
-                        $db['activities'][$key]['name'] = trim((string)($_POST['name'] ?? $activity['name']));
-                        $db['activities'][$key]['organizer'] = trim((string)($_POST['organizer'] ?? $activity['organizer']));
-                        $db['activities'][$key]['place'] = trim((string)($_POST['place'] ?? $activity['place']));
-                        $db['activities'][$key]['date'] = normalize_date($_POST['date'] ?? $activity['date']);
-                        $db['activities'][$key]['status'] = trim((string)($_POST['status'] ?? $activity['status']));
-                        $db['activities'][$key]['description'] = trim((string)($_POST['description'] ?? $activity['description']));
-                        $db['activities'][$key]['updated_at'] = date('Y-m-d H:i:s');
-                        $updatedEvent = $db['activities'][$key];
-                        $found = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!$found) { 
-                respond_err('Event not found'); 
-            }
-
-            save_db($dbFile, $db);
-            respond_ok(['event' => $updatedEvent]);
-            break;
-
-        default:
-            respond_err('Unknown action: ' . $action);
+            'image_path' => $imagePath,
+            'ocr_text' => $ocrText,
+            'award_type' => $awardType,
+            'created_date' => $now,
+            'status' => 'Active'
+        ];
+        
+        $db['events'][] = $event;
+        save_events_db($db, $dbFile);
+        
+        // Auto-update counters and checklist if award type was determined
+        if (!empty($awardType)) {
+            updateAwardCounters($awardType, 'event');
+            autoUpdateChecklistForEvent($event);
+        }
+        
+        respond(true, ['message' => 'Event added successfully', 'event' => $event]);
     }
 
-} catch (Exception $e) {
-    respond_err('Server error: ' . $e->getMessage());
+    if ($action === 'get_all') {
+        try {
+            $events = array_filter($db['events'], function($event) {
+                return isset($event['status']) && $event['status'] === 'Active';
+            });
+            
+            respond(true, ['events' => array_values($events)]);
+        } catch (Exception $e) {
+            error_log("Error in get_all action: " . $e->getMessage());
+            respond(false, ['message' => 'Error loading events: ' . $e->getMessage()]);
+        }
+    }
+
+    if ($action === 'get_by_id') {
+        $eventId = $_GET['id'] ?? '';
+        if (empty($eventId)) {
+            respond(false, ['message' => 'Event ID required']);
+        }
+        
+        $event = null;
+        foreach ($db['events'] as $e) {
+            if ($e['id'] == $eventId && $e['status'] === 'Active') {
+                $event = $e;
+                break;
+            }
+        }
+        
+        if ($event) {
+            respond(true, ['event' => $event]);
+        } else {
+            respond(false, ['message' => 'Event not found']);
+        }
+    }
+
+    if ($action === 'get_by_award') {
+        $awardType = $_GET['award_type'] ?? '';
+        if (empty($awardType)) {
+            respond(false, ['message' => 'Award type required']);
+        }
+        
+        $events = array_filter($db['events'], function($event) use ($awardType) {
+            return $event['status'] === 'Active' && $event['award_type'] === $awardType;
+        });
+        
+        respond(true, ['events' => array_values($events)]);
+    }
+
+    if ($action === 'get_award_counts') {
+        $awardTypes = [
+            'leadership' => 'Internationalization (IZN) Leadership Award',
+            'education' => 'Outstanding International Education Program Award', 
+            'emerging' => 'Emerging Leadership Award',
+            'regional' => 'Best Regional Office for Internationalization Award',
+            'citizenship' => 'Global Citizenship Award'
+        ];
+        
+        $counts = [];
+        foreach ($awardTypes as $key => $awardName) {
+            $counts[$key] = count(array_filter($db['events'], function($event) use ($awardName) {
+                return $event['status'] === 'Active' && $event['award_type'] === $awardName;
+            }));
+        }
+        
+        respond(true, ['counts' => $counts]);
+    }
+
+    if ($action === 'analyze_event') {
+        $eventId = $_POST['event_id'] ?? '';
+        if (empty($eventId)) {
+            respond(false, ['message' => 'Event ID required']);
+        }
+        
+        $event = null;
+        foreach ($db['events'] as $evt) {
+            if ($evt['id'] == $eventId && $evt['status'] === 'Active') {
+                $event = $evt;
+                break;
+            }
+        }
+        
+        if (!$event) {
+            respond(false, ['message' => 'Event not found']);
+        }
+        
+        $analysis = detect_award_from_content($event['title'], $event['description'], $event['ocr_text']);
+        
+        respond(true, ['analysis' => $analysis]);
+    }
+
+    if ($action === 'get_combined_analysis') {
+        $awardType = $_GET['award_type'] ?? '';
+        if (empty($awardType)) {
+            respond(false, ['message' => 'Award type required']);
+        }
+        
+        // Get events for this award
+        $events = array_filter($db['events'], function($event) use ($awardType) {
+            return $event['status'] === 'Active' && $event['award_type'] === $awardType;
+        });
+        
+        // Get documents for this award (from documents.json)
+        $documentsDb = json_decode(file_get_contents('../data/documents.json'), true);
+        $documents = array_filter($documentsDb['documents'], function($doc) use ($awardType) {
+            return $doc['status'] === 'Active' && $doc['award_type'] === $awardType;
+        });
+        
+        // Analyze criteria satisfaction
+        $criteria = getAwardCriteria($awardType);
+        $satisfiedCriteria = [];
+        $unsatisfiedCriteria = [];
+        
+        $allContent = array_merge(
+            array_map(function($event) {
+                return [
+                    'title' => $event['title'],
+                    'description' => $event['description'],
+                    'ocr_text' => $event['ocr_text'] ?? '',
+                    'type' => 'event'
+                ];
+            }, $events),
+            array_map(function($doc) {
+                return [
+                    'title' => $doc['document_name'],
+                    'description' => $doc['description'] ?? '',
+                    'ocr_text' => $doc['ocr_text'] ?? '',
+                    'type' => 'document'
+                ];
+            }, $documents)
+        );
+        
+        foreach ($criteria as $criterion) {
+            $isSatisfied = false;
+            foreach ($allContent as $content) {
+                if (checkCriterionSatisfaction($content, $criterion)) {
+                    $isSatisfied = true;
+                    break;
+                }
+            }
+            
+            if ($isSatisfied) {
+                $satisfiedCriteria[] = $criterion;
+            } else {
+                $unsatisfiedCriteria[] = $criterion;
+            }
+        }
+        
+        respond(true, [
+            'events' => array_values($events),
+            'documents' => array_values($documents),
+            'event_count' => count($events),
+            'document_count' => count($documents),
+            'total_count' => count($events) + count($documents),
+            'satisfied_criteria' => $satisfiedCriteria,
+            'unsatisfied_criteria' => $unsatisfiedCriteria,
+            'satisfaction_rate' => count($satisfiedCriteria) / count($criteria)
+        ]);
+    }
+
+    respond(false, ['message' => 'Unknown action']);
+} catch (Throwable $e) {
+    respond(false, ['message' => 'Server error', 'error' => $e->getMessage()]);
+}
+
+/**
+ * Helper function to get award criteria
+ */
+function getAwardCriteria($awardType) {
+    $criteria = [
+        'Internationalization (IZN) Leadership Award' => [
+            'Champion Bold Innovation',
+            'Cultivate Global Citizens', 
+            'Nurture Lifelong Learning',
+            'Lead with Purpose',
+            'Ethical and Inclusive Leadership'
+        ],
+        'Outstanding International Education Program Award' => [
+            'Expand Access to Global Opportunities',
+            'Foster Collaborative Innovation',
+            'Embrace Inclusivity and Beyond'
+        ],
+        'Emerging Leadership Award' => [
+            'Innovation',
+            'Strategic and Inclusive Growth',
+            'Empowerment of Others'
+        ],
+        'Best Regional Office for Internationalization Award' => [
+            'Comprehensive Internationalization Efforts',
+            'Cooperation and Collaboration',
+            'Measurable Impact'
+        ],
+        'Global Citizenship Award' => [
+            'Ignite Intercultural Understanding',
+            'Empower Changemakers',
+            'Cultivate Active Engagement'
+        ]
+    ];
+    
+    return $criteria[$awardType] ?? [];
+}
+
+/**
+ * Helper function to check if content satisfies a criterion
+ */
+function checkCriterionSatisfaction($content, $criterion) {
+    $text = strtolower($content['title'] . ' ' . $content['description'] . ' ' . $content['ocr_text']);
+    $criterionLower = strtolower($criterion);
+    
+    $keywords = explode(' ', $criterionLower);
+    $matchedKeywords = 0;
+    
+    foreach ($keywords as $keyword) {
+        if (strpos($text, $keyword) !== false) {
+            $matchedKeywords++;
+        }
+    }
+    
+    return $matchedKeywords >= (count($keywords) * 0.5);
+}
+
+// Auto-update checklist for uploaded event
+function autoUpdateChecklistForEvent($event) {
+    $awardType = $event['award_type'];
+    if (empty($awardType)) {
+        return;
+    }
+    
+    // Load checklist database
+    $checklistDbFile = '../data/checklist.json';
+    if (!file_exists($checklistDbFile)) {
+        return;
+    }
+    
+    $checklistDb = json_decode(file_get_contents($checklistDbFile), true);
+    if (!is_array($checklistDb)) {
+        $checklistDb = ['criterion_links' => []];
+    }
+    
+    if (!isset($checklistDb['criterion_links'])) {
+        $checklistDb['criterion_links'] = [];
+    }
+    
+    // Get criteria for this award type
+    $criteria = getAwardCriteria($awardType);
+    
+    // Analyze event content to determine which criteria it satisfies
+    $content = $event['title'] . ' ' . $event['description'] . ' ' . $event['ocr_text'];
+    $analysis = performContentAnalysis($content);
+    
+    // Link event to satisfied criteria
+    foreach ($analysis['satisfied_criteria'] as $criterionData) {
+        if ($criterionData['award_type'] === $awardType) {
+            $linkKey = $awardType . '_' . md5($criterionData['criterion']);
+            $linkId = 'event_' . $event['id'];
+            
+            if (!isset($checklistDb['criterion_links'][$linkKey])) {
+                $checklistDb['criterion_links'][$linkKey] = [];
+            }
+            
+            $checklistDb['criterion_links'][$linkKey][$linkId] = [
+                'award_type' => $awardType,
+                'criterion' => $criterionData['criterion'],
+                'content_id' => $event['id'],
+                'content_type' => 'event',
+                'linked_at' => date('Y-m-d H:i:s'),
+                'confidence' => $criterionData['confidence'],
+                'auto_linked' => true
+            ];
+        }
+    }
+    
+    // Save updated checklist
+    file_put_contents($checklistDbFile, json_encode($checklistDb, JSON_PRETTY_PRINT));
+}
+
+// Get award criteria (helper function)
+function getAwardCriteria($awardType) {
+    $criteriaMap = [
+        'leadership' => ['Champion Bold Innovation', 'Cultivate Global Citizens', 'Nurture Lifelong Learning', 'Lead with Purpose', 'Ethical and Inclusive Leadership'],
+        'education' => ['Expand Access to Global Opportunities', 'Foster Collaborative Innovation', 'Embrace Inclusivity and Beyond'],
+        'emerging' => ['Innovation', 'Strategic and Inclusive Growth', 'Empowerment of Others'],
+        'regional' => ['Comprehensive Internationalization Efforts', 'Cooperation and Collaboration', 'Measurable Impact'],
+        'global' => ['Ignite Intercultural Understanding', 'Empower Changemakers', 'Cultivate Active Engagement']
+    ];
+    
+    return $criteriaMap[$awardType] ?? [];
+}
+
+// Perform content analysis (simplified version)
+function performContentAnalysis($content) {
+    $analysis = [
+        'satisfied_criteria' => []
+    ];
+    
+    $contentLower = strtolower($content);
+    
+    // Criteria keywords mapping
+    $criteriaKeywords = [
+        'Champion Bold Innovation' => ['champion', 'bold', 'innovation', 'innovative', 'breakthrough', 'pioneering', 'cutting-edge'],
+        'Cultivate Global Citizens' => ['cultivate', 'global', 'citizens', 'citizenship', 'international', 'cross-cultural'],
+        'Nurture Lifelong Learning' => ['nurture', 'lifelong', 'learning', 'education', 'development', 'growth'],
+        'Lead with Purpose' => ['lead', 'purpose', 'leadership', 'vision', 'mission', 'goals'],
+        'Ethical and Inclusive Leadership' => ['ethical', 'inclusive', 'leadership', 'diversity', 'equity', 'fairness'],
+        'Expand Access to Global Opportunities' => ['expand', 'access', 'global', 'opportunities', 'international', 'programs'],
+        'Foster Collaborative Innovation' => ['foster', 'collaborative', 'innovation', 'partnership', 'cooperation'],
+        'Embrace Inclusivity and Beyond' => ['embrace', 'inclusivity', 'inclusive', 'diversity', 'equity'],
+        'Innovation' => ['innovation', 'innovative', 'creative', 'new', 'breakthrough'],
+        'Strategic and Inclusive Growth' => ['strategic', 'inclusive', 'growth', 'development', 'expansion'],
+        'Empowerment of Others' => ['empowerment', 'empower', 'mentoring', 'support', 'guidance'],
+        'Comprehensive Internationalization Efforts' => ['comprehensive', 'internationalization', 'international', 'global', 'efforts'],
+        'Cooperation and Collaboration' => ['cooperation', 'collaboration', 'partnership', 'teamwork'],
+        'Measurable Impact' => ['measurable', 'impact', 'results', 'outcomes', 'achievements'],
+        'Ignite Intercultural Understanding' => ['ignite', 'intercultural', 'understanding', 'cultural', 'diversity'],
+        'Empower Changemakers' => ['empower', 'changemakers', 'change', 'transformation', 'impact'],
+        'Cultivate Active Engagement' => ['cultivate', 'active', 'engagement', 'participation', 'involvement']
+    ];
+    
+    // Check each criterion
+    foreach ($criteriaKeywords as $criterion => $keywords) {
+        $score = 0;
+        foreach ($keywords as $keyword) {
+            if (strpos($contentLower, $keyword) !== false) {
+                $score += 1;
+            }
+        }
+        
+        if ($score > 0) {
+            // Determine award type from criterion
+            $awardType = '';
+            if (in_array($criterion, ['Champion Bold Innovation', 'Cultivate Global Citizens', 'Nurture Lifelong Learning', 'Lead with Purpose', 'Ethical and Inclusive Leadership'])) {
+                $awardType = 'leadership';
+            } elseif (in_array($criterion, ['Expand Access to Global Opportunities', 'Foster Collaborative Innovation', 'Embrace Inclusivity and Beyond'])) {
+                $awardType = 'education';
+            } elseif (in_array($criterion, ['Innovation', 'Strategic and Inclusive Growth', 'Empowerment of Others'])) {
+                $awardType = 'emerging';
+            } elseif (in_array($criterion, ['Comprehensive Internationalization Efforts', 'Cooperation and Collaboration', 'Measurable Impact'])) {
+                $awardType = 'regional';
+            } elseif (in_array($criterion, ['Ignite Intercultural Understanding', 'Empower Changemakers', 'Cultivate Active Engagement'])) {
+                $awardType = 'global';
+            }
+            
+            if ($awardType) {
+                $analysis['satisfied_criteria'][] = [
+                    'award_type' => $awardType,
+                    'criterion' => $criterion,
+                    'confidence' => min(100, ($score / count($keywords)) * 100)
+                ];
+            }
+        }
+    }
+    
+    return $analysis;
+}
+
+// Update award counters and readiness (shared function)
+function updateAwardCounters($awardType, $contentType) {
+    $countersDbFile = '../data/award_counters.json';
+    
+    // Load or create counters database
+    if (!file_exists($countersDbFile)) {
+        $counters = [
+            'leadership' => ['documents' => 0, 'events' => 0, 'threshold' => 5],
+            'education' => ['documents' => 0, 'events' => 0, 'threshold' => 3],
+            'emerging' => ['documents' => 0, 'events' => 0, 'threshold' => 3],
+            'regional' => ['documents' => 0, 'events' => 0, 'threshold' => 4],
+            'global' => ['documents' => 0, 'events' => 0, 'threshold' => 3]
+        ];
+    } else {
+        $counters = json_decode(file_get_contents($countersDbFile), true);
+        if (!is_array($counters)) {
+            $counters = [
+                'leadership' => ['documents' => 0, 'events' => 0, 'threshold' => 5],
+                'education' => ['documents' => 0, 'events' => 0, 'threshold' => 3],
+                'emerging' => ['documents' => 0, 'events' => 0, 'threshold' => 3],
+                'regional' => ['documents' => 0, 'events' => 0, 'threshold' => 4],
+                'global' => ['documents' => 0, 'events' => 0, 'threshold' => 3]
+            ];
+        }
+    }
+    
+    // Update counter
+    if ($contentType === 'document') {
+        $counters[$awardType]['documents']++;
+    } elseif ($contentType === 'event') {
+        $counters[$awardType]['events']++;
+    }
+    
+    // Calculate readiness
+    $totalContent = $counters[$awardType]['documents'] + $counters[$awardType]['events'];
+    $counters[$awardType]['readiness'] = $totalContent >= $counters[$awardType]['threshold'] ? 'Ready to Apply' : 'Incomplete';
+    $counters[$awardType]['total_content'] = $totalContent;
+    $counters[$awardType]['last_updated'] = date('Y-m-d H:i:s');
+    
+    // Save updated counters
+    file_put_contents($countersDbFile, json_encode($counters, JSON_PRETTY_PRINT));
+    
+    return $counters[$awardType];
 }
 ?> 

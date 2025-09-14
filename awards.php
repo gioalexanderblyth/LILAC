@@ -285,6 +285,12 @@
             initializeEventListeners();
             updateCurrentDate();
             
+            // Load award document counts on page load
+            loadAwardDocumentCounts();
+            
+            // Load readiness summary on page load
+            loadReadinessSummary();
+            
             // Initialize tabs - ensure Awards Progress is active by default
             const periodSelect = document.getElementById('awards-breakdown-period');
             if (periodSelect) {
@@ -1141,6 +1147,138 @@
 
         // Run AwardMatch analysis
         async function runAwardMatch() {
+            // Show document/event selection modal first
+            showDocumentSelectionModal();
+        }
+
+        function showDocumentSelectionModal() {
+            const modal = document.createElement('div');
+            modal.id = 'document-selection-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">Select Document or Event for Analysis</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="document.getElementById('document-selection-modal').remove()">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <h4 class="text-md font-medium text-gray-900 mb-3">Available Documents and Events</h4>
+                            <div id="available-content-list" class="space-y-2 max-h-96 overflow-y-auto">
+                                <div class="text-center text-gray-500 py-8">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                    Loading content...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            loadAvailableContentForAnalysis();
+        }
+
+        async function loadAvailableContentForAnalysis() {
+            try {
+                // Get all documents
+                const documentsResponse = await fetch('api/documents.php?action=get_all');
+                const documentsData = await documentsResponse.json();
+                
+                // Get all events
+                const eventsResponse = await fetch('api/events.php?action=get_all');
+                const eventsData = await eventsResponse.json();
+                
+                const contentList = document.getElementById('available-content-list');
+                contentList.innerHTML = '';
+                
+                if (documentsData.success && documentsData.documents.length > 0) {
+                    documentsData.documents.forEach(doc => {
+                        if (doc.status === 'Active') {
+                            const item = document.createElement('div');
+                            item.className = 'flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer';
+                            item.onclick = () => analyzeSingleContent('document', doc.id, doc.document_name);
+                            item.innerHTML = `
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-900">${doc.document_name}</div>
+                                        <div class="text-sm text-gray-500">Document • ${doc.award_type || 'Unclassified'}</div>
+                                    </div>
+                                </div>
+                                <div class="text-blue-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </div>
+                            `;
+                            contentList.appendChild(item);
+                        }
+                    });
+                }
+                
+                if (eventsData.success && eventsData.events.length > 0) {
+                    eventsData.events.forEach(event => {
+                        if (event.status === 'Active') {
+                            const item = document.createElement('div');
+                            item.className = 'flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer';
+                            item.onclick = () => analyzeSingleContent('event', event.id, event.title);
+                            item.innerHTML = `
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-900">${event.title}</div>
+                                        <div class="text-sm text-gray-500">Event • ${event.award_type || 'Unclassified'}</div>
+                                    </div>
+                                </div>
+                                <div class="text-green-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </div>
+                            `;
+                            contentList.appendChild(item);
+                        }
+                    });
+                }
+                
+                if (contentList.children.length === 0) {
+                    contentList.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <p>No documents or events available for analysis</p>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error loading content:', error);
+                document.getElementById('available-content-list').innerHTML = `
+                    <div class="text-center text-red-500 py-8">
+                        <p>Error loading content. Please try again.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function analyzeSingleContent(contentType, contentId, contentTitle) {
+            // Close selection modal
+            document.getElementById('document-selection-modal').remove();
+            
             // Show loading state
             const button = document.querySelector('button[onclick="runAwardMatch()"]');
             const originalText = button.textContent;
@@ -1148,58 +1286,41 @@
             button.textContent = 'Analyzing...';
 
             try {
-                // Analyze university activities (this would normally come from database)
-                const universityActivities = analyzeUniversityActivities();
-
-                // Prepare payload for backend Jaccard computation
-                const payload = {
-                    awardCriteria: setsToArrays(awardCriteria),
-                    activities: setsToArrays(activityKeywords)
-                };
-
-                // File presence guard: check if uploaded data exists before running analysis
-                try {
-                    const statusResp = await fetch('api/award_match_status.php', { method: 'GET' });
-                    if (statusResp.ok) {
-                        const st = await statusResp.json();
-                        if (!st.has_awards || !st.has_records) {
-                            showAwardMatchMissingDataModal();
-                            button.disabled = false;
-                            button.textContent = originalText;
-                            return;
-                        }
-                    }
-                } catch (_) {
-                    // If status check fails, proceed but keep client-side guards below
-                }
-
-                const resp = await fetch('api/award_match.php', {
+                showNotification(`Analyzing ${contentType}: ${contentTitle}`, 'info');
+                
+                // Perform analysis via API
+                const response = await fetch('api/checklist.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `action=analyze_single_content&content_type=${encodeURIComponent(contentType)}&content_id=${encodeURIComponent(contentId)}`
                 });
-                let apiResult = null;
-                if (resp.ok) {
-                    apiResult = await resp.json();
-                }
-
-                let scores = {};
-                if (apiResult && apiResult.scores) {
-                    scores = apiResult.scores;
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displaySingleAnalysisResults(result.analysis, contentType, contentTitle);
+                    showNotification('Analysis completed successfully!', 'success');
+                    
+                    // Refresh the page data
+                    if (typeof loadAwardDocumentCounts === 'function') {
+                        loadAwardDocumentCounts();
+                    }
+                    if (typeof loadReadinessSummary === 'function') {
+                        loadReadinessSummary();
+                    }
+                    if (typeof updateChecklistStatusAutomatically === 'function') {
+                        updateChecklistStatusAutomatically();
+                    }
                 } else {
-                    // Fallback to client-side Jaccard if API fails
-                    ['leadership','education','emerging','regional','citizenship'].forEach(cat => {
-                        const sim = calculateJaccardSimilarity(awardCriteria[cat], activityKeywords[cat]);
-                        scores[cat] = Math.round(sim * 100);
-                    });
+                    throw new Error(result.message || 'Analysis failed');
                 }
 
-                // Update UI with results
-                updateAwardMatchResults(scores, universityActivities);
-            } catch (e) {
-                console.error('AwardMatch error', e);
+            } catch (error) {
+                console.error('Error analyzing content:', error);
+                showNotification(`Error analyzing ${contentType}: ${error.message}`, 'error');
             } finally {
-                // Restore button
                 button.disabled = false;
                 button.textContent = originalText;
             }
@@ -1225,28 +1346,932 @@
 
         // Legacy heuristic scoring removed; scoring now computed by backend Jaccard or client fallback
 
-        // Update AwardMatch results in UI
-        function updateAwardMatchResults(scores, activities) {
-            // Update score displays
-            document.getElementById('leadership-score').textContent = scores.leadership + '%';
-            document.getElementById('education-score').textContent = scores.education + '%';
-            document.getElementById('emerging-score').textContent = scores.emerging + '%';
-            document.getElementById('regional-score').textContent = scores.regional + '%';
-            document.getElementById('citizenship-score').textContent = scores.citizenship + '%';
+        // Load award document counts from API
+        async function loadAwardDocumentCounts() {
+            try {
+                const response = await fetch('api/documents.php?action=get_award_counters');
+                const result = await response.json();
+                
+                if (result.success && result.counters) {
+                    updateAwardCounters(result.counters);
+                }
+            } catch (error) {
+                console.error('Error loading award document counts:', error);
+            }
+        }
+
+        // Update award counters in UI
+        function updateAwardCounters(counters) {
+            const awardTypes = ['leadership', 'education', 'emerging', 'regional', 'global'];
+            
+            awardTypes.forEach(awardType => {
+                const counter = counters[awardType];
+                if (counter) {
+                    // Update document count displays
+                    const scoreElement = document.getElementById(`${awardType}-score`);
+                    if (scoreElement) {
+                        scoreElement.textContent = counter.total_content || 0;
+                    }
+                    
+                    // Update readiness status
+                    updateAwardReadiness(awardType, counter);
+                }
+            });
 
             // Update analysis metrics
-            document.getElementById('activities-count').textContent = Object.values(activities).reduce((a, b) => a + b, 0);
+            const totalDocuments = Object.values(counters).reduce((a, b) => a + (b.total_content || 0), 0);
+            const activitiesCountElement = document.getElementById('activities-count');
+            const overallScoreElement = document.getElementById('overall-score');
             
-            // Find best match
-            const bestMatch = Object.entries(scores).reduce((a, b) => scores[a[0]] > scores[b[0]] ? a : b);
-            document.getElementById('best-match').textContent = bestMatch[0].charAt(0).toUpperCase() + bestMatch[0].slice(1) + ' Award';
+            if (activitiesCountElement) activitiesCountElement.textContent = totalDocuments;
+            if (overallScoreElement) overallScoreElement.textContent = totalDocuments;
             
-            // Calculate overall score
-            const overallScore = Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / 5);
-            document.getElementById('overall-score').textContent = overallScore + '%';
+            // Find best match (based on total content)
+            const bestMatch = Object.entries(counters).reduce((a, b) => 
+                (counters[a[0]].total_content || 0) > (counters[b[0]].total_content || 0) ? a : b
+            );
+            
+            const bestMatchElement = document.getElementById('best-match');
+            if (bestMatchElement) {
+                if (counters[bestMatch[0]].total_content > 0) {
+                    const awardNames = {
+                        'leadership': 'Internationalization (IZN) Leadership',
+                        'education': 'Outstanding International Education Program',
+                        'emerging': 'Emerging Leadership',
+                        'regional': 'Best Regional Office for Internationalization',
+                        'global': 'Global Citizenship'
+                    };
+                    bestMatchElement.textContent = awardNames[bestMatch[0]] + ' Award';
+                } else {
+                    bestMatchElement.textContent = 'None';
+                }
+            }
+        }
 
-            // Generate strategic recommendations
-            generateRecommendations(scores, activities);
+        // Update award readiness status
+        function updateAwardReadiness(awardType, counter) {
+            const readinessElement = document.getElementById(`${awardType}-readiness`);
+            if (readinessElement) {
+                const isReady = counter.readiness === 'Ready to Apply';
+                readinessElement.className = `px-3 py-1 rounded-full text-sm font-medium ${
+                    isReady ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`;
+                readinessElement.textContent = counter.readiness;
+            }
+            
+            // Update progress bar if it exists
+            const progressElement = document.getElementById(`${awardType}-progress`);
+            if (progressElement) {
+                const percentage = Math.min(100, (counter.total_content / counter.threshold) * 100);
+                progressElement.style.width = `${percentage}%`;
+                progressElement.className = `h-2 rounded-full ${
+                    isReady ? 'bg-green-500' : 'bg-blue-500'
+                }`;
+            }
+        }
+
+        // Update AwardMatch results in UI (legacy function for compatibility)
+        function updateAwardMatchResults(scores, activities) {
+            // This function is kept for compatibility but now just loads from API
+            loadAwardDocumentCounts();
+        }
+
+        // Analyze all documents and events and show detailed breakdown
+        async function analyzeAllDocuments() {
+            // Show loading state
+            const button = document.querySelector('button[onclick="analyzeAllDocuments()"]');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Analyzing All...';
+
+            try {
+                showNotification('Starting comprehensive analysis of all documents and events...', 'info');
+                
+                // Perform batch analysis via API
+                const response = await fetch('api/checklist.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'action=analyze_all_content'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayBatchAnalysisResults(result.analysis);
+                    showNotification('Comprehensive analysis completed successfully!', 'success');
+                    
+                    // Refresh the page data
+                    if (typeof loadAwardDocumentCounts === 'function') {
+                        loadAwardDocumentCounts();
+                    }
+                    if (typeof loadReadinessSummary === 'function') {
+                        loadReadinessSummary();
+                    }
+                    if (typeof updateChecklistStatusAutomatically === 'function') {
+                        updateChecklistStatusAutomatically();
+                    }
+                } else {
+                    throw new Error(result.message || 'Batch analysis failed');
+                }
+                
+            } catch (error) {
+                console.error('Error analyzing all documents and events:', error);
+                showNotification(`Error in batch analysis: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
+        // Display single content analysis results
+        function displaySingleAnalysisResults(analysis, contentType, contentTitle) {
+            const modal = document.createElement('div');
+            modal.id = 'single-analysis-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between px-6 py-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">Analysis Results: ${contentTitle}</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="document.getElementById('single-analysis-modal').remove()">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        ${generateSingleAnalysisContent(analysis, contentType, contentTitle)}
+                    </div>
+                    <div class="p-6 border-t border-gray-200 flex justify-end">
+                        <button onclick="document.getElementById('single-analysis-modal').remove()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function generateSingleAnalysisContent(analysis, contentType, contentTitle) {
+            const awardNames = {
+                'leadership': 'Internationalization (IZN) Leadership Award',
+                'education': 'Outstanding International Education Program Award',
+                'emerging': 'Emerging Leadership Award',
+                'regional': 'Best Regional Office for Internationalization Award',
+                'global': 'Global Citizenship Award'
+            };
+
+            let content = `
+                <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Analysis Summary</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">${analysis.supported_awards?.length || 0}</div>
+                            <div class="text-sm text-blue-800">Awards Supported</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">${analysis.satisfied_criteria?.length || 0}</div>
+                            <div class="text-sm text-green-800">Criteria Satisfied</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600">${analysis.confidence_score || 0}%</div>
+                            <div class="text-sm text-purple-800">Confidence Score</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (analysis.supported_awards && analysis.supported_awards.length > 0) {
+                content += `
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold text-gray-900 mb-3">Supported Awards</h4>
+                        <div class="space-y-2">
+                `;
+                
+                analysis.supported_awards.forEach(award => {
+                    content += `
+                        <div class="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-green-900">${awardNames[award.award_type] || award.award_type}</div>
+                                    <div class="text-sm text-green-700">Confidence: ${award.confidence}%</div>
+                                </div>
+                            </div>
+                            <div class="text-green-600 font-medium">${award.confidence}%</div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (analysis.satisfied_criteria && analysis.satisfied_criteria.length > 0) {
+                content += `
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold text-gray-900 mb-3">Satisfied Criteria</h4>
+                        <div class="space-y-2">
+                `;
+                
+                analysis.satisfied_criteria.forEach(criterion => {
+                    content += `
+                        <div class="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-blue-900">${criterion.criterion}</div>
+                                    <div class="text-sm text-blue-700">${awardNames[criterion.award_type] || criterion.award_type}</div>
+                                </div>
+                            </div>
+                            <div class="text-blue-600 font-medium">${criterion.confidence}%</div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (analysis.keywords_found && analysis.keywords_found.length > 0) {
+                content += `
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold text-gray-900 mb-3">Keywords Found</h4>
+                        <div class="flex flex-wrap gap-2">
+                `;
+                
+                analysis.keywords_found.forEach(keyword => {
+                    content += `
+                        <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
+                            ${keyword}
+                        </span>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (analysis.recommendations && analysis.recommendations.length > 0) {
+                content += `
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold text-gray-900 mb-3">Recommendations</h4>
+                        <div class="space-y-2">
+                `;
+                
+                analysis.recommendations.forEach(rec => {
+                    content += `
+                        <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div class="font-medium text-yellow-900">${rec.title}</div>
+                            <div class="text-sm text-yellow-700">${rec.description}</div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            return content;
+        }
+
+        // Display batch analysis results
+        function displayBatchAnalysisResults(analysis) {
+            const modal = document.createElement('div');
+            modal.id = 'batch-analysis-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between px-6 py-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">Comprehensive Analysis Results</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="document.getElementById('batch-analysis-modal').remove()">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        ${generateBatchAnalysisContent(analysis)}
+                    </div>
+                    <div class="p-6 border-t border-gray-200 flex justify-end">
+                        <button onclick="document.getElementById('batch-analysis-modal').remove()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function generateBatchAnalysisContent(analysis) {
+            const awardNames = {
+                'leadership': 'Internationalization (IZN) Leadership Award',
+                'education': 'Outstanding International Education Program Award',
+                'emerging': 'Emerging Leadership Award',
+                'regional': 'Best Regional Office for Internationalization Award',
+                'global': 'Global Citizenship Award'
+            };
+
+            let content = `
+                <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Analysis Summary</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">${analysis.total_documents || 0}</div>
+                            <div class="text-sm text-blue-800">Documents Analyzed</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">${analysis.total_events || 0}</div>
+                            <div class="text-sm text-green-800">Events Analyzed</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600">${analysis.total_criteria_satisfied || 0}</div>
+                            <div class="text-sm text-purple-800">Criteria Satisfied</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-orange-600">${analysis.awards_ready || 0}</div>
+                            <div class="text-sm text-orange-800">Awards Ready</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (analysis.award_breakdown && analysis.award_breakdown.length > 0) {
+                content += `
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold text-gray-900 mb-3">Award Breakdown</h4>
+                        <div class="space-y-4">
+                `;
+                
+                analysis.award_breakdown.forEach(award => {
+                    const readinessColor = award.readiness === 'Ready to Apply' ? 'green' : 
+                                         award.readiness === 'Nearly Ready' ? 'yellow' : 'red';
+                    const readinessIcon = award.readiness === 'Ready to Apply' ? '✅' : 
+                                        award.readiness === 'Nearly Ready' ? '⚠️' : '❌';
+                    
+                    content += `
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h5 class="font-semibold text-gray-900">${awardNames[award.award_type] || award.award_type}</h5>
+                                <span class="px-3 py-1 rounded-full text-sm font-medium bg-${readinessColor}-100 text-${readinessColor}-800">
+                                    ${readinessIcon} ${award.readiness}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4 mb-3">
+                                <div class="text-center">
+                                    <div class="text-lg font-bold text-blue-600">${award.documents_count}</div>
+                                    <div class="text-xs text-blue-800">Documents</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-lg font-bold text-green-600">${award.events_count}</div>
+                                    <div class="text-xs text-green-800">Events</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-lg font-bold text-purple-600">${award.satisfied_criteria}/${award.total_criteria}</div>
+                                    <div class="text-xs text-purple-800">Criteria</div>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-${readinessColor}-500 h-2 rounded-full" style="width: ${(award.satisfied_criteria / award.total_criteria) * 100}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (analysis.missing_criteria && analysis.missing_criteria.length > 0) {
+                content += `
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold text-gray-900 mb-3">Missing Criteria</h4>
+                        <div class="space-y-2">
+                `;
+                
+                analysis.missing_criteria.forEach(missing => {
+                    content += `
+                        <div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-red-900">${missing.criterion}</div>
+                                    <div class="text-sm text-red-700">${awardNames[missing.award_type] || missing.award_type}</div>
+                                </div>
+                            </div>
+                            <div class="text-red-600 font-medium">Missing</div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            return content;
+        }
+
+        // Display detailed analysis results
+        function displayAnalysisResults(results) {
+            const modal = document.createElement('div');
+            modal.id = 'analysis-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">Document Analysis Results</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="document.getElementById('analysis-modal').remove()">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                        <div class="space-y-6">
+                            ${results.map(result => `
+                                <div class="border border-gray-200 rounded-lg p-4">
+                                    <h4 class="text-lg font-semibold text-gray-900 mb-3">${result.awardType}</h4>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                        <div class="bg-blue-50 p-3 rounded-lg">
+                                            <div class="text-sm text-blue-600 font-medium">Documents</div>
+                                            <div class="text-2xl font-bold text-blue-900">${result.document_count || 0}</div>
+                                        </div>
+                                        <div class="bg-purple-50 p-3 rounded-lg">
+                                            <div class="text-sm text-purple-600 font-medium">Events</div>
+                                            <div class="text-2xl font-bold text-purple-900">${result.event_count || 0}</div>
+                                        </div>
+                                        <div class="bg-green-50 p-3 rounded-lg">
+                                            <div class="text-sm text-green-600 font-medium">Satisfaction Rate</div>
+                                            <div class="text-2xl font-bold text-green-900">${Math.round(result.satisfaction_rate * 100)}%</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <h5 class="font-medium text-gray-900 mb-2">✅ Satisfied Criteria (${result.satisfied_criteria.length})</h5>
+                                            <ul class="space-y-1">
+                                                ${result.satisfied_criteria.map(criterion => `
+                                                    <li class="text-sm text-green-700 flex items-center">
+                                                        <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                                        </svg>
+                                                        ${criterion}
+                                                    </li>
+                                                `).join('')}
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h5 class="font-medium text-gray-900 mb-2">❌ Missing Criteria (${result.unsatisfied_criteria.length})</h5>
+                                            <ul class="space-y-1">
+                                                ${result.unsatisfied_criteria.map(criterion => `
+                                                    <li class="text-sm text-red-700 flex items-center">
+                                                        <svg class="w-4 h-4 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                                        </svg>
+                                                        ${criterion}
+                                                    </li>
+                                                `).join('')}
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    ${(result.documents && result.documents.length > 0) || (result.events && result.events.length > 0) ? `
+                                        <div class="mt-4">
+                                            <h5 class="font-medium text-gray-900 mb-2">📄 Content for this Award</h5>
+                                            <div class="space-y-2">
+                                                ${result.documents ? result.documents.map(doc => `
+                                                    <div class="flex items-center justify-between p-2 bg-blue-50 rounded border-l-4 border-blue-400">
+                                                        <div class="flex items-center">
+                                                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2">DOC</span>
+                                                            <span class="text-sm text-gray-700">${doc.document_name}</span>
+                                                        </div>
+                                                        <span class="text-xs text-gray-500">${doc.upload_date}</span>
+                                                    </div>
+                                                `).join('') : ''}
+                                                ${result.events ? result.events.map(event => `
+                                                    <div class="flex items-center justify-between p-2 bg-purple-50 rounded border-l-4 border-purple-400">
+                                                        <div class="flex items-center">
+                                                            <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded mr-2">EVENT</span>
+                                                            <span class="text-sm text-gray-700">${event.title}</span>
+                                                        </div>
+                                                        <span class="text-xs text-gray-500">${event.created_date}</span>
+                                                    </div>
+                                                `).join('') : ''}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Show award checklists
+        async function showAwardChecklists() {
+            try {
+                showNotification('Loading award checklists...', 'info');
+                
+                const response = await fetch('api/checklist.php?action=get_all_checklists');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayAwardChecklists(result.checklists);
+                    showNotification('Award checklists loaded!', 'success');
+                } else {
+                    showNotification('Failed to load checklists', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading checklists:', error);
+                showNotification('Error loading checklists', 'error');
+            }
+        }
+
+        // Display award checklists
+        function displayAwardChecklists(checklists) {
+            const modal = document.createElement('div');
+            modal.id = 'checklist-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-xl max-w-7xl w-full mx-4 max-h-[90vh] overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">Award Application Checklists</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="document.getElementById('checklist-modal').remove()">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            ${checklists.map(checklist => `
+                                <div class="border border-gray-200 rounded-lg p-4">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h4 class="text-lg font-semibold text-gray-900">${checklist.award_type}</h4>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-2xl">${checklist.readiness.icon}</span>
+                                            <span class="px-3 py-1 rounded-full text-sm font-medium ${
+                                                checklist.readiness.color === 'green' ? 'bg-green-100 text-green-800' :
+                                                checklist.readiness.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-red-100 text-red-800'
+                                            }">
+                                                ${checklist.readiness.status}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-3 gap-4 mb-4">
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-blue-600">${checklist.document_count}</div>
+                                            <div class="text-xs text-gray-500">Documents</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-purple-600">${checklist.event_count}</div>
+                                            <div class="text-xs text-gray-500">Events</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-green-600">${checklist.satisfied_criteria.length}/${checklist.checklist.length}</div>
+                                            <div class="text-xs text-gray-500">Criteria</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <h5 class="font-medium text-gray-900 mb-2">Checklist Progress</h5>
+                                        ${checklist.checklist.map(item => `
+                                            <div class="flex items-center justify-between p-2 rounded ${
+                                                item.satisfied ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                                            }">
+                                                <div class="flex items-center">
+                                                    <span class="text-lg mr-2">${item.satisfied ? '✅' : '❌'}</span>
+                                                    <span class="text-sm ${item.satisfied ? 'text-green-800' : 'text-red-800'}">${item.criterion}</span>
+                                                </div>
+                                                <button onclick="toggleCriterionStatus('${checklist.award_type}', '${item.criterion}', ${!item.satisfied})" 
+                                                        class="text-xs px-2 py-1 rounded ${
+                                                            item.satisfied ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                        }">
+                                                    ${item.satisfied ? 'Mark Unsatisfied' : 'Mark Satisfied'}
+                                                </button>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+
+                                    ${checklist.unsatisfied_criteria.length > 0 ? `
+                                        <div class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                            <h6 class="font-medium text-yellow-800 mb-2">💡 Suggestions for Missing Criteria</h6>
+                                            <ul class="text-sm text-yellow-700 space-y-1">
+                                                ${checklist.checklist.filter(item => !item.satisfied).slice(0, 2).map(item => `
+                                                    <li>• ${item.suggestions[0] || 'Create content that demonstrates ' + item.criterion}</li>
+                                                `).join('')}
+                                            </ul>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Toggle criterion status
+        async function toggleCriterionStatus(awardType, criterion, newStatus) {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'update_criterion_status');
+                formData.append('award_type', awardType);
+                formData.append('criterion', criterion);
+                formData.append('satisfied', newStatus);
+
+                const response = await fetch('api/checklist.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Criterion status updated!', 'success');
+                    // Refresh the checklist display
+                    showAwardChecklists();
+                } else {
+                    showNotification('Failed to update criterion status', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating criterion status:', error);
+                showNotification('Error updating criterion status', 'error');
+            }
+        }
+
+        // Load readiness summary
+        async function loadReadinessSummary() {
+            try {
+                showNotification('Loading readiness summary...', 'info');
+                
+                const response = await fetch('api/checklist.php?action=get_readiness_summary');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayReadinessSummary(result.summary);
+                    showNotification('Readiness summary loaded!', 'success');
+                } else {
+                    showNotification('Failed to load readiness summary', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading readiness summary:', error);
+                showNotification('Error loading readiness summary', 'error');
+            }
+        }
+
+        // Display readiness summary
+        function displayReadinessSummary(summary) {
+            const container = document.getElementById('readiness-summary');
+            
+            if (!summary || summary.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">No readiness data available</div>';
+                return;
+            }
+            
+            container.innerHTML = summary.map(item => `
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-semibold text-gray-900 text-sm">${item.award_type}</h4>
+                        <div class="flex items-center gap-1">
+                            <span class="text-lg">${item.readiness.icon}</span>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                                item.readiness.color === 'green' ? 'bg-green-100 text-green-800' :
+                                item.readiness.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                            }">
+                                ${item.readiness.status}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Documents:</span>
+                            <span class="font-medium text-blue-600">${item.document_count}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Events:</span>
+                            <span class="font-medium text-purple-600">${item.event_count}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Criteria:</span>
+                            <span class="font-medium text-green-600">${item.satisfied_count}/${item.total_count}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="h-2 rounded-full ${
+                                item.readiness.color === 'green' ? 'bg-green-500' :
+                                item.readiness.color === 'yellow' ? 'bg-yellow-500' :
+                                'bg-red-500'
+                            }" style="width: ${Math.round(item.readiness.satisfaction_rate * 100)}%"></div>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1 text-center">
+                            ${Math.round(item.readiness.satisfaction_rate * 100)}% Complete
+                        </div>
+                    </div>
+                    
+                    <button onclick="showDetailedChecklist('${item.award_type}')" class="w-full mt-3 px-3 py-2 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
+                        View Details
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Show detailed checklist for a specific award
+        async function showDetailedChecklist(awardType) {
+            try {
+                showNotification('Loading detailed checklist...', 'info');
+                
+                const response = await fetch(`api/checklist.php?action=get_award_checklist&award_type=${encodeURIComponent(awardType)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayDetailedChecklist(result);
+                    showNotification('Detailed checklist loaded!', 'success');
+                } else {
+                    showNotification('Failed to load detailed checklist', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading detailed checklist:', error);
+                showNotification('Error loading detailed checklist', 'error');
+            }
+        }
+
+        // Display detailed checklist for a specific award
+        function displayDetailedChecklist(checklist) {
+            const modal = document.createElement('div');
+            modal.id = 'detailed-checklist-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">${checklist.award_type} - Detailed Checklist</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="document.getElementById('detailed-checklist-modal').remove()">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                        <!-- Readiness Status -->
+                        <div class="mb-6 p-4 rounded-lg ${
+                            checklist.readiness.color === 'green' ? 'bg-green-50 border border-green-200' :
+                            checklist.readiness.color === 'yellow' ? 'bg-yellow-50 border border-yellow-200' :
+                            'bg-red-50 border border-red-200'
+                        }">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">${checklist.readiness.icon}</span>
+                                    <div>
+                                        <h4 class="font-semibold text-lg ${
+                                            checklist.readiness.color === 'green' ? 'text-green-800' :
+                                            checklist.readiness.color === 'yellow' ? 'text-yellow-800' :
+                                            'text-red-800'
+                                        }">${checklist.readiness.status}</h4>
+                                        <p class="text-sm ${
+                                            checklist.readiness.color === 'green' ? 'text-green-600' :
+                                            checklist.readiness.color === 'yellow' ? 'text-yellow-600' :
+                                            'text-red-600'
+                                        }">${Math.round(checklist.readiness.satisfaction_rate * 100)}% Complete</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold ${
+                                        checklist.readiness.color === 'green' ? 'text-green-600' :
+                                        checklist.readiness.color === 'yellow' ? 'text-yellow-600' :
+                                        'text-red-600'
+                                    }">${checklist.satisfied_criteria.length}/${checklist.checklist.length}</div>
+                                    <div class="text-sm text-gray-500">Criteria Met</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content Summary -->
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="text-center p-4 bg-blue-50 rounded-lg">
+                                <div class="text-2xl font-bold text-blue-600">${checklist.document_count}</div>
+                                <div class="text-sm text-gray-600">Documents</div>
+                            </div>
+                            <div class="text-center p-4 bg-purple-50 rounded-lg">
+                                <div class="text-2xl font-bold text-purple-600">${checklist.event_count}</div>
+                                <div class="text-sm text-gray-600">Events</div>
+                            </div>
+                            <div class="text-center p-4 bg-green-50 rounded-lg">
+                                <div class="text-2xl font-bold text-green-600">${checklist.total_content}</div>
+                                <div class="text-sm text-gray-600">Total Content</div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Checklist -->
+                        <div class="space-y-4">
+                            <h5 class="font-semibold text-gray-900">Criteria Checklist</h5>
+                            ${checklist.checklist.map(item => `
+                                <div class="border border-gray-200 rounded-lg p-4 ${
+                                    item.satisfied ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                                }">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <span class="text-2xl">${item.satisfied ? '✅' : '❌'}</span>
+                                                <h6 class="font-medium ${
+                                                    item.satisfied ? 'text-green-800' : 'text-red-800'
+                                                }">${item.criterion}</h6>
+                                            </div>
+                                            
+                                            ${item.supporting_content.length > 0 ? `
+                                                <div class="ml-8 mb-3">
+                                                    <p class="text-sm text-gray-600 mb-2">Supporting Content:</p>
+                                                    <div class="space-y-1">
+                                                        ${item.supporting_content.map(content => `
+                                                            <div class="flex items-center gap-2 text-sm">
+                                                                <span class="px-2 py-1 rounded text-xs ${
+                                                                    content.type === 'document' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                                                }">${content.type.toUpperCase()}</span>
+                                                                <span class="text-gray-700">${content.title}</span>
+                                                            </div>
+                                                        `).join('')}
+                                                    </div>
+                                                </div>
+                                            ` : ''}
+                                            
+                                            ${!item.satisfied && item.suggestions.length > 0 ? `
+                                                <div class="ml-8">
+                                                    <p class="text-sm text-gray-600 mb-2">💡 Suggestions:</p>
+                                                    <ul class="text-sm text-gray-700 space-y-1">
+                                                        ${item.suggestions.slice(0, 3).map(suggestion => `
+                                                            <li>• ${suggestion}</li>
+                                                        `).join('')}
+                                                    </ul>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                        
+                                        <button onclick="toggleCriterionStatus('${checklist.award_type}', '${item.criterion}', ${!item.satisfied})" 
+                                                class="ml-4 px-3 py-1 text-xs rounded ${
+                                                    item.satisfied ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                }">
+                                            ${item.satisfied ? 'Mark Unsatisfied' : 'Mark Satisfied'}
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
         }
 
         // Generate strategic recommendations
@@ -1520,48 +2545,70 @@ LILAC Awards - Keyboard Shortcuts:
         <!-- Tab Content Container -->
         <div id="tab-overview-content" class="tab-content">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3 bg-gray-50 p-2 rounded-lg">
-            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3 bg-gray-50 p-2 rounded-lg">
+            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
-                        <div class="text-2xl font-extrabold text-gray-900" id="total-awards">0</div>
-                        <div class="text-sm text-gray-600">Total Awards</div>
+                        <div class="text-xl font-extrabold text-gray-900" id="total-awards">0</div>
+                        <div class="text-xs text-gray-600">Total Awards</div>
                     </div>
-                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/></svg>
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/></svg>
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
-                        <div class="text-2xl font-extrabold text-gray-900" id="academic-count">0</div>
-                        <div class="text-sm text-gray-600">Academic Excellence</div>
+                        <div class="text-xl font-extrabold text-gray-900" id="leadership-score">0</div>
+                        <div class="text-xs text-gray-600">International Leadership</div>
                     </div>
-                    <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
-                        <div class="text-2xl font-extrabold text-gray-900" id="research-count">0</div>
-                        <div class="text-sm text-gray-600">Research Awards</div>
+                        <div class="text-xl font-extrabold text-gray-900" id="education-score">0</div>
+                        <div class="text-xs text-gray-600">Outstanding International Education</div>
                     </div>
-                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
-                        <div class="text-2xl font-extrabold text-gray-900" id="leadership-count">0</div>
-                        <div class="text-sm text-gray-600">Leadership Awards</div>
+                        <div class="text-xl font-extrabold text-gray-900" id="emerging-score">0</div>
+                        <div class="text-xs text-gray-600">Emerging Leadership Award</div>
                     </div>
-                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="text-xl font-extrabold text-gray-900" id="regional-score">0</div>
+                        <div class="text-xs text-gray-600">Best Regional Office for International</div>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="text-xl font-extrabold text-gray-900" id="global-score">0</div>
+                        <div class="text-xs text-gray-600">Global Citizenship Award</div>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                 </div>
             </div>
@@ -1792,8 +2839,8 @@ LILAC Awards - Keyboard Shortcuts:
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">
                             <p class="text-xs font-medium text-gray-600 truncate">International Leadership Award</p>
-                            <p class="text-xl font-bold text-gray-900" id="leadership-score">0%</p>
-                            <p class="text-xs text-blue-600">Qualification Score</p>
+                            <p class="text-xl font-bold text-gray-900" id="leadership-score">0</p>
+                            <p class="text-xs text-blue-600">Documents Count</p>
                         </div>
                         <div class="p-2 rounded-full bg-blue-100 ml-2">
                             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1806,8 +2853,8 @@ LILAC Awards - Keyboard Shortcuts:
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">
                             <p class="text-xs font-medium text-gray-600 truncate">Outstanding International Education Program</p>
-                            <p class="text-xl font-bold text-gray-900" id="education-score">0%</p>
-                            <p class="text-xs text-green-600">Qualification Score</p>
+                            <p class="text-xl font-bold text-gray-900" id="education-score">0</p>
+                            <p class="text-xs text-green-600">Documents Count</p>
                         </div>
                         <div class="p-2 rounded-full bg-green-100 ml-2">
                             <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1821,8 +2868,8 @@ LILAC Awards - Keyboard Shortcuts:
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">
                             <p class="text-xs font-medium text-gray-600 truncate">Emerging Leadership Award</p>
-                            <p class="text-xl font-bold text-gray-900" id="emerging-score">0%</p>
-                            <p class="text-xs text-purple-600">Qualification Score</p>
+                            <p class="text-xl font-bold text-gray-900" id="emerging-score">0</p>
+                            <p class="text-xs text-purple-600">Documents Count</p>
                         </div>
                         <div class="p-2 rounded-full bg-purple-100 ml-2">
                             <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1835,8 +2882,8 @@ LILAC Awards - Keyboard Shortcuts:
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">
                             <p class="text-xs font-medium text-gray-600 truncate">Best Regional Office for International</p>
-                            <p class="text-xl font-bold text-gray-900" id="regional-score">0%</p>
-                            <p class="text-sm text-orange-600">Qualification Score</p>
+                            <p class="text-xl font-bold text-gray-900" id="regional-score">0</p>
+                            <p class="text-sm text-orange-600">Documents Count</p>
                         </div>
                         <div class="p-2 rounded-full bg-orange-100 ml-2">
                             <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1849,8 +2896,8 @@ LILAC Awards - Keyboard Shortcuts:
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">
                             <p class="text-xs font-medium text-gray-600 truncate">Global Citizenship Award</p>
-                            <p class="text-xl font-bold text-gray-900" id="citizenship-score">0%</p>
-                            <p class="text-sm text-red-600">Qualification Score</p>
+                            <p class="text-xl font-bold text-gray-900" id="citizenship-score">0</p>
+                            <p class="text-sm text-red-600">Documents Count</p>
                         </div>
                         <div class="p-2 rounded-full bg-red-100 ml-2">
                             <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1867,35 +2914,245 @@ LILAC Awards - Keyboard Shortcuts:
                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">CHED Award Criteria</h3>
                     <div class="space-y-4">
+                        <!-- International Leadership Award -->
                         <div class="border-l-4 border-blue-500 pl-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
                             <h4 class="font-medium text-gray-900">International Leadership Award</h4>
                             <p class="text-sm text-gray-600">Demonstrated leadership in international partnerships, student exchanges, and global initiatives</p>
                         </div>
+                                <button onclick="toggleAwardDetails('leadership')" class="ml-4 p-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
+                                    <svg id="leadership-arrow" class="w-5 h-5 text-blue-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="leadership-details" class="hidden mt-3 p-4 bg-blue-50 rounded-lg">
+                                <div class="space-y-2">
+                                    <div class="flex items-center text-sm text-blue-800">
+                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                               data-award="leadership" data-criterion="Champion Bold Innovation"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Champion Bold Innovation</span>
+                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Champion Bold Innovation-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-blue-800">
+                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                               data-award="leadership" data-criterion="Cultivate Global Citizens"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Cultivate Global Citizens</span>
+                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Cultivate Global Citizens-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-blue-800">
+                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                               data-award="leadership" data-criterion="Nurture Lifelong Learning"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Nurture Lifelong Learning</span>
+                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Nurture Lifelong Learning-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-blue-800">
+                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                               data-award="leadership" data-criterion="Lead with Purpose"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Lead with Purpose</span>
+                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Lead with Purpose-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-blue-800">
+                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                               data-award="leadership" data-criterion="Ethical and Inclusive Leadership"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Ethical and Inclusive Leadership</span>
+                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Ethical and Inclusive Leadership-status">Auto-assigned</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Outstanding International Education Program -->
                         <div class="border-l-4 border-green-500 pl-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
                             <h4 class="font-medium text-gray-900">Outstanding International Education Program</h4>
                             <p class="text-sm text-gray-600">Excellence in international curriculum, research collaborations, and academic partnerships</p>
                         </div>
+                                <button onclick="toggleAwardDetails('education')" class="ml-4 p-2 rounded-lg bg-green-50 hover:bg-green-100 transition-colors">
+                                    <svg id="education-arrow" class="w-5 h-5 text-green-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="education-details" class="hidden mt-3 p-4 bg-green-50 rounded-lg">
+                                <div class="space-y-2">
+                                    <div class="flex items-center text-sm text-green-800">
+                                        <input type="checkbox" class="mr-3 rounded border-green-300 text-green-600 focus:ring-green-500" 
+                                               data-award="education" data-criterion="Expand Access to Global Opportunities"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Expand Access to Global Opportunities</span>
+                                        <span class="text-xs text-green-600 ml-2" id="education-Expand Access to Global Opportunities-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-green-800">
+                                        <input type="checkbox" class="mr-3 rounded border-green-300 text-green-600 focus:ring-green-500" 
+                                               data-award="education" data-criterion="Foster Collaborative Innovation"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Foster Collaborative Innovation</span>
+                                        <span class="text-xs text-green-600 ml-2" id="education-Foster Collaborative Innovation-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-green-800">
+                                        <input type="checkbox" class="mr-3 rounded border-green-300 text-green-600 focus:ring-green-500" 
+                                               data-award="education" data-criterion="Embrace Inclusivity and Beyond"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Embrace Inclusivity and Beyond</span>
+                                        <span class="text-xs text-green-600 ml-2" id="education-Embrace Inclusivity and Beyond-status">Auto-assigned</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emerging Leadership Award -->
                         <div class="border-l-4 border-purple-500 pl-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
                             <h4 class="font-medium text-gray-900">Emerging Leadership Award</h4>
                             <p class="text-sm text-gray-600">Innovative approaches to international education and emerging global opportunities</p>
                         </div>
+                                <button onclick="toggleAwardDetails('emerging')" class="ml-4 p-2 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors">
+                                    <svg id="emerging-arrow" class="w-5 h-5 text-purple-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="emerging-details" class="hidden mt-3 p-4 bg-purple-50 rounded-lg">
+                                <div class="space-y-2">
+                                    <div class="flex items-center text-sm text-purple-800">
+                                        <input type="checkbox" class="mr-3 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
+                                               data-award="emerging" data-criterion="Innovation"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Innovation</span>
+                                        <span class="text-xs text-purple-600 ml-2" id="emerging-Innovation-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-purple-800">
+                                        <input type="checkbox" class="mr-3 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
+                                               data-award="emerging" data-criterion="Strategic and Inclusive Growth"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Strategic and Inclusive Growth</span>
+                                        <span class="text-xs text-purple-600 ml-2" id="emerging-Strategic and Inclusive Growth-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-purple-800">
+                                        <input type="checkbox" class="mr-3 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
+                                               data-award="emerging" data-criterion="Empowerment of Others"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Empowerment of Others</span>
+                                        <span class="text-xs text-purple-600 ml-2" id="emerging-Empowerment of Others-status">Auto-assigned</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Best Regional Office for International -->
                         <div class="border-l-4 border-orange-500 pl-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
                             <h4 class="font-medium text-gray-900">Best Regional Office for International</h4>
                             <p class="text-sm text-gray-600">Effective regional coordination and management of international programs</p>
                         </div>
+                                <button onclick="toggleAwardDetails('regional')" class="ml-4 p-2 rounded-lg bg-orange-50 hover:bg-orange-100 transition-colors">
+                                    <svg id="regional-arrow" class="w-5 h-5 text-orange-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="regional-details" class="hidden mt-3 p-4 bg-orange-50 rounded-lg">
+                                <div class="space-y-2">
+                                    <div class="flex items-center text-sm text-orange-800">
+                                        <input type="checkbox" class="mr-3 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
+                                               data-award="regional" data-criterion="Comprehensive Internationalization Efforts"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Comprehensive Internationalization Efforts</span>
+                                        <span class="text-xs text-orange-600 ml-2" id="regional-Comprehensive Internationalization Efforts-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-orange-800">
+                                        <input type="checkbox" class="mr-3 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
+                                               data-award="regional" data-criterion="Cooperation and Collaboration"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Cooperation and Collaboration</span>
+                                        <span class="text-xs text-orange-600 ml-2" id="regional-Cooperation and Collaboration-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-orange-800">
+                                        <input type="checkbox" class="mr-3 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
+                                               data-award="regional" data-criterion="Measurable Impact"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Measurable Impact</span>
+                                        <span class="text-xs text-orange-600 ml-2" id="regional-Measurable Impact-status">Auto-assigned</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Global Citizenship Award -->
                         <div class="border-l-4 border-red-500 pl-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
                             <h4 class="font-medium text-gray-900">Global Citizenship Award</h4>
                             <p class="text-sm text-gray-600">Promotion of global awareness, cultural exchange, and international community engagement</p>
+                        </div>
+                                <button onclick="toggleAwardDetails('citizenship')" class="ml-4 p-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors">
+                                    <svg id="citizenship-arrow" class="w-5 h-5 text-red-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="citizenship-details" class="hidden mt-3 p-4 bg-red-50 rounded-lg">
+                                <div class="space-y-2">
+                                    <div class="flex items-center text-sm text-red-800">
+                                        <input type="checkbox" class="mr-3 rounded border-red-300 text-red-600 focus:ring-red-500" 
+                                               data-award="global" data-criterion="Ignite Intercultural Understanding"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Ignite Intercultural Understanding</span>
+                                        <span class="text-xs text-red-600 ml-2" id="global-Ignite Intercultural Understanding-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-red-800">
+                                        <input type="checkbox" class="mr-3 rounded border-red-300 text-red-600 focus:ring-red-500" 
+                                               data-award="global" data-criterion="Empower Changemakers"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Empower Changemakers</span>
+                                        <span class="text-xs text-red-600 ml-2" id="global-Empower Changemakers-status">Auto-assigned</span>
+                                    </div>
+                                    <div class="flex items-center text-sm text-red-800">
+                                        <input type="checkbox" class="mr-3 rounded border-red-300 text-red-600 focus:ring-red-500" 
+                                               data-award="global" data-criterion="Cultivate Active Engagement"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                        <span class="flex-1">Cultivate Active Engagement</span>
+                                        <span class="text-xs text-red-600 ml-2" id="global-Cultivate Active Engagement-status">Auto-assigned</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Award Readiness Summary -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Award Readiness Summary</h3>
+                        <button onclick="loadReadinessSummary()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                            Refresh Status
+                        </button>
+                    </div>
+                    
+                    <div id="readiness-summary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Readiness cards will be loaded here -->
+                        <div class="col-span-full text-center py-8 text-gray-500">
+                            Click "Refresh Status" to load award readiness information
                         </div>
                     </div>
                 </div>
 
                 <!-- Matching Analysis -->
                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Qualification Analysis</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Document Analysis</h3>
                     <div class="space-y-4">
                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <span class="text-sm font-medium text-gray-700">Activities Analyzed</span>
+                            <span class="text-sm font-medium text-gray-700">Documents Analyzed</span>
                             <span class="text-sm text-gray-900" id="activities-count">0</span>
                         </div>
                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1903,13 +3160,21 @@ LILAC Awards - Keyboard Shortcuts:
                             <span class="text-sm text-green-600 font-medium" id="best-match">None</span>
                         </div>
                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <span class="text-sm font-medium text-gray-700">Overall Score</span>
-                            <span class="text-sm text-blue-600 font-medium" id="overall-score">0%</span>
+                            <span class="text-sm font-medium text-gray-700">Total Documents</span>
+                            <span class="text-sm text-blue-600 font-medium" id="overall-score">0</span>
                         </div>
                     </div>
-                    <button onclick="runAwardMatch()" class="w-full mt-4 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="runAwardMatch()" class="flex-1 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">
                         Run AwardMatch Analysis
                     </button>
+                        <button onclick="analyzeAllDocuments()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Analyze All Content
+                        </button>
+                        <button onclick="generateAwardReport()" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors ml-2">
+                            Generate Report
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -2422,6 +3687,27 @@ LILAC Awards - Keyboard Shortcuts:
             if (!input.files || !input.files[0]) { alert('Please choose a file first'); return; }
             closeImportDataModal();
         }
+        
+        // Toggle award details dropdown
+        function toggleAwardDetails(awardType) {
+            const detailsElement = document.getElementById(`${awardType}-details`);
+            const arrowElement = document.getElementById(`${awardType}-arrow`);
+            
+            if (detailsElement && arrowElement) {
+                const isHidden = detailsElement.classList.contains('hidden');
+                
+                if (isHidden) {
+                    // Show details
+                    detailsElement.classList.remove('hidden');
+                    arrowElement.style.transform = 'rotate(180deg)';
+                } else {
+                    // Hide details
+                    detailsElement.classList.add('hidden');
+                    arrowElement.style.transform = 'rotate(0deg)';
+                }
+            }
+        }
+        
         document.getElementById('award-modal-form')?.addEventListener('submit', function(e){
             e.preventDefault();
             closeAddAwardModal();
@@ -2509,6 +3795,246 @@ LILAC Awards - Keyboard Shortcuts:
             }
         });
     }
+
+    // Award Criteria Dropdown and Linking Functions
+    function updateCriterionStatus(checkbox) {
+        const award = checkbox.dataset.award;
+        const criterion = checkbox.dataset.criterion;
+        const isChecked = checkbox.checked;
+        
+        // Update the criterion status via API
+        fetch('api/checklist.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `action=update_criterion_status&award_type=${encodeURIComponent(award)}&criterion=${encodeURIComponent(criterion)}&satisfied=${isChecked ? '1' : '0'}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log(`Criterion ${criterion} status updated to ${isChecked ? 'satisfied' : 'not satisfied'}`);
+                // Refresh the readiness summary if it exists
+                if (typeof loadReadinessSummary === 'function') {
+                    loadReadinessSummary();
+                }
+            } else {
+                console.error('Failed to update criterion status:', data.message);
+                // Revert checkbox state
+                checkbox.checked = !isChecked;
+            }
+        })
+        .catch(error => {
+            console.error('Error updating criterion status:', error);
+            // Revert checkbox state
+            checkbox.checked = !isChecked;
+        });
+    }
+
+    // Function to update checklist status automatically based on counters
+    function updateChecklistStatusAutomatically() {
+        const awardTypes = ['leadership', 'education', 'emerging', 'regional', 'global'];
+        
+        awardTypes.forEach(awardType => {
+            fetch(`api/checklist.php?action=get_checklist_status&award_type=${encodeURIComponent(awardType)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    data.status.forEach(criterionStatus => {
+                        const checkbox = document.querySelector(`input[data-award="${awardType}"][data-criterion="${criterionStatus.criterion}"]`);
+                        const statusElement = document.getElementById(`${awardType}-${criterionStatus.criterion}-status`);
+                        
+                        if (checkbox) {
+                            checkbox.checked = criterionStatus.satisfied;
+                        }
+                        
+                        if (statusElement) {
+                            if (criterionStatus.satisfied) {
+                                statusElement.textContent = 'Auto-assigned';
+                                statusElement.className = 'text-xs text-green-600 ml-2';
+                            } else {
+                                statusElement.textContent = 'Not assigned';
+                                statusElement.className = 'text-xs text-gray-500 ml-2';
+                            }
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error(`Error loading checklist status for ${awardType}:`, error);
+            });
+        });
+    }
+
+    // Load available content when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        updateChecklistStatusAutomatically();
+        // Set up periodic refresh of checklist data
+        setInterval(refreshChecklistData, 30000); // Refresh every 30 seconds
+    });
+
+    // Function to refresh checklist data
+    function refreshChecklistData() {
+        if (typeof loadAwardDocumentCounts === 'function') {
+            loadAwardDocumentCounts();
+        }
+        if (typeof loadReadinessSummary === 'function') {
+            loadReadinessSummary();
+        }
+        if (typeof updateChecklistStatusAutomatically === 'function') {
+            updateChecklistStatusAutomatically();
+        }
+    }
+
+    function generateAwardReport() {
+        // Show loading state
+        const reportButton = event.target;
+        const originalText = reportButton.textContent;
+        reportButton.textContent = 'Generating...';
+        reportButton.disabled = true;
+
+        // Fetch readiness summary for all awards
+        fetch('api/checklist.php?action=get_readiness_summary')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayAwardReport(data.summary);
+            } else {
+                console.error('Failed to generate report:', data.message);
+                alert('Failed to generate report. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error generating report:', error);
+            alert('Error generating report. Please try again.');
+        })
+        .finally(() => {
+            // Restore button state
+            reportButton.textContent = originalText;
+            reportButton.disabled = false;
+        });
+    }
+
+    function displayAwardReport(summary) {
+        // Create modal for the report
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-2xl font-bold text-gray-900">Award Application Report</h2>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-gray-600 mt-2">Comprehensive overview of award readiness and missing requirements</p>
+                </div>
+                <div class="p-6">
+                    ${generateReportContent(summary)}
+                </div>
+                <div class="p-6 border-t border-gray-200 flex justify-end">
+                    <button onclick="this.closest('.fixed').remove()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    function generateReportContent(summary) {
+        const awardNames = {
+            'leadership': 'Internationalization (IZN) Leadership Award',
+            'education': 'Outstanding International Education Program Award',
+            'emerging': 'Emerging Leadership Award',
+            'regional': 'Best Regional Office for Internationalization Award',
+            'global': 'Global Citizenship Award'
+        };
+
+        let content = '<div class="space-y-6">';
+        
+        summary.forEach(award => {
+            const readinessColor = award.readiness === 'Ready to Apply' ? 'green' : 
+                                 award.readiness === 'Nearly Ready' ? 'yellow' : 'red';
+            const readinessIcon = award.readiness === 'Ready to Apply' ? '✅' : 
+                                award.readiness === 'Nearly Ready' ? '⚠️' : '❌';
+            
+            content += `
+                <div class="border border-gray-200 rounded-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-gray-900">${awardNames[award.award_type] || award.award_type}</h3>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium bg-${readinessColor}-100 text-${readinessColor}-800">
+                            ${readinessIcon} ${award.readiness}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <div class="text-2xl font-bold text-blue-600">${award.satisfied_count}/${award.total_count}</div>
+                            <div class="text-sm text-blue-800">Criteria Satisfied</div>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="text-2xl font-bold text-green-600">${award.document_count}</div>
+                            <div class="text-sm text-green-800">Documents Uploaded</div>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div class="text-2xl font-bold text-purple-600">${award.event_count}</div>
+                            <div class="text-sm text-purple-800">Events Created</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-medium text-gray-900 mb-2">Progress</h4>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-${readinessColor}-500 h-2 rounded-full" style="width: ${(award.satisfied_count / award.total_count) * 100}%"></div>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-2">
+                            ${award.total_count - award.satisfied_count} criteria remaining to complete this award
+                        </p>
+                    </div>
+                </div>
+            `;
+        });
+        
+        content += '</div>';
+        
+        // Add summary statistics
+        const totalAwards = summary.length;
+        const readyAwards = summary.filter(a => a.readiness === 'Ready to Apply').length;
+        const nearlyReadyAwards = summary.filter(a => a.readiness === 'Nearly Ready').length;
+        const incompleteAwards = summary.filter(a => a.readiness === 'Incomplete').length;
+        
+        content = `
+            <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Overall Summary</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600">${totalAwards}</div>
+                        <div class="text-sm text-blue-800">Total Awards</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">${readyAwards}</div>
+                        <div class="text-sm text-green-800">Ready to Apply</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-yellow-600">${nearlyReadyAwards}</div>
+                        <div class="text-sm text-yellow-800">Nearly Ready</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-red-600">${incompleteAwards}</div>
+                        <div class="text-sm text-red-800">Incomplete</div>
+                    </div>
+                </div>
+            </div>
+        ` + content;
+        
+        return content;
+    }
+
     // ... existing code ...
     </script>
 

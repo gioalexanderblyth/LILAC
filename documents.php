@@ -8,6 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="document-categorizer.js"></script>
+    <script src="js/document-analyzer.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         if (window['pdfjsLib']) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -122,11 +124,15 @@
         // Initialize documents functionality
         document.addEventListener('DOMContentLoaded', function() {
             try { document.documentElement.style.fontSize = '14px'; } catch(_) {}
+            console.log('🚀 DOM Content Loaded - Initializing documents page');
             initializeEventListeners();
 
             // Load initial data
+            console.log('📋 Loading categories...');
             loadCategories();
+            console.log('📋 Loading documents...');
             loadDocuments();
+            console.log('📊 Loading stats...');
             loadStats();
 
             updateCurrentDate();
@@ -468,8 +474,19 @@
 
         function loadCategories() {
             fetch('api/documents.php?action=get_categories')
-                .then(response => response.json())
-                .then(data => {
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(responseText => {
+                    if (!responseText || responseText.trim() === '') {
+                        console.log('⚠️ Empty response from categories API');
+                        return;
+                    }
+                    
+                    const data = JSON.parse(responseText);
                     if (data.success) {
                         availableCategories = data.categories;
                         // Populate filter categories if panel exists
@@ -487,7 +504,14 @@
                         }
                     }
                 })
-                .catch(error => console.error('Error loading categories:', error));
+                .catch(error => {
+                    console.error('❌ Error loading categories:', error);
+                    console.error('Error details:', {
+                        name: error.name,
+                        message: error.message,
+                        stack: error.stack
+                    });
+                });
         }
 
         function loadDocuments() {
@@ -523,12 +547,29 @@
             if (currentFilters.date_from) { params.append('date_from', currentFilters.date_from); }
             if (currentFilters.date_to) { params.append('date_to', currentFilters.date_to); }
             
+            console.log('🔗 Making API call to: api/documents.php?' + params.toString());
             fetch('api/documents.php?' + params.toString())
-                .then(response => response.json())
-                .then(data => {
+                .then(response => {
+                    console.log('📡 Response status:', response.status, response.statusText);
+                    console.log('📡 Response headers:', response.headers);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(responseText => {
+                    if (!responseText || responseText.trim() === '') {
+                        console.log('⚠️ Empty response from documents API');
+                        hideLoadingState();
+                        return;
+                    }
+                    
+                    const data = JSON.parse(responseText);
                     hideLoadingState();
+                    console.log('📥 API Response:', data);
                     if (data.success) {
                         currentDocuments = data.documents;
+                        console.log('✅ Loaded', data.documents.length, 'documents');
                         // Store all documents for client-side filtering
                         window.allDocuments = data.documents;
                         
@@ -558,7 +599,12 @@
                 })
                 .catch(error => {
                     hideLoadingState();
-                    console.error('Error loading documents:', error);
+                    console.error('❌ Error loading documents:', error);
+                    console.error('Error details:', {
+                        name: error.name,
+                        message: error.message,
+                        stack: error.stack
+                    });
                     showErrorMessage('Error loading documents. Please try again.');
                 });
         }
@@ -567,6 +613,8 @@
             const loadingElement = document.getElementById('loading-state');
             if (loadingElement) {
                 loadingElement.classList.remove('hidden');
+            } else {
+                console.log('⚠️ Loading state element not found');
             }
         }
 
@@ -574,27 +622,85 @@
             const loadingElement = document.getElementById('loading-state');
             if (loadingElement) {
                 loadingElement.classList.add('hidden');
+            } else {
+                console.log('⚠️ Loading state element not found');
             }
         }
 
         function loadStats() {
             fetch('api/documents.php?action=get_stats')
-                .then(response => response.json())
-                .then(data => {
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(responseText => {
+                    if (!responseText || responseText.trim() === '') {
+                        console.log('⚠️ Empty response from stats API');
+                        return;
+                    }
+                    
+                    const data = JSON.parse(responseText);
                     if (data.success) {
-                        document.getElementById('total-documents').textContent = data.stats.total;
-                        document.getElementById('recent-documents').textContent = data.stats.recent;
-                        document.getElementById('document-types').textContent = data.stats.categories;
+                        const totalElement = document.getElementById('total-documents');
+                        const recentElement = document.getElementById('recent-documents');
+                        const typesElement = document.getElementById('document-types');
+                        
+                        if (totalElement) {
+                            totalElement.textContent = data.stats.total;
+                        }
+                        if (recentElement) {
+                            recentElement.textContent = data.stats.recent;
+                        }
+                        if (typesElement) {
+                            // Get categories count from API
+                            fetch('api/documents.php?action=get_categories')
+                                .then(response => response.json())
+                                .then(catData => {
+                                    if (catData.success) {
+                                        typesElement.textContent = catData.categories.length;
+                                    }
+                                })
+                                .catch(error => console.error('Error loading categories:', error));
+                        }
                     }
                 })
-                .catch(error => console.error('Error loading stats:', error));
+                .catch(error => {
+                    console.error('❌ Error loading stats:', error);
+                    console.error('Error details:', {
+                        name: error.name,
+                        message: error.message,
+                        stack: error.stack
+                    });
+                });
         }
 
         function displayDocumentsByTime(documents) {
+            console.log('📋 Displaying documents:', documents.length, 'documents');
+            console.log('📋 Current view mode:', currentViewMode);
             const listContainer = document.getElementById('documents-table-body');
             const gridContainer = document.getElementById('documents-grid-body');
             const listView = document.getElementById('list-view');
             const gridView = document.getElementById('grid-view');
+            
+            // Debug: Check if elements exist
+            if (!listContainer) {
+                console.error('❌ documents-table-body element not found');
+                return;
+            }
+            if (!gridContainer) {
+                console.error('❌ documents-grid-body element not found');
+                return;
+            }
+            if (!listView) {
+                console.error('❌ list-view element not found');
+                return;
+            }
+            if (!gridView) {
+                console.error('❌ grid-view element not found');
+                return;
+            }
             
             // Show/hide appropriate view
             if (currentViewMode === 'list') {
@@ -609,7 +715,7 @@
                 if (currentViewMode === 'list') {
                     listContainer.innerHTML = `
                         <tr>
-                            <td colspan="7" class="px-6 py-24 text-center">
+                            <td colspan="6" class="px-6 py-24 text-center">
                                 <div class="flex flex-col items-center">
                                     <svg class="w-20 h-20 text-gray-400 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -690,8 +796,7 @@
             const isDocSelected = selectedDocuments.has(doc.id);
 
             return `
-                <tr class="${isDocSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}" 
-                    data-document-id="${doc.id}">
+                <tr class="${isDocSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}" data-document-id="${doc.id}">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center justify-center">
                             <input type="checkbox" 
@@ -1620,6 +1725,19 @@
 
                         <div id="upload-list" class="space-y-3"></div>
                         
+                        <!-- Award Selection -->
+                        <div class="space-y-2">
+                            <label for="award-type-select" class="block text-sm font-medium text-gray-700">Select Award Type (Optional)</label>
+                            <select id="award-type-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">No specific award</option>
+                                <option value="Internationalization (IZN) Leadership Award">Internationalization (IZN) Leadership Award</option>
+                                <option value="Outstanding International Education Program Award">Outstanding International Education Program Award</option>
+                                <option value="Emerging Leadership Award">Emerging Leadership Award</option>
+                                <option value="Best Regional Office for Internationalization Award">Best Regional Office for Internationalization Award</option>
+                                <option value="Global Citizenship Award">Global Citizenship Award</option>
+                            </select>
+                        </div>
+                        
                         <!-- Auto-categorization toggle -->
                         <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
                             <div class="flex items-center gap-2">
@@ -2146,6 +2264,12 @@
             existingFileNames.add(documentName.toLowerCase());
             
             formData.append('document_name', documentName);
+            
+            // Add award type if selected
+            const awardTypeSelect = document.getElementById('award-type-select');
+            if (awardTypeSelect && awardTypeSelect.value) {
+                formData.append('award_type', awardTypeSelect.value);
+            }
             try {
                 classifyFileClientSide(file).then(category => {
                     if (category) formData.append('category', category);
@@ -2314,6 +2438,12 @@
                 existingFileNames.add(documentName.toLowerCase());
                 formData.append('document_name', documentName);
 
+                // Add award type if selected
+                const awardTypeSelect = document.getElementById('award-type-select');
+                if (awardTypeSelect && awardTypeSelect.value) {
+                    formData.append('award_type', awardTypeSelect.value);
+                }
+
                 // Use the new document categorizer
                 let category = file._category || '';
                 let confidence = file._confidence || 0;
@@ -2333,6 +2463,20 @@
                 if (category) {
                     formData.append('category', category);
                     formData.append('category_confidence', confidence.toString());
+                }
+
+                // Auto-classify award type if not manually selected
+                if (!awardTypeSelect.value && window.DocumentAnalyzer) {
+                    try {
+                        const analyzer = new DocumentAnalyzer();
+                        const analysis = await analyzer.analyzeDocument(file);
+                        if (analysis.classification && analysis.confidence > 0.3) {
+                            formData.append('award_type', analysis.classification);
+                            console.log(`Auto-classified document as: ${analysis.classification} (confidence: ${analysis.confidence})`);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to auto-classify award type:', e);
+                    }
                 }
 
                 const res = await fetch('api/documents.php', { method:'POST', body: formData });
@@ -3797,6 +3941,54 @@
 	<div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
 		<!-- Content Area -->
 		<div class="">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <!-- Total Documents Card -->
+                <div class="bg-white bg-opacity-80 backdrop-blur-xl rounded-2xl border border-white border-opacity-30 p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Total Documents</p>
+                            <p id="total-documents" class="text-2xl font-bold text-gray-900">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Documents Card -->
+                <div class="bg-white bg-opacity-80 backdrop-blur-xl rounded-2xl border border-white border-opacity-30 p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Recent (30 days)</p>
+                            <p id="recent-documents" class="text-2xl font-bold text-gray-900">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Categories Card -->
+                <div class="bg-white bg-opacity-80 backdrop-blur-xl rounded-2xl border border-white border-opacity-30 p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Categories</p>
+                            <p id="document-types" class="text-2xl font-bold text-gray-900">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Documents Container -->
             <div id="documents-container" class="bg-white bg-opacity-80 backdrop-blur-xl rounded-3xl border border-white border-opacity-30 overflow-hidden shadow-2xl">
                 <!-- Quick Filter Chips -->
@@ -3847,6 +4039,14 @@
                             <!-- Documents will be loaded here -->
                         </tbody>
                     </table>
+                    
+                    <!-- Loading State -->
+                    <div id="loading-state" class="hidden absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+                        <div class="flex items-center space-x-2">
+                            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                            <span class="text-gray-600">Loading documents...</span>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Grid View -->

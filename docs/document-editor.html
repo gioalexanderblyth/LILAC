@@ -39,17 +39,76 @@
 
     <script>
     function exec(cmd, val = null) { document.execCommand(cmd, false, val); }
+    
     function saveDoc() {
         const content = document.getElementById('editor').innerHTML;
+        const templateData = JSON.parse(localStorage.getItem('lilac_template_data') || '{}');
+        
         try {
             localStorage.setItem('lilac_temp_doc', content);
+            
+            // Save with template metadata
+            const docData = {
+                content: content,
+                template: templateData,
+                savedAt: new Date().toISOString()
+            };
+            localStorage.setItem('lilac_document_data', JSON.stringify(docData));
+            
             alert('Document saved locally.');
-        } catch (e) { alert('Save failed.'); }
+        } catch (e) { 
+            alert('Save failed: ' + e.message); 
+        }
     }
-    // Restore if exists
+    
+    function loadTemplateContent() {
+        const templateData = JSON.parse(localStorage.getItem('lilac_template_data') || '{}');
+        const fileUrl = localStorage.getItem('lilac_template_file_url');
+        
+        if (templateData.name) {
+            // Update the title
+            document.querySelector('h1').textContent = templateData.name;
+        }
+        
+        if (fileUrl) {
+            // Load template content from file
+            fetch(fileUrl)
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    }
+                    throw new Error('Template file not found');
+                })
+                .then(content => {
+                    // Convert plain text to HTML for editing
+                    const htmlContent = content
+                        .replace(/\n/g, '<br>')
+                        .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+                    
+                    document.getElementById('editor').innerHTML = htmlContent;
+                })
+                .catch(error => {
+                    console.error('Error loading template:', error);
+                    // Fallback to default content
+                    document.getElementById('editor').innerHTML = 
+                        '<p class="text-gray-500">Template content could not be loaded. Start typing your document here...</p>';
+                });
+        }
+    }
+    
+    // Initialize editor
     (function(){
-        const saved = localStorage.getItem('lilac_temp_doc');
-        if (saved) document.getElementById('editor').innerHTML = saved;
+        // Check if we have template data
+        const templateData = localStorage.getItem('lilac_template_data');
+        if (templateData) {
+            loadTemplateContent();
+        } else {
+            // Restore saved document if exists
+            const saved = localStorage.getItem('lilac_temp_doc');
+            if (saved) {
+                document.getElementById('editor').innerHTML = saved;
+            }
+        }
     })();
     </script>
 </body>

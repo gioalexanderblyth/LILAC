@@ -11,6 +11,12 @@
     <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        if (window['pdfjsLib']) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
     <script>
         // Initialize Templates functionality
         let currentDocuments = [];
@@ -66,12 +72,6 @@
 
 
         function initializeEventListeners() {
-            // Form submission
-            const form = document.getElementById('template-form');
-            if (form) {
-                form.addEventListener('submit', handleFormSubmit);
-            }
-
             // Search and filter functionality
             const searchInput = document.getElementById('search-templates');
             if (searchInput) {
@@ -101,43 +101,6 @@
             }
         }
 
-        function handleFormSubmit(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            formData.append('action', 'add');
-            formData.append('category', CATEGORY);
-            
-            // Add template_name as document_name for consistency
-            const templateName = formData.get('template_name');
-            formData.set('document_name', templateName);
-            
-            // Add required file_name parameter
-            formData.append('file_name', `template_${Date.now()}.txt`);
-            
-            fetch('api/documents.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Reset form
-                    e.target.reset();
-                    
-                    // Refresh display
-                    loadDocuments();
-                    loadStats();
-                    showNotification('Template created successfully!', 'success');
-                } else {
-                    showNotification(data.message || 'Error creating template', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('Network error. Please try again.', 'error');
-            });
-        }
 
         function filterDocuments() {
             const searchTerm = document.getElementById('search-templates').value.toLowerCase();
@@ -265,9 +228,8 @@
                                 <div class="inline-block bg-yellow-400 text-black font-extrabold text-xs px-2 py-1 rounded">${(doc.category||'').toLowerCase().includes('report') ? 'ANNUAL REPORT' : 'TEMPLATE'}</div>
                                 ${app}
                             </div>
-                            <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                <button class="bg-white text-gray-800 px-3 py-1.5 rounded-md text-sm shadow hover:shadow-md" onclick="event.stopPropagation(); useTemplate(${doc.id})">Use Template</button>
-                                <button class="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm shadow hover:bg-blue-700" onclick="event.stopPropagation(); viewTemplate(${doc.id})">Preview</button>
+                            <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <button class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm shadow hover:bg-blue-700" onclick="event.stopPropagation(); viewTemplate(${doc.id})">Preview</button>
                             </div>
                         </div>
                         <div class="p-3">
@@ -280,17 +242,7 @@
                     </div>`;
             }).join('');
 
-            const blankCard = `
-                <button class="relative rounded-2xl overflow-hidden bg-blue-50 p-0 text-left hover:bg-blue-100 transition-colors" onclick="startBlankDocument()">
-                    <div class="h-64 flex items-center justify-center">
-                        <div class="w-28 h-36 rounded-xl bg-white shadow-md flex items-center justify-center text-3xl text-blue-500 border">+</div>
-                    </div>
-                    <div class="p-3">
-                        <p class="font-medium text-gray-700">Blank document</p>
-                    </div>
-                </button>`;
-
-            container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">${blankCard}${cards}</div>`;
+            container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">${cards}</div>`;
         }
 
         function renderTemplateTabs() {
@@ -310,14 +262,6 @@
             });
         }
 
-        function startBlankDocument() {
-            const form = document.getElementById('template-form');
-            if (form) {
-                form.scrollIntoView({ behavior: 'smooth' });
-                document.getElementById('template-name')?.focus();
-            }
-            showNotification('Starting a blank document…', 'info');
-        }
 
         function goToDocumentEditor() {
             window.location.href = 'document-editor.html';
@@ -406,29 +350,49 @@
         function useTemplate(id) {
             const template = currentDocuments.find(t => t.id == id);
             if (template) {
-                showNotification(`Using template: ${template.name}`, 'info');
+                showNotification(`Opening template: ${template.document_name || template.name}`, 'info');
                 
-                if (template.file_name) {
-                    showNotification(`Downloading template file: ${template.file_name}`, 'success');
-                    // In a real implementation, this would download/open the template file
-                    // window.open(`api/templates.php?action=download&id=${id}`, '_blank');
+                if (template.filename || template.file_name) {
+                    // Open the document editor with the template
+                    openDocumentEditor(template);
                 } else {
-                    showNotification('Template applied successfully', 'success');
-                    // In a real implementation, this would apply the template content
+                    showNotification('Template file not found', 'error');
                 }
             } else {
                 showNotification('Template not found', 'error');
             }
         }
 
+        function openDocumentEditor(template) {
+            // Create a new document based on the template
+            const templateData = {
+                name: template.document_name || template.name,
+                category: template.category,
+                description: template.description,
+                file_name: template.filename || template.file_name,
+                content: null
+            };
+            
+            // Store template data for the editor
+            try {
+                localStorage.setItem('lilac_template_data', JSON.stringify(templateData));
+                localStorage.setItem('lilac_template_file_url', buildFileUrl(template, template.filename || template.file_name));
+            } catch (e) {
+                console.error('Error storing template data:', e);
+            }
+            
+            // Open the document editor
+            window.open('docs/document-editor.html', '_blank');
+        }
+
         function viewTemplate(id) {
             const template = currentDocuments.find(t => t.id == id);
             if (template) {
                 // Populate modal with template details
-                document.getElementById('viewTemplateTitle').textContent = template.name;
-                document.getElementById('viewTemplateType').textContent = template.type;
+                document.getElementById('viewTemplateTitle').textContent = template.document_name || template.name || 'Untitled Template';
+                document.getElementById('viewTemplateType').textContent = template.category || 'Template';
                 document.getElementById('viewTemplateSize').textContent = formatFileSize(template.file_size || 0);
-                document.getElementById('viewTemplateDateAdded').textContent = new Date(template.created_at).toLocaleDateString('en-US', {
+                document.getElementById('viewTemplateDateAdded').textContent = new Date(template.upload_date || template.created_at).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric', 
                     month: 'long', 
@@ -438,7 +402,7 @@
                 
                 // Handle file preview section
                 const previewSection = document.getElementById('viewTemplatePreview');
-                const fileName = template.file_name;
+                const fileName = template.filename || template.file_name;
                 
                 if (fileName) {
                     const fileExtension = getFileExtension(fileName);
@@ -503,10 +467,16 @@
                                         <p class="text-sm text-gray-500">${formatFileSize(doc.file_size || 0)} • Image Preview</p>
                                     </div>
                                 </div>
-                                <button onclick="downloadTemplateFile(${doc.id}, '${fileName}')" 
-                                        class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-700 transition-colors">
-                                    Download
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="viewTemplateFile(${doc.id}, '${fileName}')" 
+                                            class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition-colors">
+                                        View
+                                    </button>
+                                    <button onclick="downloadTemplateFile(${doc.id}, '${fileName}')" 
+                                            class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-700 transition-colors">
+                                        Download
+                                    </button>
+                                </div>
                             </div>
                             <div class="bg-gray-100 rounded-lg p-4">
                                 <div class="text-center">
@@ -533,21 +503,15 @@
                                         <p class="text-sm text-gray-600">${formatFileSize(doc.file_size || 0)} • PDF Template</p>
                                     </div>
                                 </div>
-                                <button onclick="downloadTemplateFile(${doc.id}, '${fileName}')" 
-                                        class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors">
-                                    Download PDF
-                                </button>
-                            </div>
-                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-                                <h3 class="text-lg font-semibold text-blue-900 mb-4">PDF Template Options</h3>
-                                <div class="text-center">
-                                    <a href="${fileUrl}" 
-                                       target="_blank" 
-                                       rel="noopener noreferrer"
-                                       class="inline-flex items-center gap-3 bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors">
-                                        Open Template in New Tab
-                                    </a>
-                                    <p class="text-sm text-blue-700 mt-2">View and use this PDF template</p>
+                                <div class="flex gap-2">
+                                    <button onclick="viewTemplateFile(${doc.id}, '${fileName}')" 
+                                            class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors">
+                                        View PDF
+                                    </button>
+                                    <button onclick="downloadTemplateFile(${doc.id}, '${fileName}')" 
+                                            class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700 transition-colors">
+                                        Download
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -566,10 +530,16 @@
                                         <p class="text-sm text-gray-500">${formatFileSize(doc.file_size || 0)} • Text Template</p>
                                     </div>
                                 </div>
-                                <button onclick="downloadTemplateFile(${doc.id}, '${fileName}')" 
-                                        class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition-colors">
-                                    Download
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="viewTemplateFile(${doc.id}, '${fileName}')" 
+                                            class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-green-700 transition-colors">
+                                        View
+                                    </button>
+                                    <button onclick="downloadTemplateFile(${doc.id}, '${fileName}')" 
+                                            class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition-colors">
+                                        Download
+                                    </button>
+                                </div>
                             </div>
                             <div class="bg-gray-100 rounded-lg p-4">
                                 <div id="text-preview-${doc.id}" class="bg-white border rounded p-4 max-h-64 overflow-y-auto">
@@ -705,33 +675,218 @@
             const previewContainer = document.getElementById(`text-preview-${docId}`);
             if (!previewContainer) return;
             
-            setTimeout(() => {
-                const sampleText = `This is a preview of ${fileName}
+            // Try to load the actual file content
+            const template = currentDocuments.find(t => t.id == docId);
+            if (template && (template.filename || template.file_name)) {
+                const fileUrl = buildFileUrl(template, template.filename || template.file_name);
+                
+                fetch(fileUrl)
+                    .then(response => {
+                        if (response.ok) {
+                            return response.text();
+                        }
+                        throw new Error('File not found');
+                    })
+                    .then(content => {
+                        // Limit preview to first 1000 characters
+                        const previewContent = content.length > 1000 ? 
+                            content.substring(0, 1000) + '\n\n... [Content truncated for preview]' : 
+                            content;
+                        
+                        previewContainer.innerHTML = `<pre class="whitespace-pre-wrap text-sm text-gray-800 font-mono leading-relaxed max-h-64 overflow-y-auto">${previewContent}</pre>`;
+                    })
+                    .catch(error => {
+                        console.error('Error loading template content:', error);
+                        // Fallback to sample content
+                        showSampleTemplatePreview(previewContainer, fileName);
+                    });
+            } else {
+                // Fallback to sample content
+                showSampleTemplatePreview(previewContainer, fileName);
+            }
+        }
 
-Template Content Preview:
+        function showSampleTemplatePreview(container, fileName) {
+            const sampleText = `Template Preview: ${fileName}
 
 [HEADER SECTION]
-Company/Organization Name
-Department: _________________
-Date: _______________________
+Organization: Central Philippine University
+Department: _________________________
+Date: _______________________________
 
 [BODY SECTION]
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. This template provides a structured format for:
+This template provides a structured format for:
 
 1. Meeting minutes
-2. Report generation
+2. Report generation  
 3. Document standardization
 4. Professional formatting
 
 [FOOTER SECTION]
-Prepared by: ________________
-Reviewed by: ________________
-Approved by: ________________
+Prepared by: _________________________
+Reviewed by: _________________________
+Approved by: _________________________
 
-[Note: This is a simulated preview. In a real implementation, the actual template content would be loaded from the server.]`;
+[Note: This is a preview. The actual template content may vary.]`;
+            
+            container.innerHTML = `<pre class="whitespace-pre-wrap text-sm text-gray-800 font-mono leading-relaxed">${sampleText}</pre>`;
+        }
+
+        // Document viewer functions
+        function viewTemplateFile(id, fileName) {
+            const template = currentDocuments.find(t => t.id == id);
+            if (template) {
+                showDocumentViewer(template);
+            } else {
+                showNotification('Template not found', 'error');
+            }
+        }
+
+        function getFileExtension(filename) {
+            return filename.split('.').pop().toLowerCase();
+        }
+
+        function showDocumentViewer(doc) {
+            const title = doc.document_name || doc.title || 'Template Document';
+            let filePath = doc.filename || doc.file_name || '';
+            const ext = getFileExtension(filePath || '');
+
+            if (filePath && !filePath.startsWith('uploads/') && !filePath.startsWith('/uploads/')) {
+                filePath = `uploads/${filePath}`;
+            }
+
+            const overlay = document.getElementById('document-viewer-overlay');
+            const titleEl = document.getElementById('document-viewer-title');
+            const contentEl = document.getElementById('document-viewer-content');
+            const downloadBtn = document.getElementById('document-viewer-download');
+            const openBtn = document.getElementById('document-viewer-open');
+
+            if (!overlay || !titleEl || !contentEl || !downloadBtn) return;
+
+            titleEl.textContent = title;
+            contentEl.innerHTML = '';
+
+            if (ext === 'pdf') {
+                const container = document.createElement('div');
+                container.className = 'w-full h-full';
+                contentEl.appendChild(container);
+                try {
+                    if (!window['pdfjsLib']) throw new Error('PDF.js not loaded');
+                    pdfjsLib.getDocument(filePath).promise.then(pdf => {
+                        const numPages = pdf.numPages;
+                        const renderPage = (pageNum) => {
+                            pdf.getPage(pageNum).then(page => {
+                                const availableWidth = contentEl.clientWidth - 16; // account for padding
+                                const viewport = page.getViewport({ scale: 1 });
+                                const scale = Math.min(1.5, Math.max(0.6, availableWidth / viewport.width));
+                                const scaledViewport = page.getViewport({ scale });
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                canvas.height = scaledViewport.height;
+                                canvas.width = scaledViewport.width;
+                                canvas.className = 'mx-auto block shadow-lg mb-4';
+                                container.appendChild(canvas);
+                                page.render({ canvasContext: ctx, viewport: scaledViewport });
+                            });
+                        };
+                        // Render first page
+                        renderPage(1);
+                        // Add page navigation if multiple pages
+                        if (numPages > 1) {
+                            const nav = document.createElement('div');
+                            nav.className = 'flex justify-center items-center gap-2 mt-4';
+                            const prevBtn = document.createElement('button');
+                            prevBtn.textContent = '← Previous';
+                            prevBtn.className = 'px-3 py-1 bg-gray-200 rounded text-sm';
+                            const pageInfo = document.createElement('span');
+                            pageInfo.textContent = `Page 1 of ${numPages}`;
+                            pageInfo.className = 'px-3 py-1 text-sm';
+                            const nextBtn = document.createElement('button');
+                            nextBtn.textContent = 'Next →';
+                            nextBtn.className = 'px-3 py-1 bg-gray-200 rounded text-sm';
+                            let currentPage = 1;
+                            prevBtn.onclick = () => {
+                                if (currentPage > 1) {
+                                    currentPage--;
+                                    container.innerHTML = '';
+                                    container.appendChild(nav);
+                                    renderPage(currentPage);
+                                    pageInfo.textContent = `Page ${currentPage} of ${numPages}`;
+                                }
+                            };
+                            nextBtn.onclick = () => {
+                                if (currentPage < numPages) {
+                                    currentPage++;
+                                    container.innerHTML = '';
+                                    container.appendChild(nav);
+                                    renderPage(currentPage);
+                                    pageInfo.textContent = `Page ${currentPage} of ${numPages}`;
+                                }
+                            };
+                            nav.appendChild(prevBtn);
+                            nav.appendChild(pageInfo);
+                            nav.appendChild(nextBtn);
+                            container.appendChild(nav);
+                        }
+                    }).catch(error => {
+                        console.error('PDF loading error:', error);
+                        const fallback = document.createElement('div');
+                        fallback.className = 'text-center text-gray-600 p-8';
+                        fallback.innerHTML = `
+                            <p class="mb-4">PDF preview failed to load</p>
+                            <button onclick="window.open('${new URL(filePath, window.location.origin).href}', '_blank')" 
+                                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                                Open PDF in New Tab
+                            </button>
+                        `;
+                        contentEl.innerHTML = '';
+                        contentEl.appendChild(fallback);
+                    });
+                } catch (e) {
+                    const fallback = document.createElement('iframe');
+                    fallback.src = filePath;
+                    fallback.className = 'w-full h-full rounded';
+                    contentEl.appendChild(fallback);
+                }
                 
-                previewContainer.innerHTML = `<pre class="whitespace-pre-wrap text-sm text-gray-800 font-mono leading-relaxed">${sampleText}</pre>`;
-            }, 1000);
+                openBtn.onclick = function() { window.open(new URL(filePath, window.location.origin).href, '_blank'); };
+            } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) {
+                const imgUrl = new URL(filePath, window.location.origin).href;
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '100%';
+                img.style.objectFit = 'contain';
+                img.style.display = 'block';
+                img.style.margin = '0 auto';
+                contentEl.appendChild(img);
+                
+                openBtn.onclick = function() { window.open(imgUrl, '_blank'); };
+            } else if (['doc','docx','ppt','pptx','xls','xlsx'].includes(ext)) {
+                const isLocalhost = ['localhost','127.0.0.1','::1'].includes(location.hostname);
+                if (isLocalhost) {
+                    const info = document.createElement('div');
+                    info.className = 'text-center text-gray-600';
+                    info.textContent = 'Preview for Office files is not available on localhost. Please use Download to view the file.';
+                    contentEl.appendChild(info);
+                } else {
+                    const absoluteUrl = new URL(filePath, window.location.origin).href;
+                    const officeUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(absoluteUrl);
+                    const iframe = document.createElement('iframe');
+                    iframe.src = officeUrl;
+                    iframe.style.width = '100%';
+                    iframe.style.height = 'calc(100% - 0px)';
+                    iframe.style.display = 'block';
+                    contentEl.appendChild(iframe);
+                }
+                openBtn.onclick = function() { window.open(new URL(filePath, window.location.origin).href, '_blank'); };
+            } else {
+                contentEl.innerHTML = '<div class="text-center text-gray-600">Preview not supported for this file type. Please download to view.</div>';
+                openBtn.onclick = function() { window.open(new URL(filePath, window.location.origin).href, '_blank'); };
+            }
+
+            downloadBtn.onclick = function() { downloadTemplateFile(doc.id, doc.filename || doc.file_name); };
+            overlay.classList.remove('hidden');
         }
 
         function getApplicationBasePath() {
@@ -750,8 +905,9 @@ Approved by: ________________
                 return doc.file_url;
             }
             
-            const basePath = getApplicationBasePath();
-            return `${basePath}/uploads/${fileName}`;
+            // Use the current origin (including port) to build the full URL
+            const baseUrl = window.location.origin;
+            return `${baseUrl}/uploads/${fileName}`;
         }
 
         function closeViewTemplateModal() {
@@ -767,18 +923,9 @@ Approved by: ________________
         function editTemplate(id) {
             const template = currentDocuments.find(t => t.id == id);
             if (template) {
-                // Pre-fill form with existing data
-                document.getElementById('template-name').value = template.name;
-                document.getElementById('template-category').value = template.type;
-                document.getElementById('template-description').value = template.description || '';
-                
-                // Scroll to form
-                document.getElementById('template-form').scrollIntoView({ behavior: 'smooth' });
-                
-                // Delete the template (will be replaced when form is submitted)
-                deleteTemplate(id);
-                
-                showNotification('Template loaded for editing', 'info');
+                showNotification('Opening template for editing…', 'info');
+                // Open the template in the document editor
+                openDocumentEditor(template);
             }
         }
 
@@ -921,14 +1068,10 @@ Approved by: ________________
         }
         updateCurrentDate();
         setInterval(updateCurrentDate, 60000);
-    });
     </script>
 
     <!-- Main Content -->
     <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
-        <!-- Top Actions Row -->
-        <div class="hidden"></div>
-
         <!-- Templates Display -->
         <div class="bg-white rounded-xl shadow-md p-4">
             <h2 class="text-xl font-bold mb-2">Start with a template</h2>
@@ -1120,6 +1263,30 @@ Approved by: ________________
             }
         });
     </script>
+
+    <!-- Document Viewer Modal -->
+    <div id="document-viewer-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-[80] hidden" onclick="this.classList.add('hidden')">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between px-4 py-3 border-b">
+                    <h3 id="document-viewer-title" class="text-lg font-semibold text-gray-900"></h3>
+                    <div class="flex items-center gap-2">
+                        <button id="document-viewer-open" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Open in New Tab</button>
+                        <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 bg-gray-50 p-2 overflow-y-auto overflow-x-hidden min-h-0">
+                    <div id="document-viewer-content" class="w-full h-full overflow-y-auto overflow-x-hidden"></div>
+                </div>
+                <div class="flex items-center justify-end gap-2 px-4 py-3 border-t">
+                    <button id="document-viewer-download" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Download</button>
+                    <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 

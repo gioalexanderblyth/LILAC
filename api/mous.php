@@ -153,6 +153,74 @@ try {
 		respond_ok(['stats' => compact('total','active','expired','pending','expiringSoon')]);
 	}
 
+	if ($action === 'sync_from_documents') {
+		// Check for MOU documents in the documents system that aren't in MOUs system
+		$documentsFile = $dataDir . DIRECTORY_SEPARATOR . 'documents.json';
+		if (!file_exists($documentsFile)) {
+			respond_ok(['message' => 'No documents file found', 'synced' => 0]);
+		}
+		
+		$documentsData = json_decode(file_get_contents($documentsFile), true);
+		if (!isset($documentsData['documents']) || !is_array($documentsData['documents'])) {
+			respond_ok(['message' => 'No documents found', 'synced' => 0]);
+		}
+		
+		$synced = 0;
+		$existingMous = array_column($db['mous'], 'document_id'); // Track by document_id to avoid duplicates
+		
+		foreach ($documentsData['documents'] as $doc) {
+			// Check if this is a MOU document that should be in the MOUs system
+			$category = $doc['category'] ?? '';
+			$documentName = $doc['document_name'] ?? '';
+			$filename = $doc['original_filename'] ?? '';
+			
+			// Check if it's categorized as MOU or has MOU keywords in name
+			$isMou = ($category === 'MOUs & MOAs') || 
+					preg_match('/\b(MOU|MOA|MEMORANDUM|AGREEMENT|PARTNERSHIP)\b/i', $documentName . ' ' . $filename);
+			
+			if ($isMou && !in_array($doc['id'], $existingMous)) {
+				// Extract partner name from document name or filename
+				$partner = $documentName;
+				if (empty($partner)) {
+					$partner = pathinfo($filename, PATHINFO_FILENAME);
+				}
+				
+				// Clean up partner name
+				$partner = preg_replace('/\b(MOU|MOA|MEMORANDUM|AGREEMENT|PARTNERSHIP|WITH|AND)\b/i', '', $partner);
+				$partner = trim(preg_replace('/[_\-\s]+/', ' ', $partner));
+				if (empty($partner)) $partner = 'Unknown Partner';
+				
+				// Determine type
+				$type = 'MOU';
+				if (preg_match('/\bMOA\b/i', $documentName . ' ' . $filename)) {
+					$type = 'MOA';
+				}
+				
+				// Add to MOUs system
+				$mouId = $db['auto_id']++;
+				$db['mous'][] = [
+					'id' => $mouId,
+					'document_id' => $doc['id'], // Link to original document
+					'partner_name' => $partner,
+					'type' => $type,
+					'status' => 'Active',
+					'date_signed' => '',
+					'end_date' => '',
+					'description' => $doc['description'] ?? '',
+					'file_name' => $filename,
+					'created_at' => $doc['upload_date'] ?? date('Y-m-d H:i:s')
+				];
+				$synced++;
+			}
+		}
+		
+		if ($synced > 0) {
+			save_db($dbFile, $db);
+		}
+		
+		respond_ok(['message' => "Synced {$synced} MOU documents", 'synced' => $synced]);
+	}
+
 	respond_err('Unknown action');
 } catch (Throwable $e) {
 	respond_err('Server error', ['error' => $e->getMessage()]);

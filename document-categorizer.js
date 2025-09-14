@@ -27,11 +27,6 @@ class DocumentCategorizer {
                 filePatterns: [/template/i, /form/i, /blank/i, /sample/i, /example/i, /draft/i],
                 priority: 4
             },
-            'Registrar Files': {
-                keywords: ['transcript', 'registrar', 'student records', 'enrollment', 'grade', 'academic record'],
-                filePatterns: [/transcript/i, /registrar/i, /student.*record/i, /enrollment/i, /grade/i, /academic.*record/i],
-                priority: 5
-            }
         };
     }
 

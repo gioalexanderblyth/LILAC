@@ -6,6 +6,7 @@
 
 require_once 'central_events_system.php';
 require_once 'config/database.php';
+require_once 'universal_upload_handler.php';
 
 // Set JSON header
 header('Content-Type: application/json');
@@ -13,8 +14,9 @@ header('Content-Type: application/json');
 // Get action from request
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
-// Initialize central events system
+// Initialize central events system and universal upload handler
 $centralEvents = new CentralEventsSystem();
+$uploadHandler = new UniversalUploadHandler();
 
 // Helper function for API responses
 function api_respond($success, $data = []) {
@@ -38,21 +40,24 @@ try {
                 'event_date' => $_POST['event_date'] ?? '',
                 'event_time' => $_POST['event_time'] ?? null,
                 'location' => $_POST['location'] ?? '',
-                'image_path' => $_FILES['file']['tmp_name'] ?? null
+                'original_link' => $_POST['original_link'] ?? '',
+                'award_type' => $_POST['award_type'] ?? ''
             ];
             
-            // Handle file upload if present
+            // Handle file upload using universal upload handler
             if (isset($_FILES['file']) && is_uploaded_file($_FILES['file']['tmp_name'])) {
-                $uploadDir = 'uploads/events/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
+                $uploadResult = $uploadHandler->handleUpload($_FILES['file'], 'system', 'events');
                 
-                $fileName = uniqid() . '_' . $_FILES['file']['name'];
-                $filePath = $uploadDir . $fileName;
-                
-                if (move_uploaded_file($_FILES['file']['tmp_name'], $filePath)) {
-                    $eventData['image_path'] = $filePath;
+                if ($uploadResult['success']) {
+                    $eventData['image_path'] = $uploadResult['file_path'];
+                    $eventData['file_id'] = $uploadResult['file_id'];
+                    
+                    // If event date wasn't provided but was extracted from file, use it
+                    if (empty($eventData['event_date']) && $uploadResult['event_date']) {
+                        $eventData['event_date'] = $uploadResult['event_date'];
+                    }
+                } else {
+                    api_respond(false, ['message' => 'File upload failed: ' . $uploadResult['error']]);
                 }
             }
             

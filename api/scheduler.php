@@ -75,6 +75,26 @@ function normalize_time($t) {
 $action = get_param('action', get_param('a', 'get_all'));
 $db = load_db();
 
+// Load central events if needed
+function load_central_events() {
+	try {
+		require_once 'config/database.php';
+		$db = new Database();
+		$pdo = $db->getConnection();
+		
+		$stmt = $pdo->prepare("
+			SELECT id, title, description, start, end, location, status
+			FROM central_events 
+			WHERE status = 'upcoming' OR (status = 'completed' AND start >= DATE_SUB(NOW(), INTERVAL 30 DAY))
+			ORDER BY start ASC
+		");
+		$stmt->execute();
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	} catch (Exception $e) {
+		return [];
+	}
+}
+
 switch ($action) {
 	case 'get_all': {
 		// Map to expected fields by frontend
@@ -94,7 +114,33 @@ switch ($action) {
 				'location' => isset($m['venue']) ? $m['venue'] : ''
 			];
 		}, $db['meetings']);
-		json_ok([ 'meetings' => $meetings ]);
+		
+        // Also load events from central_events table
+        $events = load_central_events();
+        $events = array_map(function($e){
+            $startDateTime = new DateTime($e['start']);
+            $endDateTime = $e['end'] ? new DateTime($e['end']) : (clone $startDateTime)->modify('+2 hours');
+            
+            return [
+                'id' => 'event_' . (string)$e['id'], // Prefix to avoid ID conflicts
+                'title' => $e['title'],
+                'meeting_date' => $startDateTime->format('Y-m-d'),
+                'meeting_time' => $startDateTime->format('H:i'),
+                'end_date' => $endDateTime->format('Y-m-d'),
+                'end_time' => $endDateTime->format('H:i'),
+                'description' => $e['description'] ?: '',
+                'is_all_day' => '0',
+                'color' => 'green', // Events get green color
+                'organizer' => 'LILAC',
+                'venue' => $e['location'] ?: '',
+                'location' => $e['location'] ?: ''
+            ];
+        }, $events);
+		
+		// Combine meetings and events
+		$allItems = array_merge($meetings, $events);
+		
+		json_ok([ 'meetings' => $allItems ]);
 	}
 	case 'get_upcoming': {
 		$limit = (int)get_param('limit', 3);

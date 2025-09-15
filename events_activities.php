@@ -1,3 +1,97 @@
+<?php
+// Load events data directly from database to avoid HTTP request issues
+require_once 'config/database.php';
+
+function loadEventsData() {
+    try {
+        $db = new Database();
+        $pdo = $db->getConnection();
+        
+        // Get all events from central_events table
+        $stmt = $pdo->query("
+            SELECT id, title, description, start, end, location, image_path, status, created_at, updated_at
+            FROM central_events 
+            ORDER BY start ASC
+        ");
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Group events by status
+        $groupedEvents = [
+            'upcoming' => [],
+            'completed' => []
+        ];
+        
+        foreach ($events as $event) {
+            $groupedEvents[$event['status']][] = $event;
+        }
+        
+        return [
+            'success' => true,
+            'data' => [
+                'events' => $groupedEvents,
+                'total' => count($events)
+            ]
+        ];
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'data' => [
+                'events' => ['upcoming' => [], 'completed' => []],
+                'total' => 0
+            ],
+            'error' => $e->getMessage()
+        ];
+    }
+}
+
+$eventsData = loadEventsData();
+
+// Load trash events data directly from database
+function loadTrashEventsData() {
+    try {
+        $db = new Database();
+        $pdo = $db->getConnection();
+        
+        // Create trash table if it doesn't exist
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS event_trash (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                original_id INT,
+                title VARCHAR(255),
+                description TEXT,
+                event_date DATE,
+                event_time TIME,
+                location VARCHAR(255),
+                image_path VARCHAR(500),
+                file_path VARCHAR(500),
+                file_type VARCHAR(100),
+                extracted_content TEXT,
+                award_assignments TEXT,
+                analysis_data TEXT,
+                status VARCHAR(50),
+                deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+        
+        // Get all trash events
+        $stmt = $pdo->query("SELECT * FROM event_trash ORDER BY deleted_at DESC");
+        $trashEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        return [
+            'success' => true,
+            'trash_events' => $trashEvents
+        ];
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'trash_events' => [],
+            'error' => $e->getMessage()
+        ];
+    }
+}
+
+$trashEventsData = loadTrashEventsData();
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -221,11 +315,6 @@
                         </div>
                         <h3 class="text-lg font-semibold text-gray-900">Trash Bin</h3>
                     </div>
-                    <button type="button" class="text-gray-400 hover:text-gray-600" onclick="hideTrashModal()">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
                 </div>
                 <div class="p-4 max-h-[60vh] overflow-y-auto">
                     <div id="trash-container" class="space-y-2">
@@ -233,11 +322,63 @@
                     </div>
                 </div>
                 <div class="p-4 border-t flex justify-between">
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700" onclick="emptyTrash()">
+                    <button type="button" class="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700" onclick="showEmptyTrashModal()">
                         Empty Trash
                     </button>
                     <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg" onclick="hideTrashModal()">
                         Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trash Delete Confirmation Modal -->
+    <div id="trash-delete-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-auto">
+            <!-- Modal Header -->
+            <div class="p-6 text-center">
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Permanently Delete Event</h3>
+                <p class="text-gray-600 text-sm mb-6">Are you sure you want to permanently delete this event? This action cannot be undone.</p>
+                
+                <!-- Modal Buttons -->
+                <div class="flex gap-3">
+                    <button type="button" id="trash-delete-cancel" class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="trash-delete-confirm" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+                        Delete Permanently
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty Trash Confirmation Modal -->
+    <div id="empty-trash-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-auto">
+            <!-- Modal Header -->
+            <div class="p-6 text-center">
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Empty Trash</h3>
+                <p class="text-gray-600 text-sm mb-6">Are you sure you want to empty the trash? This will permanently delete all events in the trash. This action cannot be undone.</p>
+                
+                <!-- Modal Buttons -->
+                <div class="flex gap-3">
+                    <button type="button" id="empty-trash-cancel" class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="empty-trash-confirm" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+                        Empty Trash
                     </button>
                 </div>
             </div>
@@ -668,14 +809,35 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Check for success/error messages from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('created') === '1') {
+                const message = urlParams.get('message') || 'Event created successfully';
+                showNotification(decodeURIComponent(message), 'success');
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (urlParams.get('deleted') === '1') {
+                const message = urlParams.get('message') || 'Event deleted successfully';
+                showNotification(decodeURIComponent(message), 'success');
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (urlParams.get('error') === '1') {
+                const message = urlParams.get('message') || 'Error occurred';
+                showNotification(decodeURIComponent(message), 'error');
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
             // Initialize calendar
             generateCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
             
             // Load existing events on page load
             loadExistingEvents();
             
-            // Initialize delete listeners for existing table rows
-            fixAllDeleteButtons();
+            // Initialize delete listeners after events are loaded (with delay)
+            setTimeout(() => {
+                fixAllDeleteButtons();
+            }, 200);
             
             // Initialize search functionality
             initializeSearch();
@@ -683,6 +845,26 @@
             // Initialize upload modal functionality
             const eventsUploadBtn = document.getElementById('events-upload-btn');
             const uploadModal = document.getElementById('upload-modal');
+            
+            // Initialize trash delete modal event listeners
+            const trashDeleteCancel = document.getElementById('trash-delete-cancel');
+            const trashDeleteConfirm = document.getElementById('trash-delete-confirm');
+            if (trashDeleteCancel) {
+                trashDeleteCancel.addEventListener('click', cancelTrashDelete);
+            }
+            if (trashDeleteConfirm) {
+                trashDeleteConfirm.addEventListener('click', confirmTrashDelete);
+            }
+            
+            // Initialize empty trash modal event listeners
+            const emptyTrashCancel = document.getElementById('empty-trash-cancel');
+            const emptyTrashConfirm = document.getElementById('empty-trash-confirm');
+            if (emptyTrashCancel) {
+                emptyTrashCancel.addEventListener('click', hideEmptyTrashModal);
+            }
+            if (emptyTrashConfirm) {
+                emptyTrashConfirm.addEventListener('click', confirmEmptyTrash);
+            }
             const closeModal = document.getElementById('close-modal');
             const cancelUpload = document.getElementById('cancel-upload');
             const fileInput = document.getElementById('file-input');
@@ -1043,31 +1225,24 @@
                     }
 
                     try {
-                        const response = await fetch('api/central_events_api.php', {
-                            method: 'POST',
-                            body: formData
-                        });
+                        // Submit form directly to create_event.php
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = 'create_event.php';
+                        form.style.display = 'none';
                         
-                        // Check if response is ok
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
+                        // Add all form data as hidden inputs
+                        for (let [key, value] of formData.entries()) {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = key;
+                            input.value = value;
+                            form.appendChild(input);
                         }
                         
-                        const result = await response.json();
+                        document.body.appendChild(form);
+                        form.submit();
                         
-                        if (result.success) {
-                            showNotification('Event created successfully!', 'success');
-                            eventCreationModal.classList.add('hidden');
-                            eventForm.reset();
-                            imagePreview.classList.add('hidden');
-                            imageUploadArea.classList.remove('hidden');
-                            classificationPreview.classList.add('hidden');
-                            
-                            // Reload all events
-                            loadExistingEvents();
-                        } else {
-                            showNotification('Failed to create event: ' + (result.message || 'Unknown error'), 'error');
-                        }
                     } catch (error) {
                         console.error('Error creating event:', error);
                         showNotification('Error creating event: ' + error.message, 'error');
@@ -1125,7 +1300,7 @@
                     <p class="text-gray-900 text-sm">${eventData.place || eventData.location || 'TBD'}</p>
                 </td>
                 <td class="px-3 py-2">
-                    <p class="text-gray-600 text-sm">${eventData.date || eventData.event_date || 'N/A'}</p>
+                    <p class="text-gray-600 text-sm">${eventData.date || (eventData.start ? new Date(eventData.start).toLocaleDateString() : 'N/A')}</p>
                 </td>
                 <td class="px-3 py-2">
                     <span class="inline-block ${statusClass} text-xs px-2 py-1 rounded-full font-medium">${statusText}</span>
@@ -1562,40 +1737,17 @@
             }
         }
 
-        // Load existing events from central events system
-        async function loadExistingEvents() {
+        // Load existing events from PHP data directly
+        function loadExistingEvents() {
             try {
-                console.log('🔄 Loading all events from central events system...');
-                const response = await fetch('api/central_events_api.php?action=get_events_by_status', {
-                    cache: 'no-cache', // Prevent browser caching
-                    headers: {
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
-                    }
-                });
+                console.log('🔄 Loading all events from PHP data...');
                 
-                // Check if response is ok
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                // Get response text first to debug
-                const responseText = await response.text();
-                console.log('📥 Raw API Response:', responseText);
-                
-                // Check if response is empty
-                if (!responseText || responseText.trim() === '') {
-                    console.log('⚠️ Empty response from API');
-                    return;
-                }
-                
-                // Parse JSON
-                const result = JSON.parse(responseText);
-                
-                console.log('📥 API Response:', result);
+                // Use PHP data directly instead of HTTP requests
+                const result = <?php echo json_encode($eventsData); ?>;
+                console.log('📥 PHP Events Data:', result);
                 
                 if (result.success && result.data.events) {
-                    console.log('✅ Loaded events from central system');
+                    console.log('✅ Loaded events from PHP data');
                     
                     // Combine upcoming and completed events
                     const allEvents = [...result.data.events.upcoming, ...result.data.events.completed];
@@ -1619,27 +1771,41 @@
                     console.log(`📅 Loading ${allEvents.length} total events`);
                     
                     allEvents.forEach(eventData => {
-                        console.log('Loading event with ID:', eventData.id, 'Title:', eventData.title, 'Status:', eventData.status);
-                        
-                        // Add to table (all events - both upcoming and completed)
-                        addEventToTable(eventData);
+                        try {
+                            console.log('Loading event with ID:', eventData.id, 'Title:', eventData.title, 'Status:', eventData.status);
+                            
+                            // Add to table (all events - both upcoming and completed)
+                            addEventToTable(eventData);
+                        } catch (error) {
+                            console.error('Error adding event to table:', error, eventData);
+                        }
                     });
                     
                     // Update event counters
-                    updateEventCounters(allEvents);
+                    try {
+                        updateEventCounters(allEvents);
+                    } catch (error) {
+                        console.error('Error updating event counters:', error);
+                    }
                     
                     // Update upcoming events list in sidebar
-                    populateUpcomingEventsList(result.data.events.upcoming);
+                    try {
+                        populateUpcomingEventsList(result.data.events.upcoming);
+                    } catch (error) {
+                        console.error('Error populating upcoming events list:', error);
+                    }
                     
-                    // Update calendar with events
-                    updateCalendarWithEvents(result.events);
-                    
-                    // Populate upcoming events list
-                    populateUpcomingEventsList(result.events);
+                    // Update calendar with events (combine upcoming and completed)
+                    try {
+                        const allEventsForCalendar = [...result.data.events.upcoming, ...result.data.events.completed];
+                        updateCalendarWithEvents(allEventsForCalendar);
+                    } catch (error) {
+                        console.error('Error updating calendar with events:', error);
+                    }
                     
                     // Handle empty state
                     const emptyMessage = document.getElementById('empty-events-message');
-                    if (emptyMessage && result.events.length > 0) {
+                    if (emptyMessage && allEvents.length > 0) {
                         emptyMessage.style.display = 'none';
                     }
                     
@@ -1702,7 +1868,7 @@
             // Filter upcoming events and sort by date
             const upcomingEvents = events
                 .filter(event => event.status === 'upcoming')
-                .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+                .sort((a, b) => new Date(a.start) - new Date(b.start))
                 .slice(0, 4); // Show only the next 4 upcoming events
             
             if (upcomingEvents.length === 0) {
@@ -1720,7 +1886,7 @@
                 const color = colors[index % colors.length];
                 
                 // Format date
-                const eventDate = new Date(event.event_date);
+                const eventDate = new Date(event.start);
                 const formattedDate = eventDate.toLocaleDateString('en-US', { 
                     month: 'short', 
                     day: 'numeric', 
@@ -1743,41 +1909,36 @@
         }
 
         // Delete event from API
-        async function deleteEventFromAPI(eventId) {
+        function deleteEventFromAPI(eventId) {
             try {
-                const formData = new FormData();
-                formData.append('action', 'delete_event');
-                formData.append('event_id', eventId);
-
-                const response = await fetch('api/central_events_api.php', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-                console.log('Delete event result:', result);
+                console.log('Deleting event ID:', eventId);
                 
-                if (result.success) {
-                    console.log('Event deleted successfully');
-                    
-                    // Log file deletion status
-                    if (result.file_deleted === true) {
-                        console.log('✅ Associated file also deleted from server');
-                    } else if (result.file_deleted === false) {
-                        console.warn('⚠️ Event deleted but file could not be removed:', result.file_warning);
-                    } else {
-                        console.log('ℹ️ Event had no associated file to delete');
-                    }
-                    
-                    return result;
-                } else {
-                    const errorMsg = result.message || result.error || 'Unknown error occurred';
-                    console.error('Failed to delete event:', errorMsg);
-                    return { success: false, message: errorMsg };
-                }
+                // Create a form to submit the deletion request
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'delete_event.php';
+                form.style.display = 'none';
+                
+                const eventIdInput = document.createElement('input');
+                eventIdInput.type = 'hidden';
+                eventIdInput.name = 'event_id';
+                eventIdInput.value = eventId;
+                
+                form.appendChild(eventIdInput);
+                document.body.appendChild(form);
+                
+                // Show loading notification
+                showNotification('Deleting event...', 'info');
+                
+                // Submit the form (this will cause a page reload with updated data)
+                form.submit();
+                
+                return Promise.resolve({ success: true, message: 'Event deletion in progress...' });
+                
             } catch (error) {
                 console.error('Error deleting event:', error);
-                return { success: false, message: error.message || 'Network error occurred' };
+                showNotification('Error deleting event: ' + error.message, 'error');
+                return Promise.reject(error);
             }
         }
 
@@ -1976,7 +2137,7 @@
                     eventInfo.innerHTML = `
                         <div class="text-sm">
                             <div class="font-medium text-gray-900">${event.title || 'Untitled Event'}</div>
-                            <div class="text-gray-600 mt-1">Date: ${event.event_date || 'N/A'}</div>
+                            <div class="text-gray-600 mt-1">Date: ${event.start ? new Date(event.start).toLocaleDateString() : 'N/A'}</div>
                             <div class="text-gray-600">Location: ${event.location || 'N/A'}</div>
                             ${event.original_link ? `<div class="text-gray-600">Link: <a href="${event.original_link}" target="_blank" class="text-blue-600 hover:underline">${event.original_link}</a></div>` : ''}
                         </div>
@@ -2098,18 +2259,93 @@
             }
         }
 
-        async function loadTrashEvents() {
+        // Trash delete modal functions
+        let currentTrashDeleteId = null;
+
+        function showTrashDeleteModal(trashId) {
+            console.log('showTrashDeleteModal called with trashId:', trashId);
+            console.log('trashId type:', typeof trashId);
+            console.log('trashId value:', JSON.stringify(trashId));
+            
+            if (!trashId || trashId === 'undefined' || trashId === 'null' || trashId === '') {
+                console.error('Invalid trash ID:', trashId);
+                showNotification('Invalid event ID. Please try again.', 'error');
+                return;
+            }
+            
+            currentTrashDeleteId = trashId;
+            const modal = document.getElementById('trash-delete-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function hideTrashDeleteModal() {
+            const modal = document.getElementById('trash-delete-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            // Don't reset currentTrashDeleteId here - it will be reset after successful deletion
+        }
+        
+        function cancelTrashDelete() {
+            currentTrashDeleteId = null;
+            hideTrashDeleteModal();
+        }
+
+        function confirmTrashDelete() {
+            console.log('confirmTrashDelete called, currentTrashDeleteId:', currentTrashDeleteId);
+            
+            if (currentTrashDeleteId) {
+                const trashIdToDelete = currentTrashDeleteId;
+                currentTrashDeleteId = null; // Reset immediately
+                hideTrashDeleteModal();
+                permanentlyDeleteEvent(trashIdToDelete);
+            } else {
+                console.error('No trash ID available for deletion');
+                showNotification('No event selected for deletion', 'error');
+            }
+        }
+
+        // Empty trash modal functions
+        function showEmptyTrashModal() {
+            const modal = document.getElementById('empty-trash-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function hideEmptyTrashModal() {
+            const modal = document.getElementById('empty-trash-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function confirmEmptyTrash() {
+            hideEmptyTrashModal();
+            emptyTrash();
+        }
+
+        function loadTrashEvents() {
             try {
-                const response = await fetch('api/enhanced_management.php?action=get_trash_events');
-                const result = await response.json();
+                console.log('Loading trash events from PHP data...');
                 
-                if (result.success) {
-                    renderTrashEvents(result.trash_events || []);
+                // Use PHP data directly instead of HTTP requests
+                const result = <?php echo json_encode($trashEventsData); ?>;
+                console.log('PHP Trash Events Data:', result);
+                
+                if (result.success && result.trash_events) {
+                    console.log('✅ Loaded trash events from PHP data');
+                    console.log('Trash events count:', result.trash_events.length);
+                    renderTrashEvents(result.trash_events);
                 } else {
-                    console.error('Failed to load trash events:', result.message);
+                    console.log('No trash events found or failed to load');
+                    renderTrashEvents([]);
                 }
             } catch (error) {
-                console.error('Error loading trash events:', error);
+                console.error('❌ Error loading trash events:', error);
+                renderTrashEvents([]);
             }
         }
 
@@ -2117,12 +2353,23 @@
             const container = document.getElementById('trash-container');
             if (!container) return;
             
+            console.log('Rendering trash events:', trashEvents);
+            
             if (!trashEvents || trashEvents.length === 0) {
                 container.innerHTML = '<div class="text-sm text-gray-500">No deleted events.</div>';
                 return;
             }
             
-            container.innerHTML = trashEvents.map(event => `
+            container.innerHTML = trashEvents.map(event => {
+                console.log('Rendering event:', event);
+                console.log('Event ID:', event.id, 'Type:', typeof event.id);
+                
+                if (!event.id) {
+                    console.error('Event missing ID:', event);
+                    return '';
+                }
+                
+                return `
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div class="min-w-0 flex-1">
                         <div class="text-sm font-medium text-gray-900 truncate">${event.title || 'Untitled Event'}</div>
@@ -2133,12 +2380,13 @@
                         <button class="px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" onclick="restoreEvent(${event.id})">
                             Restore
                         </button>
-                        <button class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" onclick="permanentlyDeleteEvent(${event.id})">
+                        <button class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" onclick="showTrashDeleteModal(${event.id})">
                             Delete
                         </button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).filter(html => html !== '').join('');
         }
 
         async function restoreEvent(trashId) {
@@ -2167,40 +2415,47 @@
             }
         }
 
-        async function permanentlyDeleteEvent(trashId) {
-            if (!confirm('Are you sure you want to permanently delete this event? This action cannot be undone.')) {
-                return;
-            }
-            
+        function permanentlyDeleteEvent(trashId) {
             try {
-                const formData = new FormData();
-                formData.append('action', 'permanently_delete_event');
-                formData.append('trash_id', trashId);
+                console.log('permanentlyDeleteEvent called with trashId:', trashId);
+                console.log('trashId type:', typeof trashId);
+                console.log('trashId value:', JSON.stringify(trashId));
                 
-                const response = await fetch('api/enhanced_management.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification('Event permanently deleted', 'success');
-                    loadTrashEvents(); // Refresh trash list
-                } else {
-                    showNotification('Failed to delete event: ' + result.message, 'error');
+                if (!trashId || trashId === 'undefined' || trashId === 'null' || trashId === '') {
+                    console.error('Invalid trash ID in permanentlyDeleteEvent:', trashId);
+                    showNotification('Invalid event ID. Cannot delete.', 'error');
+                    return;
                 }
+                
+                // Create a form to submit the deletion request
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = 'delete_trash_event.php';
+                form.style.display = 'none';
+                
+                const trashIdInput = document.createElement('input');
+                trashIdInput.type = 'hidden';
+                trashIdInput.name = 'trash_id';
+                trashIdInput.value = trashId;
+                
+                console.log('Form input value:', trashIdInput.value);
+                
+                form.appendChild(trashIdInput);
+                document.body.appendChild(form);
+                
+                // Show loading notification
+                showNotification('Permanently deleting event...', 'info');
+                
+                // Submit the form (this will cause a page reload with updated data)
+                form.submit();
+                
             } catch (error) {
                 console.error('Error deleting event:', error);
-                showNotification('Error deleting event', 'error');
+                showNotification('Error deleting event: ' + error.message, 'error');
             }
         }
 
         async function emptyTrash() {
-            if (!confirm('Are you sure you want to empty the trash? This will permanently delete all events in the trash. This action cannot be undone.')) {
-                return;
-            }
-            
             try {
                 const formData = new FormData();
                 formData.append('action', 'empty_trash_events');
@@ -2244,6 +2499,13 @@
         window.restoreEvent = restoreEvent;
         window.permanentlyDeleteEvent = permanentlyDeleteEvent;
         window.emptyTrash = emptyTrash;
+        window.showTrashDeleteModal = showTrashDeleteModal;
+        window.hideTrashDeleteModal = hideTrashDeleteModal;
+        window.cancelTrashDelete = cancelTrashDelete;
+        window.confirmTrashDelete = confirmTrashDelete;
+        window.showEmptyTrashModal = showEmptyTrashModal;
+        window.hideEmptyTrashModal = hideEmptyTrashModal;
+        window.confirmEmptyTrash = confirmEmptyTrash;
         window.showDeleteModal = showDeleteModal;
         window.hideDeleteModal = hideDeleteModal;
         window.confirmDeleteEvent = confirmDeleteEvent;
@@ -2472,7 +2734,7 @@
                             title: event.title || 'Untitled Event',
                             filename: event.image_path || event.file_path || null,
                             description: event.description || '',
-                            event_date: event.event_date || '',
+                            event_date: event.start || '',
                             location: event.location || '',
                             original_link: event.original_link || '',
                             extracted_content: event.extracted_content || ''
@@ -2516,11 +2778,11 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                <p class="text-gray-900">${event.event_date || 'N/A'}</p>
+                                <p class="text-gray-900">${event.start ? new Date(event.start).toLocaleDateString() : 'N/A'}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                                <p class="text-gray-900">${event.event_time || 'N/A'}</p>
+                                <p class="text-gray-900">${event.start ? new Date(event.start).toLocaleTimeString() : 'N/A'}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
@@ -2617,7 +2879,8 @@
                 // Check if this date has events
                 const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const hasEvents = eventsData.some(event => {
-                    const eventDate = new Date(event.date);
+                    // Use start field from database
+                    const eventDate = new Date(event.start);
                     const eventDateString = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
                     return eventDateString === dateString;
                 });
@@ -2649,13 +2912,15 @@
         function showEventsForDate(year, month, day) {
             const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const eventsOnDate = eventsData.filter(event => {
-                const eventDate = new Date(event.date);
+                // Use start field from database
+                const eventDate = new Date(event.start);
                 const eventDateString = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
                 return eventDateString === dateString;
             });
 
             if (eventsOnDate.length > 0) {
-                const eventList = eventsOnDate.map(event => `• ${event.name}`).join('\n');
+                // Use title field from database
+                const eventList = eventsOnDate.map(event => `• ${event.title}`).join('\n');
                 showNotification(`Events on ${dateString}:\n${eventList}`, 'info');
             } else {
                 showNotification(`No events on ${dateString}`, 'info');

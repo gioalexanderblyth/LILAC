@@ -73,8 +73,8 @@
                                 <input type="text" id="event-place" class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500" placeholder="Enter venue/location">
                             </div>
                             <div>
-                                <label for="event-date" class="block text-xs font-medium text-gray-700 mb-0.5">Date</label>
-                                <input type="date" id="event-date" class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                <label for="event-date-manual" class="block text-xs font-medium text-gray-700 mb-0.5">Date</label>
+                                <input type="date" id="event-date-manual" class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500">
                             </div>
                         </div>
 
@@ -172,6 +172,79 @@
     <input type="file" id="file-input" class="hidden" multiple accept="*/*" onchange="handleFileSelection(this.files)">
 
     <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-[70] hidden" onclick="hideDeleteModal()">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md" onclick="event.stopPropagation()">
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Delete Event</h3>
+                            <p class="text-sm text-gray-500">This action will move the event to trash</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <p class="text-gray-700">Are you sure you want to delete this event?</p>
+                        <div id="deleteEventInfo" class="mt-2 p-3 bg-gray-50 rounded-lg">
+                            <!-- Event info will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-end gap-3">
+                        <button onclick="hideDeleteModal()" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button id="confirmDeleteBtn" onclick="confirmDeleteEvent()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trash Bin Modal -->
+    <div id="trashModal" class="fixed inset-0 bg-black bg-opacity-50 z-[70] hidden" onclick="hideTrashModal()">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Trash Bin</h3>
+                    </div>
+                    <button type="button" class="text-gray-400 hover:text-gray-600" onclick="hideTrashModal()">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-4 max-h-[60vh] overflow-y-auto">
+                    <div id="trash-container" class="space-y-2">
+                        <div class="text-sm text-gray-500">No deleted events.</div>
+                    </div>
+                </div>
+                <div class="p-4 border-t flex justify-between">
+                    <button type="button" class="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700" onclick="emptyTrash()">
+                        Empty Trash
+                    </button>
+                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg" onclick="hideTrashModal()">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
     <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-auto">
             <!-- Modal Header -->
@@ -221,12 +294,45 @@
                                placeholder="Enter event title">
                     </div>
 
+                    <!-- Event Date -->
+                    <div>
+                        <label for="event-date" class="block text-sm font-medium text-gray-700 mb-1">Event Date *</label>
+                        <input type="date" id="event-date" name="event_date" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">Select any date (past dates automatically allowed for award documentation)</p>
+                    </div>
+
+                    <!-- Event Time -->
+                    <div>
+                        <label for="event-time" class="block text-sm font-medium text-gray-700 mb-1">Event Time (Optional)</label>
+                        <input type="time" id="event-time" name="event_time" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <!-- Event Location -->
+                    <div>
+                        <label for="event-location" class="block text-sm font-medium text-gray-700 mb-1">Location (Optional)</label>
+                        <input type="text" id="event-location" name="location"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Enter event location (auto-detected from title/description)">
+                        <p class="text-xs text-gray-500 mt-1">💡 Location will be automatically suggested based on your event title and description</p>
+                    </div>
+
                     <!-- Event Description -->
                     <div>
                         <label for="event-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                         <textarea id="event-description" name="description" rows="3"
                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   placeholder="Enter event description"></textarea>
+                    </div>
+
+                    <!-- Original Link -->
+                    <div>
+                        <label for="event-original-link" class="block text-sm font-medium text-gray-700 mb-1">Original Link (Optional)</label>
+                        <input type="url" id="event-original-link" name="original_link"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="https://example.com/original-event-post">
+                        <p class="text-xs text-gray-500 mt-1">💡 Link to the original event post or source</p>
                     </div>
 
                     <!-- Image Upload -->
@@ -253,15 +359,20 @@
                     <!-- Award Classification -->
                     <div>
                         <label for="event-award-type" class="block text-sm font-medium text-gray-700 mb-1">Award Classification</label>
-                        <select id="event-award-type" name="award_type" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Auto-classify based on content</option>
-                            <option value="Internationalization (IZN) Leadership Award">Internationalization (IZN) Leadership Award</option>
-                            <option value="Outstanding International Education Program Award">Outstanding International Education Program Award</option>
-                            <option value="Emerging Leadership Award">Emerging Leadership Award</option>
-                            <option value="Best Regional Office for Internationalization Award">Best Regional Office for Internationalization Award</option>
-                            <option value="Global Citizenship Award">Global Citizenship Award</option>
-                        </select>
+                        <div class="relative">
+                            <select id="event-award-type" name="award_type" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Auto-classify based on content</option>
+                                <option value="Internationalization (IZN) Leadership Award">Internationalization (IZN) Leadership Award</option>
+                                <option value="Outstanding International Education Program Award">Outstanding International Education Program Award</option>
+                                <option value="Emerging Leadership Award">Emerging Leadership Award</option>
+                                <option value="Best Regional Office for Internationalization Award">Best Regional Office for Internationalization Award</option>
+                                <option value="Global Citizenship Award">Global Citizenship Award</option>
+                            </select>
+                            <div id="award-classification-loading" class="absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            </div>
+                        </div>
                         <p class="text-xs text-gray-500 mt-1">Leave empty for automatic classification based on title and description</p>
                     </div>
 
@@ -345,155 +456,6 @@
                     </div>
                 </div>
 
-                <!-- Your Events and Activities Section -->
-                <div class="mb-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <h2 class="text-lg font-bold text-gray-900">Your Events and Activities</h2>
-                        <div class="flex items-center gap-2">
-                            <!-- Filter Dropdown -->
-                            <div class="relative">
-                                <button id="filter-btn" class="flex items-center gap-1 px-3 py-1 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                    <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v4.586a1 1 0 01-.293.707l-2 2A1 1 0 0110 20.586V14.414a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
-                                    </svg>
-                                    <span id="filter-text">All</span>
-                                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </button>
-                                <!-- Filter Dropdown Menu -->
-                                <div id="filter-menu" class="absolute top-full left-0 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-50 hidden">
-                                    <div class="p-1">
-                                        <button class="filter-option w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded" data-filter="all">All</button>
-                                        <button class="filter-option w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded" data-filter="activities">Activities</button>
-                                        <button class="filter-option w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded" data-filter="events">Events</button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Navigation Arrows -->
-                            <div class="flex gap-1">
-                                <button class="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50">
-                                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                                    </svg>
-                                </button>
-                                <button class="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50">
-                                    <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <!-- Course Card 1 -->
-                        <div class="event-card bg-white rounded-lg border border-gray-200 overflow-hidden relative group shadow-md hover:shadow-lg transition-shadow duration-300" data-type="activities">
-                            <div class="h-32 bg-cover bg-center bg-no-repeat relative">
-                                <div class="absolute inset-0 bg-black bg-opacity-20"></div>
-                                <div class="absolute bottom-2 left-2 text-white">
-                                    <p class="text-xs font-medium">SEA-TEACHER 10th BATCH EVALUATION MEETING</p>
-                                </div>
-                                <!-- Delete Button -->
-                                <button class="delete-card absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete this card">
-                                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="p-3">
-                                <span class="text-purple-600 text-xs font-medium">ACTIVITIES</span>
-                                <h3 class="font-semibold text-gray-900 mt-1 mb-2 text-sm">Pre-Service Student Teacher Exchange in Southeast Asia Project</h3>
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-1">
-                                        <div class="flex -space-x-1">
-                                            <div class="w-4 h-4 bg-gray-300 rounded-full border border-white"></div>
-                                            <div class="w-4 h-4 bg-gray-300 rounded-full border border-white"></div>
-                                            <div class="w-4 h-4 bg-gray-300 rounded-full border border-white"></div>
-                                        </div>
-                                        <span class="text-xs text-gray-600">+124</span>
-                                    </div>
-                                    <button class="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                                        <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Course Card 2 -->
-                        <div class="event-card bg-white rounded-lg border border-gray-200 overflow-hidden relative group shadow-md hover:shadow-lg transition-shadow duration-300" data-type="events">
-                            <div class="h-32 bg-gradient-to-br from-gray-800 to-gray-900 relative">
-                                <div class="absolute inset-0 bg-black bg-opacity-20"></div>
-                                <div class="absolute bottom-2 left-2 text-white">
-                                    <p class="text-xs font-medium">4th REGIONAL AWARDS</p>
-                                </div>
-                                <!-- Delete Button -->
-                                <button class="delete-card absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete this card">
-                                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="p-3">
-                                <span class="text-purple-600 text-xs font-medium">EVENTS</span>
-                                <h3 class="font-semibold text-gray-900 mt-1 mb-2 text-sm">Exclusivity and Sustainability</h3>
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-1">
-                                        <div class="flex -space-x-1">
-                                            <div class="w-4 h-4 bg-gray-300 rounded-full border border-white"></div>
-                                            <div class="w-4 h-4 bg-gray-300 rounded-full border border-white"></div>
-                                            <div class="w-4 h-4 bg-gray-300 rounded-full border border-white"></div>
-                                        </div>
-                                        <span class="text-xs text-gray-600">+27</span>
-                                    </div>
-                                    <button class="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                                        <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Course Card 3 -->
-                        <div class="event-card bg-white rounded-lg border border-gray-200 overflow-hidden relative group shadow-md hover:shadow-lg transition-shadow duration-300" data-type="activities">
-                            <div class="h-32 bg-gradient-to-br from-blue-500 to-blue-600 relative">
-                                <div class="absolute inset-0 bg-black bg-opacity-20"></div>
-                                <div class="absolute bottom-2 left-2 text-white">
-                                    <p class="text-xs font-medium">ASEAN UNIVERSITIES EXHIBITION AND FORUM</p>
-                                </div>
-                                <!-- Delete Button -->
-                                <button class="delete-card absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete this card">
-                                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="p-3">
-                                <span class="text-purple-600 text-xs font-medium">ACTIVITIES</span>
-                                <h3 class="font-semibold text-gray-900 mt-1 mb-2 text-sm">Pre-Service Student Teacher Exchange in Southeast Asia Project</h3>
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-1">
-                                        <div class="flex -space-x-1">
-                                            <div class="w-4 h-4 bg-gray-300 rounded-full border border-white"></div>
-                                            <div class="w-4 h-4 bg-gray-300 rounded-full border border-white"></div>
-                                            <div class="w-4 h-4 bg-gray-300 rounded-full border border-white"></div>
-                                        </div>
-                                        <span class="text-xs text-gray-600">+87</span>
-                                    </div>
-                                    <button class="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                                        <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Events List Table -->
                 <div class="bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow duration-300">
@@ -515,6 +477,12 @@
                                     </button>
                                     <button id="events-upload-btn" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
                                         Upload
+                                    </button>
+                                    <button id="trash-btn" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm" onclick="showTrashModal()">
+                                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                        Trash
                                     </button>
                                 </div>
                             </div>
@@ -600,42 +568,8 @@
                         <button class="text-purple-600 text-xs font-medium hover:text-purple-700">View All</button>
                     </div>
                     
-                    <div class="space-y-3">
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-medium text-gray-900 text-xs">Tech Conference 2024</p>
-                                <p class="text-xs text-gray-500">Jan 25, 2024</p>
-                                <p class="text-xs text-gray-500">CPU Auditorium</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-medium text-gray-900 text-xs">Research Symposium</p>
-                                <p class="text-xs text-gray-500">Feb 15, 2024</p>
-                                <p class="text-xs text-gray-500">Library Hall</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-medium text-gray-900 text-xs">Student Activities Fair</p>
-                                <p class="text-xs text-gray-500">Mar 10, 2024</p>
-                                <p class="text-xs text-gray-500">Main Campus</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start gap-3">
-                            <div class="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                            <div class="flex-1 min-w-0">
-                                <p class="font-medium text-gray-900 text-xs">Graduation Ceremony</p>
-                                <p class="text-xs text-gray-500">Mar 25, 2024</p>
-                                <p class="text-xs text-gray-500">Grand Auditorium</p>
-                            </div>
-                        </div>
+                    <div id="upcoming-events-list" class="space-y-3">
+                        <!-- Dynamic upcoming events will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -809,7 +743,7 @@
                     const eventName = document.getElementById('event-name')?.value || '';
                     const organizer = document.getElementById('event-organizer')?.value || '';
                     const place = document.getElementById('event-place')?.value || '';
-                    const date = document.getElementById('event-date')?.value || '';
+                    const date = document.getElementById('event-date-manual')?.value || '';
                     const status = document.getElementById('event-status')?.value || '';
                     const type = document.getElementById('event-type')?.value || '';
                     
@@ -849,7 +783,7 @@
                     document.getElementById('event-name').value = '';
                     document.getElementById('event-organizer').value = '';
                     document.getElementById('event-place').value = '';
-                    document.getElementById('event-date').value = '';
+                    document.getElementById('event-date-manual').value = '';
                     document.getElementById('event-status').value = '';
                     document.getElementById('event-type').value = '';
                 };
@@ -878,10 +812,37 @@
                 });
             }
 
+            // Date format conversion helper
+            function convertDateFormat(dateString) {
+                // Handle various date formats and convert to YYYY-MM-DD
+                if (!dateString) return '';
+                
+                // If already in YYYY-MM-DD format, return as is
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                    return dateString;
+                }
+                
+                // Handle formats like "8 8, 2025" or "8/8/2025" or "8-8-2025"
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    return '';
+                }
+                
+                // Convert to YYYY-MM-DD format
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                
+                return `${year}-${month}-${day}`;
+            }
+            
             // Auto-classification on input change
             const eventTitle = document.getElementById('event-title');
             const eventDescription = document.getElementById('event-description');
             const eventAwardType = document.getElementById('event-award-type');
+            const eventDate = document.getElementById('event-date');
+            const eventTime = document.getElementById('event-time');
+            const eventLocation = document.getElementById('event-location');
 
             function performAutoClassification() {
                 const title = eventTitle.value;
@@ -913,30 +874,184 @@
             }
 
             if (eventTitle) {
-                eventTitle.addEventListener('input', performAutoClassification);
+                eventTitle.addEventListener('input', performEnhancedClassification);
             }
             if (eventDescription) {
-                eventDescription.addEventListener('input', performAutoClassification);
+                eventDescription.addEventListener('input', performEnhancedClassification);
+            }
+            
+            // Location analysis function
+            async function analyzeLocation(title, description) {
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'analyze_location');
+                    formData.append('title', title);
+                    formData.append('description', description);
+                    
+                    const response = await fetch('api/enhanced_management.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success && result.location_analysis.suggested_location) {
+                            const suggestedLocation = result.location_analysis.suggested_location;
+                            const confidence = result.location_analysis.confidence;
+                            
+                            // Only suggest if confidence is high enough and location field is empty
+                            if (confidence > 0.5 && !eventLocation.value) {
+                                eventLocation.value = suggestedLocation;
+                                showNotification(`📍 Location suggested: ${suggestedLocation} (${Math.round(confidence * 100)}% confidence)`, 'info');
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.log('Location analysis failed:', error);
+                    // Don't show error to user, just fail silently
+                }
+            }
+            
+            // Enhanced auto-classification with location analysis
+            function performEnhancedClassification() {
+                performAutoClassification();
+                
+                // Auto-analyze location if location field is empty
+                const title = eventTitle.value;
+                const description = eventDescription.value;
+                if (!eventLocation.value && (title || description)) {
+                    // Debounce the location analysis
+                    clearTimeout(window.locationAnalysisTimeout);
+                    window.locationAnalysisTimeout = setTimeout(() => {
+                        analyzeLocation(title, description);
+                    }, 1000); // Wait 1 second after user stops typing
+                }
             }
 
             // Create event functionality
             if (createEventBtn) {
                 createEventBtn.onclick = async function() {
+                    // Validate required fields
+                    if (!eventTitle.value.trim()) {
+                        showNotification('Event title is required', 'error');
+                        return;
+                    }
+                    if (!eventDate.value) {
+                        showNotification('Event date is required', 'error');
+                        return;
+                    }
+                    
+                    // Convert and validate date format
+                    const convertedDate = convertDateFormat(eventDate.value);
+                    if (!convertedDate) {
+                        showNotification('Please enter a valid date (e.g., 8/8/2025, 8-8-2025, or 2025-08-08)', 'error');
+                        return;
+                    }
+                    
+                    // Check if date is not in the past (allow past dates for award records)
+                    const selectedDate = new Date(convertedDate);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    // Auto-classify award type if not specified
+                    let awardType = eventAwardType.value;
+                    if (!awardType) {
+                        try {
+                            // Show loading state
+                            const originalText = createEventBtn.textContent;
+                            createEventBtn.textContent = 'Analyzing content...';
+                            createEventBtn.disabled = true;
+                            
+                            // Show loading spinner in award classification
+                            const loadingSpinner = document.getElementById('award-classification-loading');
+                            if (loadingSpinner) {
+                                loadingSpinner.classList.remove('hidden');
+                            }
+                            
+                            // Call auto-classification API
+                            const classifyFormData = new FormData();
+                            classifyFormData.append('action', 'auto_classify_event');
+                            classifyFormData.append('title', eventTitle.value.trim());
+                            classifyFormData.append('description', eventDescription.value.trim());
+                            classifyFormData.append('location', eventLocation.value.trim());
+                            
+                            const classifyResponse = await fetch('api/enhanced_management.php', {
+                                method: 'POST',
+                                body: classifyFormData
+                            });
+                            
+                            const classifyResult = await classifyResponse.json();
+                            
+                            if (classifyResult.success && classifyResult.award_name) {
+                                awardType = classifyResult.award_name;
+                                eventAwardType.value = awardType;
+                                
+                                const confidence = Math.round(classifyResult.confidence_score * 100);
+                                showNotification(`Auto-classified as: ${awardType} (${confidence}% confidence)`, 'success');
+                            } else {
+                                // Fallback to default for past events
+                                if (selectedDate < today) {
+                                    awardType = 'Internationalization (IZN) Leadership Award';
+                                    eventAwardType.value = awardType;
+                                    showNotification('Auto-selected award classification for historical event', 'info');
+                                } else {
+                                    showNotification('Could not auto-classify event. Please select an award type manually.', 'warning');
+                                }
+                            }
+                            
+                            // Reset button and hide loading spinner
+                            createEventBtn.textContent = originalText;
+                            createEventBtn.disabled = false;
+                            
+                            if (loadingSpinner) {
+                                loadingSpinner.classList.add('hidden');
+                            }
+                            
+                        } catch (error) {
+                            console.error('Auto-classification error:', error);
+                            // Reset button and hide loading spinner
+                            createEventBtn.textContent = originalText;
+                            createEventBtn.disabled = false;
+                            
+                            if (loadingSpinner) {
+                                loadingSpinner.classList.add('hidden');
+                            }
+                            
+                            // Fallback to default for past events
+                            if (selectedDate < today) {
+                                awardType = 'Internationalization (IZN) Leadership Award';
+                                eventAwardType.value = awardType;
+                                showNotification('Auto-selected award classification for historical event', 'info');
+                            } else {
+                                showNotification('Could not auto-classify event. Please select an award type manually.', 'warning');
+                            }
+                        }
+                    }
+
                     const formData = new FormData();
-                    formData.append('action', 'add');
-                    formData.append('title', eventTitle.value);
-                    formData.append('description', eventDescription.value);
-                    formData.append('award_type', eventAwardType.value);
+                    formData.append('action', 'create_event');
+                    formData.append('title', eventTitle.value.trim());
+                    formData.append('description', eventDescription.value.trim());
+                    formData.append('event_date', convertedDate);
+                    formData.append('event_time', eventTime.value || '');
+                    formData.append('location', eventLocation.value.trim());
+                    formData.append('award_type', awardType || '');
+                    formData.append('original_link', document.getElementById('event-original-link').value.trim());
                     
                     if (eventImageInput.files[0]) {
-                        formData.append('image', eventImageInput.files[0]);
+                        formData.append('file', eventImageInput.files[0]);
                     }
 
                     try {
-                        const response = await fetch('api/events.php', {
+                        const response = await fetch('api/central_events_api.php', {
                             method: 'POST',
                             body: formData
                         });
+                        
+                        // Check if response is ok
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
                         
                         const result = await response.json();
                         
@@ -948,14 +1063,14 @@
                             imageUploadArea.classList.remove('hidden');
                             classificationPreview.classList.add('hidden');
                             
-                            // Reload events
+                            // Reload all events
                             loadExistingEvents();
                         } else {
-                            showNotification('Failed to create event: ' + result.message, 'error');
+                            showNotification('Failed to create event: ' + (result.message || 'Unknown error'), 'error');
                         }
                     } catch (error) {
                         console.error('Error creating event:', error);
-                        showNotification('Error creating event', 'error');
+                        showNotification('Error creating event: ' + error.message, 'error');
                     }
                 };
             }
@@ -1004,13 +1119,13 @@
                     <p class="font-medium text-gray-900 text-sm">${eventData.name || eventData.title || 'Untitled Event'}</p>
                 </td>
                 <td class="px-3 py-2">
-                    <p class="text-gray-900 text-sm">${eventData.organizer || 'N/A'}</p>
+                    <p class="text-gray-900 text-sm">${eventData.organizer || 'LILAC'}</p>
                 </td>
                 <td class="px-3 py-2">
-                    <p class="text-gray-900 text-sm">${eventData.place || 'N/A'}</p>
+                    <p class="text-gray-900 text-sm">${eventData.place || eventData.location || 'TBD'}</p>
                 </td>
                 <td class="px-3 py-2">
-                    <p class="text-gray-600 text-sm">${eventData.date || 'N/A'}</p>
+                    <p class="text-gray-600 text-sm">${eventData.date || eventData.event_date || 'N/A'}</p>
                 </td>
                 <td class="px-3 py-2">
                     <span class="inline-block ${statusClass} text-xs px-2 py-1 rounded-full font-medium">${statusText}</span>
@@ -1023,7 +1138,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                             </svg>
                         </button>
-                        <button class="delete-row-btn text-red-500 hover:text-red-700 transition-colors p-1" title="Delete event" data-event-id="${eventData.id || ''}">
+                        <button class="delete-row-btn text-red-500 hover:text-red-700 transition-colors p-1" title="Delete event" data-event-id="${eventData.id || ''}" onclick="showDeleteModal('${eventData.id || ''}')">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
@@ -1447,11 +1562,11 @@
             }
         }
 
-        // Load existing events from API
+        // Load existing events from central events system
         async function loadExistingEvents() {
             try {
-                console.log('🔄 Loading existing events from API...');
-                const response = await fetch('api/events.php?action=get_all', {
+                console.log('🔄 Loading all events from central events system...');
+                const response = await fetch('api/central_events_api.php?action=get_events_by_status', {
                     cache: 'no-cache', // Prevent browser caching
                     headers: {
                         'Cache-Control': 'no-cache',
@@ -1479,24 +1594,14 @@
                 
                 console.log('📥 API Response:', result);
                 
-                if (result.success && result.events) {
-                    console.log('✅ Loaded', result.events.length, 'existing events:', result.events);
+                if (result.success && result.data.events) {
+                    console.log('✅ Loaded events from central system');
                     
-                    // Clear existing dynamic cards (keep the original 3 sample cards)
-                    const cardsContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-3.gap-3');
-                    if (cardsContainer) {
-                        // Remove cards that have the "NEW" badge (dynamically created ones)
-                        const allCards = cardsContainer.querySelectorAll('.event-card');
-                        allCards.forEach(card => {
-                            if (card) {
-                                // Check if this card has a NEW badge (dynamically created)
-                                const newBadge = card.querySelector('.bg-green-500');
-                                if (newBadge && newBadge.textContent.trim() === 'NEW') {
-                                    card.remove();
-                                }
-                            }
-                        });
-                    }
+                    // Combine upcoming and completed events
+                    const allEvents = [...result.data.events.upcoming, ...result.data.events.completed];
+                    console.log('📊 Total events:', allEvents.length, '(Upcoming:', result.data.events.upcoming.length, ', Completed:', result.data.events.completed.length, ')');
+                    
+                    // Cards container removed - using sidebar upcoming events list instead
                     
                     // Clear existing table rows (keep empty message)
                     const tableBody = document.getElementById('events-table-body');
@@ -1510,29 +1615,27 @@
                         });
                     }
                     
-                    // Recreate cards and table entries for each saved event
-                    result.events.forEach(eventData => {
-                        console.log('Loading event with ID:', eventData.id, 'Name:', eventData.name);
+                    // Recreate cards and table entries for all events
+                    console.log(`📅 Loading ${allEvents.length} total events`);
+                    
+                    allEvents.forEach(eventData => {
+                        console.log('Loading event with ID:', eventData.id, 'Title:', eventData.title, 'Status:', eventData.status);
                         
-                        // Create visual card
-                        if (eventData.image_file) {
-                            // If it has an image file, create image card
-                            // Note: We'd need to handle image URL properly here
-                            createManualEventCard(eventData);
-                        } else {
-                            // Create regular manual card
-                            createManualEventCard(eventData);
-                        }
-                        
-                        // Add to table
+                        // Add to table (all events - both upcoming and completed)
                         addEventToTable(eventData);
                     });
                     
                     // Update event counters
-                    updateEventCounters(result.events);
+                    updateEventCounters(allEvents);
+                    
+                    // Update upcoming events list in sidebar
+                    populateUpcomingEventsList(result.data.events.upcoming);
                     
                     // Update calendar with events
                     updateCalendarWithEvents(result.events);
+                    
+                    // Populate upcoming events list
+                    populateUpcomingEventsList(result.events);
                     
                     // Handle empty state
                     const emptyMessage = document.getElementById('empty-events-message');
@@ -1591,15 +1694,62 @@
             }
         }
 
+        // Populate upcoming events list
+        function populateUpcomingEventsList(events) {
+            const upcomingEventsList = document.getElementById('upcoming-events-list');
+            if (!upcomingEventsList) return;
+            
+            // Filter upcoming events and sort by date
+            const upcomingEvents = events
+                .filter(event => event.status === 'upcoming')
+                .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+                .slice(0, 4); // Show only the next 4 upcoming events
+            
+            if (upcomingEvents.length === 0) {
+                upcomingEventsList.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-xs text-gray-500">No upcoming events</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Generate event items
+            const eventItems = upcomingEvents.map((event, index) => {
+                const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500'];
+                const color = colors[index % colors.length];
+                
+                // Format date
+                const eventDate = new Date(event.event_date);
+                const formattedDate = eventDate.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                });
+                
+                return `
+                    <div class="flex items-start gap-3">
+                        <div class="w-2 h-2 ${color} rounded-full mt-2 flex-shrink-0"></div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-gray-900 text-xs">${event.title || event.name || 'Untitled Event'}</p>
+                            <p class="text-xs text-gray-500">${formattedDate}</p>
+                            <p class="text-xs text-gray-500">${event.location || 'TBD'}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            upcomingEventsList.innerHTML = eventItems;
+        }
 
         // Delete event from API
         async function deleteEventFromAPI(eventId) {
             try {
                 const formData = new FormData();
-                formData.append('action', 'delete');
-                formData.append('id', eventId);
+                formData.append('action', 'delete_event');
+                formData.append('event_id', eventId);
 
-                const response = await fetch('api/events.php', {
+                const response = await fetch('api/central_events_api.php', {
                     method: 'POST',
                     body: formData
                 });
@@ -1621,48 +1771,34 @@
                     
                     return result;
                 } else {
-                    console.error('Failed to delete event:', result.message);
-                    return false;
+                    const errorMsg = result.message || result.error || 'Unknown error occurred';
+                    console.error('Failed to delete event:', errorMsg);
+                    return { success: false, message: errorMsg };
                 }
             } catch (error) {
                 console.error('Error deleting event:', error);
-                return false;
+                return { success: false, message: error.message || 'Network error occurred' };
             }
         }
 
         // Attach delete listeners to table rows
         function attachTableDeleteListeners() {
+            // Note: Delete buttons now use onclick handlers directly, so this function is disabled
+            // to prevent conflicts with the new delete modal system
+            console.log('🔍 Delete buttons now use onclick handlers with delete modal - no event listeners needed');
+            
             const allDeleteButtons = document.querySelectorAll('.delete-row-btn');
-            const enabledButtons = document.querySelectorAll('.delete-row-btn:not([disabled])');
+            console.log(`- Total delete buttons found: ${allDeleteButtons.length}`);
+            
+            // Only handle disabled buttons (sample events)
             const disabledButtons = document.querySelectorAll('.delete-row-btn[disabled]');
-            
-            console.log('🔍 Delete button analysis:');
-            console.log('- Total buttons:', allDeleteButtons.length);
-            console.log('- Enabled buttons:', enabledButtons.length);
-            console.log('- Disabled buttons:', disabledButtons.length);
-            
-            // Attach listeners to enabled buttons
-            enabledButtons.forEach((button, index) => {
-                // Remove existing listeners to prevent duplicates
-                button.removeEventListener('click', handleTableDeleteClick);
-                button.addEventListener('click', handleTableDeleteClick);
-                const eventId = button.getAttribute('data-event-id');
-                const row = button.closest('tr');
-                const eventName = row ? row.querySelector('td:first-child p')?.textContent : 'Unknown';
-                console.log(`✅ Button ${index + 1} - ID: "${eventId}", Name: "${eventName}"`);
-            });
-            
-            // Add click handlers to disabled buttons to show message
             disabledButtons.forEach(button => {
                 button.removeEventListener('click', handleDisabledButtonClick);
                 button.addEventListener('click', handleDisabledButtonClick);
             });
             
-            if (enabledButtons.length === 0) {
-                console.warn('⚠️ No enabled delete buttons found! Only sample events exist.');
-                console.log('💡 Add a new event to see working delete buttons.');
-            } else {
-                console.log('🎉 Delete functionality is ready!');
+            if (disabledButtons.length > 0) {
+                console.log(`- ${disabledButtons.length} disabled buttons (sample events) handled`);
             }
         }
         
@@ -1674,116 +1810,7 @@
             alert('This is a sample event and cannot be deleted. Add your own events to see the delete functionality.');
         }
 
-        // Handle delete button click
-        async function handleTableDeleteClick(event) {
-            console.log('🗑️ Delete button clicked!', event.target);
-            event.preventDefault();
-            event.stopPropagation();
-            
-            const button = event.currentTarget;
-            const eventId = button.getAttribute('data-event-id');
-            const row = button.closest('tr');
-            const eventName = row ? row.querySelector('td:first-child p')?.textContent || 'this event' : 'Unknown event';
-            
-            console.log('🔍 Delete button data:', { 
-                eventId, 
-                eventName, 
-                buttonElement: button,
-                hasRow: !!row,
-                buttonClasses: button.className,
-                isDisabled: button.disabled
-            });
-            
-            if (!eventId || eventId === '') {
-                console.error('❌ No event ID found on button:', button);
-                alert('Cannot delete this event - no ID found. This might be a sample event.');
-                return;
-            }
-            
-            if (button.disabled) {
-                console.log('⚠️ Button is disabled - this is likely a sample event');
-                alert('Cannot delete sample events.');
-                return;
-            }
-            
-            // Confirm deletion
-            if (!confirm(`Are you sure you want to delete "${eventName}"? This action cannot be undone.`)) {
-                return;
-            }
-            
-            // Show loading state
-            button.disabled = true;
-            button.innerHTML = `
-                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            `;
-            
-            // Delete from API
-            const result = await deleteEventFromAPI(eventId);
-            
-            if (result && result.success) {
-                // Remove the table row with animation
-                if (row) {
-                    row.style.transition = 'all 0.3s ease-out';
-                    row.style.opacity = '0';
-                    row.style.transform = 'translateX(-20px)';
-                    
-                    setTimeout(() => {
-                        if (row && row.parentNode) {
-                            row.remove();
-                            
-                            // Check if table is now empty and show empty state
-                            const tableBody = document.getElementById('events-table-body');
-                            const remainingRows = tableBody.querySelectorAll('tr:not(#empty-events-message)');
-                            if (remainingRows.length === 0) {
-                                const emptyMessage = document.getElementById('empty-events-message');
-                                if (emptyMessage) {
-                                    emptyMessage.style.display = '';
-                                }
-                            }
-                        }
-                    }, 300);
-                }
-                
-                // Also remove the corresponding card if it exists
-                const cards = document.querySelectorAll('.event-card');
-                cards.forEach(card => {
-                    if (card) {
-                        const cardEventId = card.getAttribute('data-event-id');
-                        if (cardEventId === eventId) {
-                            card.style.transition = 'all 0.3s ease-out';
-                            card.style.opacity = '0';
-                            card.style.transform = 'scale(0.95)';
-                            setTimeout(() => {
-                                if (card && card.parentNode) {
-                                    card.remove();
-                                }
-                            }, 300);
-                        }
-                    }
-                });
-                
-                // Show success message with file deletion status
-                let message = 'Event deleted successfully!';
-                if (result.file_deleted === true) {
-                    message += ' (File also removed)';
-                } else if (result.file_deleted === false) {
-                    message += ' (File could not be removed)';
-                }
-                showTemporaryMessage(message, 'success');
-            } else {
-                // Reset button on failure
-                button.disabled = false;
-                button.innerHTML = `
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                `;
-                alert('Failed to delete event. Please try again.');
-            }
-        }
+        // Note: handleTableDeleteClick function removed - delete buttons now use onclick handlers with modal
 
         // Show temporary success/error message
         function showTemporaryMessage(message, type = 'success') {
@@ -1913,6 +1940,290 @@
             console.log('✅ All delete buttons updated!');
         }
 
+        // Delete confirmation modal functionality
+        let currentDeleteEventId = null;
+        let currentDeleteEventData = null;
+
+        async function showDeleteModal(eventId) {
+            currentDeleteEventId = eventId;
+            
+            const modal = document.getElementById('deleteModal');
+            const eventInfo = document.getElementById('deleteEventInfo');
+            
+            if (!modal || !eventInfo) {
+                console.error('Delete modal or event info element not found');
+                return;
+            }
+            
+            // Show loading state
+            eventInfo.innerHTML = `
+                <div class="text-sm text-gray-500">
+                    <div class="animate-pulse">Loading event details...</div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            
+            try {
+                // Fetch event data from API
+                const response = await fetch(`api/enhanced_management.php?action=get_event&id=${eventId}`);
+                const result = await response.json();
+                
+                if (result.success && result.event) {
+                    const event = result.event;
+                    currentDeleteEventData = event;
+                    
+                    // Populate event info
+                    eventInfo.innerHTML = `
+                        <div class="text-sm">
+                            <div class="font-medium text-gray-900">${event.title || 'Untitled Event'}</div>
+                            <div class="text-gray-600 mt-1">Date: ${event.event_date || 'N/A'}</div>
+                            <div class="text-gray-600">Location: ${event.location || 'N/A'}</div>
+                            ${event.original_link ? `<div class="text-gray-600">Link: <a href="${event.original_link}" target="_blank" class="text-blue-600 hover:underline">${event.original_link}</a></div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    eventInfo.innerHTML = `
+                        <div class="text-sm text-red-600">
+                            Error loading event details: ${result.message || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error fetching event data:', error);
+                eventInfo.innerHTML = `
+                    <div class="text-sm text-red-600">
+                        Error loading event details: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function hideDeleteModal() {
+            const modal = document.getElementById('deleteModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            currentDeleteEventId = null;
+            currentDeleteEventData = null;
+        }
+
+        async function confirmDeleteEvent() {
+            if (!currentDeleteEventId) return;
+            
+            try {
+                // Show loading state
+                const deleteBtn = document.getElementById('confirmDeleteBtn');
+                const originalText = deleteBtn.textContent;
+                deleteBtn.textContent = 'Deleting...';
+                deleteBtn.disabled = true;
+                
+                // Delete the event
+                const result = await deleteEventFromAPI(currentDeleteEventId);
+                
+                if (result.success) {
+                    // Hide modal
+                    hideDeleteModal();
+                    
+                    // Remove from Events List table
+                    removeEventFromTable(currentDeleteEventId);
+                    
+                    // Remove from upcoming events cards
+                    removeEventFromCards(currentDeleteEventId);
+                    
+                    // Show success notification
+                    showNotification('Event moved to trash successfully', 'success');
+                    
+                    // Refresh counters
+                    loadExistingEvents();
+                } else {
+                    const errorMsg = result.message || result.error || 'Unknown error occurred';
+                    showNotification('Failed to delete event: ' + errorMsg, 'error');
+                }
+                
+                // Reset button
+                deleteBtn.textContent = originalText;
+                deleteBtn.disabled = false;
+                
+            } catch (error) {
+                console.error('Error deleting event:', error);
+                showNotification('Error deleting event', 'error');
+                
+                // Reset button
+                const deleteBtn = document.getElementById('confirmDeleteBtn');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.disabled = false;
+            }
+        }
+
+        function removeEventFromTable(eventId) {
+            // Find and remove the table row
+            const tableBody = document.querySelector('#events-table tbody');
+            if (tableBody) {
+                const rows = tableBody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    const deleteBtn = row.querySelector('button[onclick*="deleteEventFromAPI"]');
+                    if (deleteBtn && deleteBtn.getAttribute('onclick').includes(eventId)) {
+                        row.remove();
+                    }
+                });
+            }
+        }
+
+        function removeEventFromCards(eventId) {
+            // Since we removed the cards container, we'll refresh the upcoming events list instead
+            // This will be handled by the loadExistingEvents function when it's called after deletion
+            console.log('Event card removal handled by upcoming events list refresh');
+        }
+
+        function updateCardsLayout() {
+            // Since we removed the cards container, this function is no longer needed
+            // The upcoming events list in the sidebar will be refreshed automatically
+            console.log('Cards layout update handled by upcoming events list refresh');
+        }
+
+        // Trash bin functionality
+        function showTrashModal() {
+            const modal = document.getElementById('trashModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                // Load trash events when opening
+                loadTrashEvents();
+            }
+        }
+
+        function hideTrashModal() {
+            const modal = document.getElementById('trashModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        async function loadTrashEvents() {
+            try {
+                const response = await fetch('api/enhanced_management.php?action=get_trash_events');
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderTrashEvents(result.trash_events || []);
+                } else {
+                    console.error('Failed to load trash events:', result.message);
+                }
+            } catch (error) {
+                console.error('Error loading trash events:', error);
+            }
+        }
+
+        function renderTrashEvents(trashEvents) {
+            const container = document.getElementById('trash-container');
+            if (!container) return;
+            
+            if (!trashEvents || trashEvents.length === 0) {
+                container.innerHTML = '<div class="text-sm text-gray-500">No deleted events.</div>';
+                return;
+            }
+            
+            container.innerHTML = trashEvents.map(event => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-gray-900 truncate">${event.title || 'Untitled Event'}</div>
+                        <div class="text-xs text-gray-500">Deleted ${new Date(event.deleted_at || Date.now()).toLocaleString()}</div>
+                        ${event.description ? `<div class="text-xs text-gray-600 mt-1 truncate">${event.description.substring(0, 100)}...</div>` : ''}
+                    </div>
+                    <div class="flex items-center gap-2 ml-4">
+                        <button class="px-3 py-1.5 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" onclick="restoreEvent(${event.id})">
+                            Restore
+                        </button>
+                        <button class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" onclick="permanentlyDeleteEvent(${event.id})">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function restoreEvent(trashId) {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'restore_event');
+                formData.append('trash_id', trashId);
+                
+                const response = await fetch('api/enhanced_management.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Event restored successfully', 'success');
+                    loadTrashEvents(); // Refresh trash list
+                    loadExistingEvents(); // Refresh main events list
+                } else {
+                    showNotification('Failed to restore event: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error restoring event:', error);
+                showNotification('Error restoring event', 'error');
+            }
+        }
+
+        async function permanentlyDeleteEvent(trashId) {
+            if (!confirm('Are you sure you want to permanently delete this event? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'permanently_delete_event');
+                formData.append('trash_id', trashId);
+                
+                const response = await fetch('api/enhanced_management.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Event permanently deleted', 'success');
+                    loadTrashEvents(); // Refresh trash list
+                } else {
+                    showNotification('Failed to delete event: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting event:', error);
+                showNotification('Error deleting event', 'error');
+            }
+        }
+
+        async function emptyTrash() {
+            if (!confirm('Are you sure you want to empty the trash? This will permanently delete all events in the trash. This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'empty_trash_events');
+                
+                const response = await fetch('api/enhanced_management.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Trash emptied successfully', 'success');
+                    loadTrashEvents(); // Refresh trash list
+                } else {
+                    showNotification('Failed to empty trash: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error emptying trash:', error);
+                showNotification('Error emptying trash', 'error');
+            }
+        }
+
         // Make functions globally available
         window.addEventToTable = addEventToTable;
         window.createManualEventCard = createManualEventCard;
@@ -1928,6 +2239,14 @@
         window.navigateCalendar = navigateCalendar;
         window.updateCalendarWithEvents = updateCalendarWithEvents;
         window.showEventsForDate = showEventsForDate;
+        window.showTrashModal = showTrashModal;
+        window.hideTrashModal = hideTrashModal;
+        window.restoreEvent = restoreEvent;
+        window.permanentlyDeleteEvent = permanentlyDeleteEvent;
+        window.emptyTrash = emptyTrash;
+        window.showDeleteModal = showDeleteModal;
+        window.hideDeleteModal = hideDeleteModal;
+        window.confirmDeleteEvent = confirmDeleteEvent;
         
         // Helper functions for OCR processing
         function extractEventName(text) {
@@ -2019,6 +2338,37 @@
                 img.alt = title;
                 img.className = 'max-h-full max-w-full object-contain mx-auto';
                 contentEl.appendChild(img);
+                
+                // Add description below the image if it exists
+                if (doc.description && doc.description.trim()) {
+                    const descriptionDiv = document.createElement('div');
+                    descriptionDiv.className = 'mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200';
+                    descriptionDiv.innerHTML = `
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Event Description</h4>
+                        <p class="text-gray-900 whitespace-pre-wrap text-sm">${doc.description}</p>
+                    `;
+                    contentEl.appendChild(descriptionDiv);
+                }
+                
+                // Add original link below the description if it exists
+                if (doc.original_link && doc.original_link.trim()) {
+                    const linkDiv = document.createElement('div');
+                    linkDiv.className = 'mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200';
+                    linkDiv.innerHTML = `
+                        <h4 class="text-sm font-medium text-blue-700 mb-2">Original Source</h4>
+                        <div class="flex items-center gap-2">
+                            <a href="${doc.original_link}" target="_blank" rel="noopener noreferrer" 
+                               class="text-blue-600 hover:text-blue-800 text-sm underline truncate flex-1">
+                                ${doc.original_link}
+                            </a>
+                            <button onclick="window.open('${doc.original_link}', '_blank')" 
+                                    class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
+                                Open in New Tab
+                            </button>
+                        </div>
+                    `;
+                    contentEl.appendChild(linkDiv);
+                }
             } else if (ext === 'pdf') {
                 const container = document.createElement('div');
                 container.className = 'w-full h-full';
@@ -2108,28 +2458,109 @@
         }
 
         function viewEventFile(eventId) {
-            // Find the event data from the stored events
-            // We need to get the actual event data from the API or stored data
-            fetch(`api/events.php?action=get_by_id&id=${eventId}`)
+            // Get event data from the central events API
+            fetch(`api/central_events_api.php?action=get_event&event_id=${eventId}`)
                 .then(response => response.json())
                 .then(result => {
                     if (result.success && result.event) {
                         const event = result.event;
+                        
+                        // Create a document object for the viewer
                         const doc = {
-                            document_name: event.name || event.title || 'Untitled Event',
-                            file_path: event.image_file || event.file_path || null,
-                            title: event.name || event.title || 'Untitled Event',
-                            filename: event.image_file || event.file_path || null
+                            document_name: event.title || 'Untitled Event',
+                            file_path: event.image_path || event.file_path || null,
+                            title: event.title || 'Untitled Event',
+                            filename: event.image_path || event.file_path || null,
+                            description: event.description || '',
+                            event_date: event.event_date || '',
+                            location: event.location || '',
+                            original_link: event.original_link || '',
+                            extracted_content: event.extracted_content || ''
                         };
-                        showDocumentViewer(doc);
+                        
+                        // Show document viewer if there's a file, otherwise show event details
+                        if (doc.file_path) {
+                            showDocumentViewer(doc);
+                        } else {
+                            showEventDetails(event);
+                        }
                     } else {
-                        showNotification('Event file not found', 'error');
+                        showNotification('Event not found', 'error');
                     }
                 })
                 .catch(error => {
-                    console.error('Error fetching event data:', error);
-                    showNotification('Error loading event file', 'error');
+                    console.error('Error fetching event:', error);
+                    showNotification('Error loading event', 'error');
                 });
+        }
+        
+        function showEventDetails(event) {
+            // Create a modal to show event details
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">Event Details</h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.closest('.fixed').remove()">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="p-6 overflow-y-auto max-h-[70vh]">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
+                                <p class="text-gray-900">${event.title || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                <p class="text-gray-900">${event.event_date || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                <p class="text-gray-900">${event.event_time || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                <p class="text-gray-900">${event.location || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <span class="inline-block ${event.status === 'upcoming' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'} text-xs px-2 py-1 rounded-full font-medium">
+                                    ${event.status ? event.status.charAt(0).toUpperCase() + event.status.slice(1) : 'N/A'}
+                                </span>
+                            </div>
+                            ${event.description && event.description.trim() ? `
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                <p class="text-gray-900 whitespace-pre-wrap">${event.description}</p>
+                            </div>
+                            ` : ''}
+                            ${event.image_path || event.file_path ? `
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Event Image</label>
+                                <div class="mt-2">
+                                    <img src="${event.image_path || event.file_path}" alt="${event.title || 'Event Image'}" 
+                                         class="max-w-full h-auto rounded-lg border border-gray-200 shadow-sm" 
+                                         style="max-height: 300px;">
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
         }
 
         // Calendar functionality

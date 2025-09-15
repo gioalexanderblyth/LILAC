@@ -1193,8 +1193,8 @@
                 const documentsResponse = await fetch('api/documents.php?action=get_all');
                 const documentsData = await documentsResponse.json();
                 
-                // Get all events
-                const eventsResponse = await fetch('api/enhanced_management.php?action=get_all_events');
+                // Get all events from central system
+                const eventsResponse = await fetch('api/central_events_api.php?action=get_events_for_awards');
                 const eventsData = await eventsResponse.json();
                 
                 const contentList = document.getElementById('available-content-list');

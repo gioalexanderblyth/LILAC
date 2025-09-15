@@ -30,20 +30,56 @@ class CentralEventsSystem {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
                 description TEXT,
-                event_date DATE NOT NULL,
-                event_time TIME,
+                start DATETIME NOT NULL,
+                end DATETIME,
                 location VARCHAR(255),
                 image_path VARCHAR(500),
                 status ENUM('upcoming', 'completed') NOT NULL DEFAULT 'upcoming',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_status (status),
-                INDEX idx_event_date (event_date),
-                INDEX idx_status_date (status, event_date)
+                INDEX idx_start (start),
+                INDEX idx_status_start (status, start)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ";
         
         $this->pdo->exec($sql);
+        $this->migrateTableSchema();
+    }
+    
+    /**
+     * Migrate existing table schema to new format
+     */
+    private function migrateTableSchema() {
+        try {
+            // Check if old columns exist
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM central_events LIKE 'event_date'");
+            if ($stmt->rowCount() > 0) {
+                // Add new columns if they don't exist
+                $this->pdo->exec("ALTER TABLE central_events ADD COLUMN IF NOT EXISTS start DATETIME");
+                $this->pdo->exec("ALTER TABLE central_events ADD COLUMN IF NOT EXISTS end DATETIME");
+                
+                // Migrate data from old columns to new columns
+                $this->pdo->exec("
+                    UPDATE central_events 
+                    SET start = CONCAT(event_date, ' ', COALESCE(event_time, '09:00:00'))
+                    WHERE start IS NULL AND event_date IS NOT NULL
+                ");
+                
+                $this->pdo->exec("
+                    UPDATE central_events 
+                    SET end = CONCAT(event_date, ' ', COALESCE(event_time, '11:00:00'))
+                    WHERE end IS NULL AND event_date IS NOT NULL
+                ");
+                
+                // Drop old columns after migration
+                $this->pdo->exec("ALTER TABLE central_events DROP COLUMN IF EXISTS event_date");
+                $this->pdo->exec("ALTER TABLE central_events DROP COLUMN IF EXISTS event_time");
+            }
+        } catch (Exception $e) {
+            // Migration failed, but continue
+            error_log("Schema migration failed: " . $e->getMessage());
+        }
     }
     
     /**
@@ -51,29 +87,39 @@ class CentralEventsSystem {
      */
     public function saveEvent($eventData) {
         try {
-            // Determine status based on date
-            $eventDate = new DateTime($eventData['event_date']);
-            $today = new DateTime();
-            $status = $eventDate < $today ? 'completed' : 'upcoming';
+            // Convert event_date and event_time to start/end DATETIME
+            $start = $eventData['event_date'] ?? $eventData['start'] ?? '';
+            $end = $eventData['end'] ?? '';
             
-            // Check if event already exists (by title and date)
+            // If we have separate date and time, combine them
+            if (isset($eventData['event_date']) && isset($eventData['event_time'])) {
+                $start = $eventData['event_date'] . ' ' . $eventData['event_time'];
+                $end = $eventData['event_date'] . ' ' . ($eventData['end_time'] ?? date('H:i:s', strtotime($eventData['event_time'] . ' +2 hours')));
+            }
+            
+            // Determine status based on start date
+            $startDate = new DateTime($start);
+            $today = new DateTime();
+            $status = $startDate < $today ? 'completed' : 'upcoming';
+            
+            // Check if event already exists (by title and start)
             $stmt = $this->pdo->prepare("
                 SELECT id FROM central_events 
-                WHERE title = ? AND event_date = ?
+                WHERE title = ? AND start = ?
             ");
-            $stmt->execute([$eventData['title'], $eventData['event_date']]);
+            $stmt->execute([$eventData['title'], $start]);
             $existingEvent = $stmt->fetch();
             
             if ($existingEvent) {
                 // Update existing event
                 $stmt = $this->pdo->prepare("
                     UPDATE central_events 
-                    SET description = ?, event_time = ?, location = ?, image_path = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+                    SET description = ?, end = ?, location = ?, image_path = ?, status = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ");
                 $stmt->execute([
                     $eventData['description'] ?? null,
-                    $eventData['event_time'] ?? null,
+                    $end,
                     $eventData['location'] ?? null,
                     $eventData['image_path'] ?? null,
                     $status,
@@ -82,29 +128,43 @@ class CentralEventsSystem {
                 
                 return [
                     'success' => true,
-                    'event_id' => $existingEvent['id'],
+                    'event' => [
+                        'id' => 'event_' . (string)$existingEvent['id'],
+                        'title' => $eventData['title'],
+                        'start' => $start,
+                        'end' => $end,
+                        'location' => $eventData['location'] ?? ''
+                    ],
                     'status' => $status,
                     'action' => 'updated'
                 ];
             } else {
                 // Insert new event
                 $stmt = $this->pdo->prepare("
-                    INSERT INTO central_events (title, description, event_date, event_time, location, image_path, status)
+                    INSERT INTO central_events (title, description, start, end, location, image_path, status)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
                     $eventData['title'],
                     $eventData['description'] ?? null,
-                    $eventData['event_date'],
-                    $eventData['event_time'] ?? null,
+                    $start,
+                    $end,
                     $eventData['location'] ?? null,
                     $eventData['image_path'] ?? null,
                     $status
                 ]);
                 
+                $eventId = $this->pdo->lastInsertId();
+                
                 return [
                     'success' => true,
-                    'event_id' => $this->pdo->lastInsertId(),
+                    'event' => [
+                        'id' => 'event_' . (string)$eventId,
+                        'title' => $eventData['title'],
+                        'start' => $start,
+                        'end' => $end,
+                        'location' => $eventData['location'] ?? ''
+                    ],
                     'status' => $status,
                     'action' => 'created'
                 ];
@@ -151,18 +211,23 @@ class CentralEventsSystem {
     }
     
     /**
-     * Get events for scheduler (upcoming events only)
+     * Get events for scheduler (upcoming events + recent completed events within 30 days)
      */
     public function getEventsForScheduler() {
         try {
             $stmt = $this->pdo->prepare("
-                SELECT id, title, event_date, event_time, location, status
+                SELECT id, title, description, start, end, location, status
                 FROM central_events 
-                WHERE status = 'upcoming'
-                ORDER BY event_date ASC, event_time ASC
+                WHERE status = 'upcoming' OR (status = 'completed' AND start >= DATE_SUB(NOW(), INTERVAL 30 DAY))
+                ORDER BY start ASC
             ");
             $stmt->execute();
             $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Cast IDs as strings with event_ prefix
+            foreach ($events as &$event) {
+                $event['id'] = 'event_' . (string)$event['id'];
+            }
             
             return [
                 'success' => true,
@@ -182,11 +247,16 @@ class CentralEventsSystem {
     public function getEventsForAwards() {
         try {
             $stmt = $this->pdo->query("
-                SELECT id, title, description, event_date, location, status
+                SELECT id, title, description, start, end, location, status
                 FROM central_events 
-                ORDER BY event_date DESC
+                ORDER BY start DESC
             ");
             $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Cast IDs as strings with event_ prefix
+            foreach ($events as &$event) {
+                $event['id'] = 'event_' . (string)$event['id'];
+            }
             
             return [
                 'success' => true,
@@ -205,24 +275,24 @@ class CentralEventsSystem {
      */
     public function updateEventStatuses() {
         try {
-            $today = date('Y-m-d');
+            $now = date('Y-m-d H:i:s');
             
             // Update past events to completed
             $stmt = $this->pdo->prepare("
                 UPDATE central_events 
                 SET status = 'completed', updated_at = CURRENT_TIMESTAMP
-                WHERE event_date < ? AND status = 'upcoming'
+                WHERE start < ? AND status = 'upcoming'
             ");
-            $stmt->execute([$today]);
+            $stmt->execute([$now]);
             $completedCount = $stmt->rowCount();
             
             // Update future events to upcoming
             $stmt = $this->pdo->prepare("
                 UPDATE central_events 
                 SET status = 'upcoming', updated_at = CURRENT_TIMESTAMP
-                WHERE event_date >= ? AND status = 'completed'
+                WHERE start >= ? AND status = 'completed'
             ");
-            $stmt->execute([$today]);
+            $stmt->execute([$now]);
             $upcomingCount = $stmt->rowCount();
             
             return [

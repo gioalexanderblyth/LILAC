@@ -83,7 +83,10 @@ window.LILACSidebar = {
             return;
         }
         
-        // Load saved state or default to open on desktop, closed on mobile
+        // Initialize saveTimeout property
+        this.saveTimeout = null;
+        
+        // Load saved state from database and apply
         this.loadState().then(() => {
             this.applyState();
             this.setupEventListeners();
@@ -93,89 +96,119 @@ window.LILACSidebar = {
         window.addEventListener('resize', () => {
             this.applyState();
         });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (this.saveTimeout) {
+                clearTimeout(this.saveTimeout);
+                // Save immediately before leaving
+                this.saveStateToDatabase();
+            }
+        });
     },
     
     loadState: async function() {
         try {
-            const response = await fetch('api/sidebar_state.php');
+            const response = await fetch('api/sidebar_state.php?action=get_state');
             const data = await response.json();
-            if (data.ok) {
-                this.isOpen = data.sidebar_state === 'open';
+            if (data.success) {
+                this.isOpen = data.data.state === 'open';
             } else {
                 // Default state based on screen size
                 this.isOpen = window.innerWidth >= 1024;
             }
         } catch (error) {
-            console.warn('Could not load sidebar state:', error);
+            console.warn('Could not load sidebar state from database:', error);
+            // Default state based on screen size
             this.isOpen = window.innerWidth >= 1024;
         }
     },
     
-    saveState: async function() {
+    saveState: function() {
+        // Debounce database saves to avoid excessive API calls
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => {
+            this.saveStateToDatabase();
+        }, 500); // Save to database after 500ms of inactivity
+    },
+    
+    saveStateToDatabase: async function() {
         try {
-            await fetch('api/sidebar_state.php', {
+            const formData = new FormData();
+            formData.append('action', 'save_state');
+            formData.append('state', this.isOpen ? 'open' : 'closed');
+            
+            const response = await fetch('api/sidebar_state.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sidebar_state: this.isOpen ? 'open' : 'closed' })
+                body: formData
             });
+            
+            const data = await response.json();
+            if (!data.success) {
+                console.warn('Failed to save sidebar state to database:', data.message);
+            }
         } catch (error) {
-            console.warn('Could not save sidebar state:', error);
+            console.warn('Could not save sidebar state to database:', error);
         }
     },
     
     applyState: function() {
         const sidebar = document.getElementById('sidebar');
-        const backdrop = document.getElementById('sidebar-backdrop');
-        const mainContainer = document.getElementById('main-content');
-        const nav = document.querySelector('nav.modern-nav');
-        
         if (!sidebar) return;
         
         const isDesktop = window.innerWidth >= 1024;
         
-        // Apply sidebar visibility - always respect the isOpen state
-        if (this.isOpen) {
-            sidebar.classList.remove('-translate-x-full');
-        } else {
-            sidebar.classList.add('-translate-x-full');
-        }
-        
-        // Handle backdrop (only on mobile)
-        if (backdrop) {
-            if (!isDesktop && this.isOpen) {
-                backdrop.classList.remove('hidden');
+        // Use requestAnimationFrame for smooth animations
+        requestAnimationFrame(() => {
+            // Apply sidebar visibility - always respect the isOpen state
+            if (this.isOpen) {
+                sidebar.classList.remove('-translate-x-full');
             } else {
-                backdrop.classList.add('hidden');
+                sidebar.classList.add('-translate-x-full');
             }
-        }
-        
-        // Handle main content margin (only on desktop when sidebar is open)
-        if (mainContainer) {
-            if (isDesktop && this.isOpen) {
-                mainContainer.classList.add('ml-64');
-            } else {
-                mainContainer.classList.remove('ml-64');
+            
+            // Handle backdrop (only on mobile)
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (backdrop) {
+                if (!isDesktop && this.isOpen) {
+                    backdrop.classList.remove('hidden');
+                } else {
+                    backdrop.classList.add('hidden');
+                }
             }
-        }
-        
-        // Handle navigation padding (only on desktop when sidebar is open)
-        if (nav) {
-            if (isDesktop && this.isOpen) {
-                nav.classList.add('pl-64');
-            } else {
-                nav.classList.remove('pl-64');
+            
+            // Handle main content margin (only on desktop when sidebar is open)
+            const mainContainer = document.getElementById('main-content');
+            if (mainContainer) {
+                if (isDesktop && this.isOpen) {
+                    mainContainer.classList.add('ml-64');
+                } else {
+                    mainContainer.classList.remove('ml-64');
+                }
             }
-        }
-        
-        // Dispatch custom event for other components
-        window.dispatchEvent(new CustomEvent('sidebar:state', { 
-            detail: { isOpen: this.isOpen, isDesktop: isDesktop } 
-        }));
+            
+            // Handle navigation padding (only on desktop when sidebar is open)
+            const nav = document.querySelector('nav.modern-nav');
+            if (nav) {
+                if (isDesktop && this.isOpen) {
+                    nav.classList.add('pl-64');
+                } else {
+                    nav.classList.remove('pl-64');
+                }
+            }
+            
+            // Dispatch custom event for other components
+            window.dispatchEvent(new CustomEvent('sidebar:state', { 
+                detail: { isOpen: this.isOpen, isDesktop: isDesktop } 
+            }));
+        });
     },
     
     toggle: function() {
         this.isOpen = !this.isOpen;
         this.applyState();
+        
+        // Save state to database (debounced)
         this.saveState();
         
         // On mobile, close sidebar automatically after navigation
@@ -206,12 +239,21 @@ window.LILACSidebar = {
         const hamburger = document.getElementById('hamburger-toggle');
         if (hamburger) {
             hamburger.addEventListener('click', (e) => {
-                // Add click animation (zoom out like documents page)
-                hamburger.style.transform = 'scale(0.98)';
-                setTimeout(() => {
-                    hamburger.style.transform = '';
-                }, 120);
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Immediate visual feedback
+                hamburger.style.transform = 'scale(0.95)';
+                
+                // Toggle sidebar immediately
                 this.toggle();
+                
+                // Reset animation after a short delay
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        hamburger.style.transform = '';
+                    }, 100);
+                });
             });
         }
         

@@ -5,6 +5,9 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Include universal upload handler
+require_once 'universal_upload_handler.php';
+
 // Paths
 $rootDir = dirname(__DIR__);
 $dataDir = $rootDir . DIRECTORY_SEPARATOR . 'data';
@@ -20,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-function respond($ok, $payload = []) {
+function docs_respond($ok, $payload = []) {
     echo json_encode(array_merge(['success' => $ok], $payload));
     exit;
 }
@@ -93,77 +96,47 @@ try {
     }
 
     if ($action === 'add') {
-        // Validate file
-        if (!isset($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {
-            respond(false, ['message' => 'No file uploaded']);
+        // Use universal upload handler
+        $uploadHandler = new UniversalUploadHandler();
+        $uploadResult = $uploadHandler->handleUpload($_FILES['file'], 'system', 'docs');
+        
+        if (!$uploadResult['success']) {
+            docs_respond(false, ['message' => $uploadResult['error']]);
         }
-        if ($_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            respond(false, ['message' => 'Upload error: ' . $_FILES['file']['error']]);
-        }
-        if (intval($_FILES['file']['size']) <= 0) {
-            respond(false, ['message' => 'File size is zero']);
-        }
-
-        $originalName = $_FILES['file']['name'];
-        $safeName = sanitize_filename($originalName);
-        $ext = strtolower(pathinfo($safeName, PATHINFO_EXTENSION));
-        $allowed = ['pdf','doc','docx','txt','jpg','jpeg','png'];
-        if ($ext && !in_array($ext, $allowed, true)) {
-            // Still allow saving, but mark as other types
-        }
-
-        // Unique destination
-        $unique = uniqid('doc_', true) . ($ext ? ('.' . $ext) : '');
-        $dest = $uploadsDir . DIRECTORY_SEPARATOR . $unique;
-        if (!move_uploaded_file($_FILES['file']['tmp_name'], $dest)) {
-            respond(false, ['message' => 'Failed to save uploaded file']);
-        }
-
-        $documentName = $_POST['document_name'] ?? ($_POST['title'] ?? pathinfo($safeName, PATHINFO_FILENAME));
-        $category = trim((string)($_POST['category'] ?? ''));
-        $categoryConfidence = floatval($_POST['category_confidence'] ?? 0);
+        
+        // Get additional data from POST
+        $documentName = $_POST['document_name'] ?? ($_POST['title'] ?? pathinfo($_FILES['file']['name'], PATHINFO_FILENAME));
+        $description = $_POST['description'] ?? '';
         $awardType = trim((string)($_POST['award_type'] ?? ''));
         
-        if ($category === '') {
-            $auto = detect_category_from_name($documentName . ' ' . $safeName);
-            if ($auto !== '') { 
-                $category = $auto;
-                $categoryConfidence = 0.5; // Default confidence for server-side detection
-            }
-        }
-        $description = $_POST['description'] ?? '';
-
-        // OCR text (optional excerpt from client)
-        $ocrText = $_POST['ocr_excerpt'] ?? '';
-        if ($category === '' && $ocrText !== '') {
-            $fallback = detect_category_from_text($ocrText);
-            if ($fallback !== '') { 
-                $category = $fallback;
-                $categoryConfidence = 0.3; // Lower confidence for OCR-based detection
-            }
-        }
+        // Use the category determined by universal upload handler
+        $category = $uploadResult['category'];
+        $categoryConfidence = 0.8; // High confidence for universal handler categorization
 
         $now = date('Y-m-d H:i:s');
         $id = $db['auto_id']++;
 
         // Auto-analyze for award classification if not provided
         if (empty($awardType)) {
-            $awardType = performAutoAwardAnalysis($documentName, $description, $ocrText);
+            $awardType = performAutoAwardAnalysis($documentName, $description, $uploadResult['extracted_text']);
         }
 
         $record = [
             'id' => $id,
             'document_name' => htmlspecialchars($documentName, ENT_QUOTES, 'UTF-8'),
-            'filename' => $unique,
-            'original_filename' => $safeName,
-            'file_size' => intval(filesize($dest)),
+            'filename' => $uploadResult['stored_filename'],
+            'original_filename' => $uploadResult['original_filename'],
+            'file_path' => $uploadResult['file_path'],
+            'file_size' => intval($_FILES['file']['size']),
             'category' => htmlspecialchars($category, ENT_QUOTES, 'UTF-8'),
             'category_confidence' => $categoryConfidence,
             'description' => htmlspecialchars($description, ENT_QUOTES, 'UTF-8'),
             'upload_date' => $now,
             'status' => 'Active',
-            'ocr_text' => $ocrText,
-            'award_type' => htmlspecialchars($awardType, ENT_QUOTES, 'UTF-8')
+            'ocr_text' => $uploadResult['extracted_text'],
+            'award_type' => htmlspecialchars($awardType, ENT_QUOTES, 'UTF-8'),
+            'universal_file_id' => $uploadResult['file_id'],
+            'linked_pages' => $uploadResult['linked_pages']
         ];
         $db['documents'][] = $record;
         save_db($dbFile, $db);
@@ -174,7 +147,7 @@ try {
             autoUpdateChecklistForDocument($record);
         }
         
-        respond(true, ['message' => 'Document added', 'document' => $record]);
+        docs_respond(true, ['message' => 'Document added', 'document' => $record]);
     }
 
     if ($action === 'reclassify_auto') {
@@ -190,22 +163,22 @@ try {
         }
         unset($doc);
         if ($updated > 0) { save_db($dbFile, $db); }
-        respond(true, ['message' => 'Reclassification complete', 'updated' => $updated]);
+        docs_respond(true, ['message' => 'Reclassification complete', 'updated' => $updated]);
     }
 
     if ($action === 'get_award_counters') {
         $counters = getAwardCounters();
-        respond(true, ['counters' => $counters]);
+        docs_respond(true, ['counters' => $counters]);
     }
 
     if ($action === 'recalculate_counters') {
         $counters = recalculateAllCounters();
-        respond(true, ['message' => 'Counters recalculated', 'counters' => $counters]);
+        docs_respond(true, ['message' => 'Counters recalculated', 'counters' => $counters]);
     }
 
     if ($action === 'delete') {
         $id = intval($_POST['id'] ?? 0);
-        if ($id <= 0) { respond(false, ['message' => 'Invalid id']); }
+        if ($id <= 0) { docs_respond(false, ['message' => 'Invalid id']); }
         $found = false;
         foreach ($db['documents'] as $i => $doc) {
             if (intval($doc['id']) === $id) {
@@ -221,18 +194,18 @@ try {
                 break;
             }
         }
-        if (!$found) { respond(false, ['message' => 'Document not found']); }
+        if (!$found) { docs_respond(false, ['message' => 'Document not found']); }
         save_db($dbFile, $db);
-        respond(true, ['message' => 'Moved to trash']);
+        docs_respond(true, ['message' => 'Moved to trash']);
     }
 
     if ($action === 'get_trash') {
-        respond(true, ['trash' => array_values($db['trash'])]);
+        docs_respond(true, ['trash' => array_values($db['trash'])]);
     }
 
     if ($action === 'restore') {
         $trashId = intval($_POST['trash_id'] ?? 0);
-        if ($trashId <= 0) { respond(false, ['message' => 'Invalid trash id']); }
+        if ($trashId <= 0) { docs_respond(false, ['message' => 'Invalid trash id']); }
         foreach ($db['trash'] as $i => $t) {
             if (intval($t['id']) === $trashId || intval($t['original_id'] ?? 0) === $trashId) {
                 $restored = $t;
@@ -243,15 +216,15 @@ try {
                 $db['documents'][] = $restored;
                 array_splice($db['trash'], $i, 1);
                 save_db($dbFile, $db);
-                respond(true, ['message' => 'Restored']);
+                docs_respond(true, ['message' => 'Restored']);
             }
         }
-        respond(false, ['message' => 'Trash item not found']);
+        docs_respond(false, ['message' => 'Trash item not found']);
     }
 
     if ($action === 'permanently_delete') {
         $trashId = intval($_POST['trash_id'] ?? 0);
-        if ($trashId <= 0) { respond(false, ['message' => 'Invalid trash id']); }
+        if ($trashId <= 0) { docs_respond(false, ['message' => 'Invalid trash id']); }
         foreach ($db['trash'] as $i => $t) {
             if (intval($t['id']) === $trashId || intval($t['original_id'] ?? 0) === $trashId) {
                 // Also remove uploaded file if exists
@@ -259,10 +232,10 @@ try {
                 if (is_file($filepath)) { @unlink($filepath); }
                 array_splice($db['trash'], $i, 1);
                 save_db($dbFile, $db);
-                respond(true, ['message' => 'Permanently deleted']);
+                docs_respond(true, ['message' => 'Permanently deleted']);
             }
         }
-        respond(false, ['message' => 'Trash item not found']);
+        docs_respond(false, ['message' => 'Trash item not found']);
     }
 
     if ($action === 'empty_trash') {
@@ -273,7 +246,7 @@ try {
         }
         $db['trash'] = [];
         save_db($dbFile, $db);
-        respond(true, ['message' => 'Trash emptied']);
+        docs_respond(true, ['message' => 'Trash emptied']);
     }
 
     if ($action === 'get_categories') {
@@ -282,10 +255,10 @@ try {
             foreach ($db['documents'] as $doc) {
                 if (!empty($doc['category'])) { $cats[$doc['category']] = true; }
             }
-            respond(true, ['categories' => array_values(array_keys($cats))]);
+            docs_respond(true, ['categories' => array_values(array_keys($cats))]);
         } catch (Exception $e) {
             error_log("Error in get_categories action: " . $e->getMessage());
-            respond(false, ['message' => 'Error loading categories: ' . $e->getMessage()]);
+            docs_respond(false, ['message' => 'Error loading categories: ' . $e->getMessage()]);
         }
     }
 
@@ -311,7 +284,7 @@ try {
                 if ($ts && $ts >= $thirtyDaysAgo) { $recentCount++; }
                 if ($ts && $ts >= $startOfMonth) { $monthCount++; }
             }
-            respond(true, ['stats' => [
+            docs_respond(true, ['stats' => [
                 'total_documents' => $total,
                 'total' => $total,
                 'recent' => $recentCount,
@@ -320,7 +293,7 @@ try {
             ]]);
         } catch (Exception $e) {
             error_log("Error in get_stats action: " . $e->getMessage());
-            respond(false, ['message' => 'Error loading stats: ' . $e->getMessage()]);
+            docs_respond(false, ['message' => 'Error loading stats: ' . $e->getMessage()]);
         }
     }
 
@@ -331,7 +304,7 @@ try {
         $docs = $_POST['documents'] ?? '[]';
         $entry = date('c') . " | To: {$to} | Docs: {$docs}\n";
         file_put_contents($logFile, $entry, FILE_APPEND);
-        respond(true, ['message' => 'Share logged']);
+        docs_respond(true, ['message' => 'Share logged']);
     }
 
     // get_all with pagination, search, category, sorting
@@ -444,7 +417,7 @@ try {
         $paged = array_slice($docs, $offset, $limit);
 
         error_log("Responding with " . count($paged) . " documents");
-        respond(true, [
+        docs_respond(true, [
             'documents' => $paged,
             'pagination' => [
                 'total_documents' => $total,
@@ -458,14 +431,14 @@ try {
     if ($action === 'get_by_award') {
         $awardType = $_GET['award_type'] ?? '';
         if (empty($awardType)) {
-            respond(false, ['message' => 'Award type required']);
+            docs_respond(false, ['message' => 'Award type required']);
         }
         
         $filtered = array_filter($db['documents'], function($doc) use ($awardType) {
             return $doc['status'] === 'Active' && $doc['award_type'] === $awardType;
         });
         
-        respond(true, ['documents' => array_values($filtered)]);
+        docs_respond(true, ['documents' => array_values($filtered)]);
     }
 
     if ($action === 'get_award_counts') {
@@ -484,13 +457,13 @@ try {
             }));
         }
         
-        respond(true, ['counts' => $counts]);
+        docs_respond(true, ['counts' => $counts]);
     }
 
     if ($action === 'analyze_document') {
         $documentId = $_POST['document_id'] ?? '';
         if (empty($documentId)) {
-            respond(false, ['message' => 'Document ID required']);
+            docs_respond(false, ['message' => 'Document ID required']);
         }
         
         // Find the document
@@ -503,19 +476,19 @@ try {
         }
         
         if (!$document) {
-            respond(false, ['message' => 'Document not found']);
+            docs_respond(false, ['message' => 'Document not found']);
         }
         
         // Perform analysis (this would typically call the DocumentAnalyzer)
         $analysis = performDocumentAnalysis($document);
         
-        respond(true, ['analysis' => $analysis]);
+        docs_respond(true, ['analysis' => $analysis]);
     }
 
     if ($action === 'get_award_analysis') {
         $awardType = $_GET['award_type'] ?? '';
         if (empty($awardType)) {
-            respond(false, ['message' => 'Award type required']);
+            docs_respond(false, ['message' => 'Award type required']);
         }
         
         // Get documents for this award
@@ -544,7 +517,7 @@ try {
             }
         }
         
-        respond(true, [
+        docs_respond(true, [
             'documents' => array_values($documents),
             'document_count' => count($documents),
             'satisfied_criteria' => $satisfiedCriteria,
@@ -553,9 +526,9 @@ try {
         ]);
     }
 
-    respond(false, ['message' => 'Unknown action']);
+    docs_respond(false, ['message' => 'Unknown action']);
 } catch (Throwable $e) {
-    respond(false, ['message' => 'Server error', 'error' => $e->getMessage()]);
+    docs_respond(false, ['message' => 'Server error', 'error' => $e->getMessage()]);
 }
 
 /**

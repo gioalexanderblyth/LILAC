@@ -160,7 +160,12 @@
 
 /* Enhanced hamburger button animation */
 #hamburger-toggle {
-    transition: transform 0.12s ease !important;
+    transition: transform 0.08s ease !important;
+}
+
+/* Faster sidebar slide animation */
+#sidebar {
+    transition: transform 0.2s ease-out !important;
 }
 
 /* Enhanced focus states for accessibility */

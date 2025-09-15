@@ -1,45 +1,5 @@
 {
-    "next_id": 4,
+    "next_id": 7,
     "meetings": [],
-    "trash": [
-        {
-            "id": 1,
-            "title": "Thesis",
-            "description": "test",
-            "date": "2025-09-05",
-            "time": "00:00",
-            "end_date": "2025-09-05",
-            "end_time": "23:59",
-            "is_all_day": "1",
-            "color": "brown",
-            "original_id": 1,
-            "deleted_at": "2025-09-05T10:27:48+02:00"
-        },
-        {
-            "id": 3,
-            "title": "Test",
-            "description": "test",
-            "date": "2025-09-07",
-            "time": "00:00",
-            "end_date": "2025-09-07",
-            "end_time": "23:59",
-            "is_all_day": "1",
-            "color": "orange-500",
-            "original_id": 3,
-            "deleted_at": "2025-09-05T10:27:53+02:00"
-        },
-        {
-            "id": 2,
-            "title": "Defense",
-            "description": "TEST",
-            "date": "2025-09-05",
-            "time": "12:00",
-            "end_date": "2025-09-25",
-            "end_time": "13:00",
-            "is_all_day": "0",
-            "color": "teal",
-            "original_id": 2,
-            "deleted_at": "2025-09-06T07:21:26+02:00"
-        }
-    ]
+    "trash": []
 }

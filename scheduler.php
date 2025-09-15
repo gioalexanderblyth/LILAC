@@ -1,3 +1,105 @@
+<?php
+// Load data directly from database to avoid HTTP request issues
+require_once 'config/database.php';
+
+function loadMeetingsData() {
+    try {
+        // Load meetings from JSON file
+        $DATA_DIR = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'data';
+        $DATA_FILE = $DATA_DIR . DIRECTORY_SEPARATOR . 'meetings.json';
+        
+        if (!is_dir($DATA_DIR)) {
+            @mkdir($DATA_DIR, 0777, true);
+        }
+        if (!file_exists($DATA_FILE)) {
+            @file_put_contents($DATA_FILE, json_encode([ 'next_id' => 1, 'meetings' => [], 'trash' => [] ], JSON_PRETTY_PRINT));
+        }
+        
+        $raw = @file_get_contents($DATA_FILE);
+        if ($raw === false || trim($raw) === '') {
+            $meetings = [];
+        } else {
+            $data = json_decode($raw, true);
+            $meetings = isset($data['meetings']) && is_array($data['meetings']) ? $data['meetings'] : [];
+        }
+        
+        // Load events from central_events table
+        $events = [];
+        try {
+            $db = new Database();
+            $pdo = $db->getConnection();
+            
+            $stmt = $pdo->prepare("
+                SELECT id, title, description, start, end, location, status
+                FROM central_events 
+                WHERE status = 'upcoming' OR (status = 'completed' AND start >= DATE_SUB(NOW(), INTERVAL 30 DAY))
+                ORDER BY start ASC
+            ");
+            $stmt->execute();
+            $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (Exception $e) {
+            // Database connection failed, use empty events
+            $events = [];
+        }
+        
+        // Load trash meetings
+        $trashMeetings = [];
+        if (isset($data['trash']) && is_array($data['trash'])) {
+            $trashMeetings = $data['trash'];
+        }
+        
+        // Combine and format data
+        $allItems = [];
+        
+        // Add meetings
+        foreach ($meetings as $m) {
+            $allItems[] = [
+                'id' => $m['id'],
+                'title' => $m['title'],
+                'meeting_date' => $m['date'],
+                'meeting_time' => $m['time'],
+                'end_date' => $m['end_date'],
+                'end_time' => $m['end_time'],
+                'description' => isset($m['description']) ? $m['description'] : '',
+                'is_all_day' => isset($m['is_all_day']) ? $m['is_all_day'] : '0',
+                'color' => isset($m['color']) ? $m['color'] : 'blue',
+                'organizer' => isset($m['organizer']) ? $m['organizer'] : '',
+                'venue' => isset($m['venue']) ? $m['venue'] : '',
+                'location' => isset($m['venue']) ? $m['venue'] : ''
+            ];
+        }
+        
+            // Add events
+            foreach ($events as $e) {
+                $startDateTime = new DateTime($e['start']);
+                $endDateTime = $e['end'] ? new DateTime($e['end']) : $startDateTime->modify('+2 hours');
+                
+                $allItems[] = [
+                    'id' => 'event_' . (string)$e['id'],
+                    'title' => $e['title'],
+                    'meeting_date' => $startDateTime->format('Y-m-d'),
+                    'meeting_time' => $startDateTime->format('H:i'),
+                    'end_date' => $endDateTime->format('Y-m-d'),
+                    'end_time' => $endDateTime->format('H:i'),
+                    'description' => $e['description'] ?: '',
+                    'is_all_day' => '0',
+                    'color' => 'green',
+                    'organizer' => 'LILAC',
+                    'venue' => $e['location'] ?: '',
+                    'location' => $e['location'] ?: ''
+                ];
+            }
+        
+        return $allItems;
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+$meetingsData = loadMeetingsData();
+$trashData = $meetingsData['trash'] ?? [];
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -314,7 +416,6 @@
             const viewSwitchBtn = document.getElementById('view-switch-btn');
             const calendarView = document.getElementById('calendar-view');
             const meetingsView = document.getElementById('meetings-view');
-            const trashView = document.getElementById('trash-view');
 
             if (viewSwitchBtn) {
                 viewSwitchBtn.addEventListener('click', function() {
@@ -810,39 +911,103 @@
             return colorMap[colorName] || '#3b82f6'; // Default to blue if color not found
         }
 
+        function showNotification(message, type = 'info') {
+            // Simple notification function
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 4px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 300px;
+                word-wrap: break-word;
+                ${type === 'error' ? 'background-color: #ef4444;' : 'background-color: #3b82f6;'}
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
         function loadMeetings() {
-            console.log('Loading meetings...');
-            fetch('api/scheduler.php?action=get_all')
-                .then(response => response.json())
-                .then(data => {
-                                            console.log('Raw API response:', data);
-                        console.log('First meeting description check:', data.meetings[0]?.description);
-                        console.log('All meetings descriptions:', data.meetings.map(m => ({ id: m.id, title: m.title, description: m.description, descriptionLength: m.description ? m.description.length : 0 })));
-                    if (data.success) {
-                        currentMeetings = data.meetings.map(meeting => ({
-                            ...meeting,
-                            type: 'meeting',
-                            color: meeting.color || 'blue', // Use the actual color from database
-                            startTime: meeting.meeting_time,
-                            endTime: meeting.end_time || calculateEndTime(meeting.meeting_time, 60), // Use end_time if available
-                            date: meeting.meeting_date,
-                            dateEnd: meeting.end_date || meeting.meeting_date
-                        }));
-                        console.log('Meetings with colors:', currentMeetings.map(m => ({ id: m.id, title: m.title, color: m.color, description: m.description })));
-                        console.log('Processed meetings:', currentMeetings);
-                        renderSchedule();
-                        renderMiniCalendar();
-                        updateReminders();
-                        loadStats(); // Update statistics after loading meetings
-                    } else {
-                        console.error('Error loading meetings:', data.message);
-                        currentMeetings = [];
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading meetings:', error);
-                    currentMeetings = [];
-                });
+            console.log('Loading meetings and events...');
+            
+            // For now, use the fallback method which works reliably
+            // TODO: Fix API call issues later
+            loadMeetingsFallback();
+        }
+
+        function loadMeetingsFallback() {
+            console.log('Using fallback PHP meetings data...');
+            try {
+                // Use PHP data as fallback
+                const meetingsData = <?php echo json_encode($meetingsData); ?>;
+                console.log('Loaded fallback meetings data:', meetingsData);
+                
+                let allItems = [];
+                
+                // Process meetings and events
+                if (Array.isArray(meetingsData)) {
+                    allItems = meetingsData.map(item => ({
+                        ...item,
+                        type: String(item.id).startsWith('event_') ? 'event' : 'meeting',
+                        color: item.color || (String(item.id).startsWith('event_') ? 'green' : 'blue'),
+                        startTime: item.meeting_time,
+                        endTime: item.end_time || calculateEndTime(item.meeting_time, String(item.id).startsWith('event_') ? 120 : 60),
+                        date: item.meeting_date,
+                        dateEnd: item.end_date || item.meeting_date
+                    }));
+                }
+                
+                currentMeetings = allItems;
+                console.log('Combined meetings and events:', currentMeetings);
+                renderSchedule();
+                renderMiniCalendar();
+                updateReminders();
+                loadStats();
+                
+            } catch (error) {
+                console.error('Error loading meetings and events:', error);
+                currentMeetings = [];
+                showNotification('Failed to load schedule data. Please refresh the page.', 'error');
+            }
+        }
+
+        function displayMeetings(meetingsData) {
+            console.log('Displaying meetings data:', meetingsData);
+            
+            let allItems = [];
+            
+            // Process meetings and events
+            if (Array.isArray(meetingsData)) {
+                allItems = meetingsData.map(item => ({
+                    ...item,
+                    type: String(item.id).startsWith('event_') ? 'event' : 'meeting',
+                    color: item.color || (String(item.id).startsWith('event_') ? 'green' : 'blue'),
+                    startTime: item.meeting_time,
+                    endTime: item.end_time || calculateEndTime(item.meeting_time, String(item.id).startsWith('event_') ? 120 : 60),
+                    date: item.meeting_date,
+                    dateEnd: item.end_date || item.meeting_date
+                }));
+            }
+            
+            currentMeetings = allItems;
+            console.log('Combined meetings and events:', currentMeetings);
+            renderSchedule();
+            renderMiniCalendar();
+            updateReminders();
+            loadStats();
         }
 
         function calculateEndTime(startTime, durationMinutes) {
@@ -875,31 +1040,37 @@
             const startDateString = firstDay.toISOString().split('T')[0];
             const endDateString = lastDay.toISOString().split('T')[0];
             
-            // Fetch meetings for the month
-            fetch(`api/scheduler.php?action=get_by_date_range&start_date=${startDateString}&end_date=${endDateString}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Calendar fetch response:', data);
-                    const meetings = data.success ? data.meetings : [];
-                    const daysWithEvents = new Map(); // Use Map to store date -> count
-                    
-                    // Create a map of dates to event counts
-                    meetings.forEach(meeting => {
-                        if (meeting.meeting_date) {
-                            const currentCount = daysWithEvents.get(meeting.meeting_date) || 0;
-                            daysWithEvents.set(meeting.meeting_date, currentCount + 1);
-                            console.log('Added event for date:', meeting.meeting_date, 'Total events for this date:', currentCount + 1);
-                        }
-                    });
-                    
-                    console.log('Days with events:', Object.fromEntries(daysWithEvents));
-                    renderCalendarDays(daysWithEvents, meetings);
-                })
-                .catch(error => {
-                    console.error('Error fetching meetings for calendar:', error);
-                    // Render calendar with no event markers when API/database is unavailable
-                    renderCalendarDays(new Map(), []);
+            // Use PHP data directly for calendar
+            try {
+                const meetingsData = <?php echo json_encode($meetingsData); ?>;
+                console.log('Calendar data:', meetingsData);
+                
+                // Filter meetings for the current month
+                const meetings = Array.isArray(meetingsData) ? meetingsData.filter(meeting => {
+                    if (!meeting.meeting_date) return false;
+                    const meetingDate = new Date(meeting.meeting_date);
+                    return meetingDate >= startDate && meetingDate <= endDate;
+                }) : [];
+                
+                const daysWithEvents = new Map(); // Use Map to store date -> count
+                
+                // Create a map of dates to event counts
+                meetings.forEach(meeting => {
+                    if (meeting.meeting_date) {
+                        const currentCount = daysWithEvents.get(meeting.meeting_date) || 0;
+                        daysWithEvents.set(meeting.meeting_date, currentCount + 1);
+                        console.log('Added event for date:', meeting.meeting_date, 'Total events for this date:', currentCount + 1);
+                    }
                 });
+                
+                console.log('Days with events:', Object.fromEntries(daysWithEvents));
+                renderCalendarDays(daysWithEvents, meetings);
+                
+            } catch (error) {
+                console.error('Error fetching meetings for calendar:', error);
+                // Render calendar with no event markers when API/database is unavailable
+                renderCalendarDays(new Map(), []);
+            }
         }
 
         function renderCalendarDays(daysWithEvents, meetings = []) {
@@ -1854,7 +2025,6 @@
             const viewSwitchText = document.getElementById('view-switch-text');
             const calendarView = document.getElementById('calendar-view');
             const meetingsView = document.getElementById('meetings-view');
-            const trashView = document.getElementById('trash-view');
 
             if (view === 'calendar') {
                 // Update floating button (if it exists)
@@ -1878,9 +2048,6 @@
                 if (meetingsView) {
                     meetingsView.style.display = 'none';
                 }
-                if (trashView) {
-                    trashView.style.display = 'none';
-                }
             } else if (view === 'meetings') {
                 // Update floating button (if it exists)
                 if (viewSwitchBtn) {
@@ -1903,27 +2070,29 @@
                 if (calendarView) {
                     calendarView.style.display = 'none';
                 }
-                if (trashView) {
-                    trashView.style.display = 'none';
-                }
                 loadDocuments(); // Load meetings for the table view
-            } else if (view === 'trash') {
-                // Show trash view (no button update needed since trash has its own button)
-                if (trashView) {
-                    trashView.style.display = 'block';
-                }
-                if (calendarView) {
-                    calendarView.style.display = 'none';
-                }
-                if (meetingsView) {
-                    meetingsView.style.display = 'none';
-                }
-                loadTrashMeetings(); // Load trash meetings
             }
         }
 
         function openTrashBin() {
-            setActiveView('trash');
+            showTrashModal();
+        }
+        
+        function showTrashModal() {
+            const modal = document.getElementById('trash-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                // Load trash meetings and update count when opening modal
+                loadTrashMeetings();
+                loadTrashCount();
+            }
+        }
+        
+        function hideTrashModal() {
+            const modal = document.getElementById('trash-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
         }
 
         function showAddEventModal() {
@@ -2319,22 +2488,22 @@
 
         // Original meeting management functions
         function loadDocuments() {
-            fetch('api/scheduler.php?action=get_all')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        currentDocuments = data.meetings;
-                        displayDocuments(data.meetings);
-                        loadStats();
-                    } else {
-                        console.error('Error loading meetings:', data.message);
-                        displayDocuments([]);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading meetings:', error);
+            try {
+                // Use PHP data directly instead of HTTP requests
+                const meetingsData = <?php echo json_encode($meetingsData); ?>;
+                
+                if (Array.isArray(meetingsData)) {
+                    currentDocuments = meetingsData;
+                    displayDocuments(meetingsData);
+                    loadStats();
+                } else {
+                    console.error('Error loading meetings: Invalid data format');
                     displayDocuments([]);
-                });
+                }
+            } catch (error) {
+                console.error('Error loading meetings:', error);
+                displayDocuments([]);
+            }
         }
 
         function loadStats() {
@@ -2782,6 +2951,17 @@
                         console.log('Parsed response:', data);
                         
                         if (data.success) {
+                            // Remove the meeting from currentMeetings array
+                            const meetingIndex = currentMeetings.findIndex(m => m.id == id);
+                            if (meetingIndex !== -1) {
+                                currentMeetings.splice(meetingIndex, 1);
+                                console.log('Removed meeting from currentMeetings array');
+                            }
+                            
+                            // Refresh the calendar display
+                            renderSchedule();
+                            renderMiniCalendar();
+                            
                             alert('Meeting moved to trash successfully!');
                             // Immediately remove the meeting row from the table
                             const meetingRow = document.querySelector(`tr[data-meeting-id="${id}"]`);
@@ -2795,12 +2975,6 @@
                                         meetingRow.parentNode.removeChild(meetingRow);
                                     }
                                 }, 300);
-                            }
-                            
-                            // Remove from currentMeetings array
-                            const meetingIndex = currentMeetings.findIndex(meeting => meeting.id == id);
-                            if (meetingIndex !== -1) {
-                                currentMeetings.splice(meetingIndex, 1);
                             }
                             
                             // Update reminders
@@ -2873,6 +3047,17 @@
                 console.log('Delete response data:', data);
                 console.log('Delete response message:', data.message);
                 if (data.success) {
+                    // Remove the meeting from currentMeetings array
+                    const meetingIndex = currentMeetings.findIndex(m => m.id == id);
+                    if (meetingIndex !== -1) {
+                        currentMeetings.splice(meetingIndex, 1);
+                        console.log('Removed meeting from currentMeetings array');
+                    }
+                    
+                    // Refresh the calendar display
+                    renderSchedule();
+                    renderMiniCalendar();
+                    
                     // Update trash count and reminders
                     loadTrashCount(); // Update trash count
                     updateReminders(); // Update reminders after deletion
@@ -2914,27 +3099,55 @@
 
         // Trash bin functions
         function loadTrashMeetings() {
+            console.log('Loading trash meetings from API...');
             fetch('api/scheduler.php?action=get_trash')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Trash API response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.success) {
+                    console.log('Trash API response data:', data);
+                    if (data.success && Array.isArray(data.meetings)) {
                         currentTrashMeetings = data.meetings;
                         displayTrashMeetings(data.meetings);
                         updateTrashCount(data.meetings.length);
+                        console.log(`Successfully loaded ${data.meetings.length} trash meetings`);
                     } else {
-                        console.error('Error loading trash meetings:', data.message);
+                        console.error('Trash API returned invalid data:', data);
                         displayTrashMeetings([]);
                         updateTrashCount(0);
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading trash meetings:', error);
+                    console.error('Error loading trash meetings from API:', error);
+                    // Fallback to PHP data if API fails
+                    try {
+                const trashData = <?php echo json_encode($trashData); ?>;
+                        console.log('Using fallback PHP trash data:', trashData);
+                
+                if (Array.isArray(trashData)) {
+                    currentTrashMeetings = trashData;
+                    displayTrashMeetings(trashData);
+                    updateTrashCount(trashData.length);
+                            console.log(`Fallback: Loaded ${trashData.length} trash meetings from PHP data`);
+                } else {
+                            console.log('Fallback: No valid trash data found');
                     displayTrashMeetings([]);
                     updateTrashCount(0);
+                }
+                    } catch (fallbackError) {
+                        console.error('Fallback also failed:', fallbackError);
+                displayTrashMeetings([]);
+                updateTrashCount(0);
+            }
                 });
         }
 
         function updateTrashCount(count) {
+            // Update the original badge (in actions dropdown)
             const badge = document.getElementById('trash-count-badge');
             if (badge) {
                 if (count > 0) {
@@ -2944,26 +3157,68 @@
                     badge.classList.add('hidden');
                 }
             }
+            
+            // Update the main trash bin button badge
+            const mainBadge = document.getElementById('trash-count-badge-main');
+            if (mainBadge) {
+                if (count > 0) {
+                    mainBadge.textContent = count;
+                    mainBadge.classList.remove('hidden');
+                } else {
+                    mainBadge.classList.add('hidden');
+                }
+            }
         }
 
         function loadTrashCount() {
+            console.log('Loading trash count from API...');
             fetch('api/scheduler.php?action=get_trash')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Trash count API response status:', response.status);
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.success) {
+                    console.log('Trash count API response data:', data);
+                    if (data.success && Array.isArray(data.meetings)) {
                         updateTrashCount(data.meetings.length);
                     } else {
+                        console.error('Trash count API returned invalid data:', data);
                         updateTrashCount(0);
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading trash count:', error);
+                    console.error('Error loading trash count from API:', error);
+                    // Fallback to PHP data if API fails
+                    try {
+                        const trashData = <?php echo json_encode($trashData); ?>;
+                        if (Array.isArray(trashData)) {
+                            updateTrashCount(trashData.length);
+                        } else {
                     updateTrashCount(0);
+                        }
+                    } catch (fallbackError) {
+                        console.error('Fallback also failed:', fallbackError);
+                        updateTrashCount(0);
+                    }
                 });
         }
 
         function displayTrashMeetings(meetings) {
             const container = document.getElementById('trash-container');
+            
+            if (!container) {
+                console.error('Trash container element not found');
+                return;
+            }
+            
+            // Ensure meetings is an array
+            if (!Array.isArray(meetings)) {
+                console.warn('displayTrashMeetings received non-array data:', meetings);
+                meetings = [];
+            }
+            
+            console.log(`Displaying ${meetings.length} trash meetings`);
+            
             
             // Add search, filter, and sort controls
             let controlsHTML = `
@@ -3030,19 +3285,20 @@
             
             let tableHTML = `<div class="overflow-x-auto">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <table class="min-w-full">
+                    <table class="w-full table-auto">
                         <thead>
                             <tr class="bg-gray-50 border-b border-gray-200">
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-3 sm:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <div class="flex items-center">
                                         <input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll()" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                         </svg>
-                                        Meeting Title
+                                        <span class="hidden sm:inline">Meeting Title</span>
+                                        <span class="sm:hidden">Title</span>
                                     </div>
                                 </th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-3 sm:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                                     <div class="flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -3050,7 +3306,7 @@
                                         Date & Time
                                     </div>
                                 </th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-3 sm:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                                     <div class="flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -3058,7 +3314,7 @@
                                         Deleted At
                                     </div>
                                 </th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-3 sm:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                                     <div class="flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -3066,7 +3322,7 @@
                                         Deleted By
                                     </div>
                                 </th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-3 sm:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                                     <div class="flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
@@ -3074,7 +3330,7 @@
                                         Type
                                     </div>
                                 </th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-3 sm:px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <div class="flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
@@ -3108,10 +3364,14 @@
                     let colorIndicator = '';
                     
                     try {
-                        if (meeting.meeting_date) {
-                            const meetingDate = new Date(meeting.meeting_date);
-                            if (!isNaN(meetingDate.getTime())) {
-                                formattedDate = meetingDate.toLocaleDateString('en-US', { 
+                        // Handle both meeting_date/meeting_time and date/time field names
+                        const meetingDate = meeting.meeting_date || meeting.date;
+                        const meetingTime = meeting.meeting_time || meeting.time;
+                        
+                        if (meetingDate) {
+                            const dateObj = new Date(meetingDate);
+                            if (!isNaN(dateObj.getTime())) {
+                                formattedDate = dateObj.toLocaleDateString('en-US', { 
                                     year: 'numeric', 
                                     month: 'short', 
                                     day: 'numeric' 
@@ -3119,8 +3379,8 @@
                             }
                         }
                         
-                        if (meeting.meeting_time) {
-                            const timeStr = meeting.meeting_time;
+                        if (meetingTime) {
+                            const timeStr = meetingTime;
                             const timeParts = timeStr.split(':');
                             if (timeParts.length >= 2) {
                                 const hours = parseInt(timeParts[0]);
@@ -3188,57 +3448,58 @@
                     const description = meeting.description || 'No description available';
                     const truncatedDescription = description.length > 50 ? description.substring(0, 50) + '...' : description;
                     
-                    return `<tr class="hover:bg-gray-50 transition-colors" data-meeting-id="${meeting.id}" data-meeting-title="${meeting.title || ''}" data-meeting-date="${meeting.meeting_date || ''}" data-meeting-month="${new Date(meeting.meeting_date).getMonth() + 1}" data-meeting-year="${new Date(meeting.meeting_date).getFullYear()}">
-                        <td class="px-6 py-4 whitespace-nowrap">
+                    return `<tr class="hover:bg-gray-50 transition-colors" data-meeting-id="${meeting.id}" data-meeting-title="${meeting.title || ''}" data-meeting-date="${meeting.meeting_date || meeting.date || ''}" data-meeting-month="${new Date(meeting.meeting_date || meeting.date || new Date()).getMonth() + 1}" data-meeting-year="${new Date(meeting.meeting_date || meeting.date || new Date()).getFullYear()}">
+                        <td class="px-3 sm:px-6 py-4">
                             <div class="flex items-center">
                                 <input type="checkbox" class="meeting-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-3" data-meeting-id="${meeting.id}" onchange="updateBulkActionButtons()">
-                                <div class="flex-shrink-0 h-10 w-10">
-                                    <div class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10">
+                                    <div class="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-red-100 flex items-center justify-center">
+                                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                         </svg>
                                     </div>
                                 </div>
-                                <div class="ml-4 flex-1">
+                                <div class="ml-2 sm:ml-4 flex-1 min-w-0">
                                     <div class="flex items-center">
                                         ${colorIndicator}
-                                        <button onclick="showTrashMeetingDetails(${meeting.id})" class="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left">
+                                        <button onclick="showTrashMeetingDetails(${meeting.id})" class="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left truncate">
                                             ${meeting.title || 'Untitled Meeting'}
                                         </button>
                                     </div>
-                                    <div class="text-sm text-gray-500">Original ID: ${meeting.original_id}</div>
-                                    <div class="text-xs text-gray-400 mt-1" title="${description}">${truncatedDescription}</div>
+                                    <div class="text-xs sm:text-sm text-gray-500">ID: ${meeting.original_id}</div>
+                                    <div class="text-xs text-gray-400 mt-1 truncate" title="${description}">${truncatedDescription}</div>
+                                    <div class="sm:hidden text-xs text-gray-500 mt-1">${formattedDate} ${formattedTime}</div>
                                     ${timeUntilPermanent ? `<div class="text-xs text-orange-600 mt-1">${timeUntilPermanent}</div>` : ''}
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
                             <div class="text-sm text-gray-900 font-medium">${formattedDate}</div>
                             <div class="text-sm text-gray-500">${formattedTime}</div>
                             ${meeting.is_all_day == '1' ? '<div class="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full inline-block mt-1">All Day</div>' : ''}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                             <div class="text-sm text-gray-900">${formattedDeletedAt}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-3 sm:px-6 py-4 whitespace-nowrap hidden xl:table-cell">
                             <div class="text-sm text-gray-900">${meeting.deleted_by || 'System'}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                             <div class="text-sm text-gray-900">${eventType}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div class="flex space-x-3">
-                                <button onclick="showRestoreConfirmModal(${meeting.id}, '${(meeting.title || 'Untitled Meeting').replace(/'/g, "\\'")}')" class="text-green-600 hover:text-green-900 font-medium flex items-center" title="Restore Meeting">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex space-x-1 sm:space-x-3">
+                                <button onclick="showRestoreConfirmModal(${meeting.id}, '${(meeting.title || 'Untitled Meeting').replace(/'/g, "\\'")}')" class="text-green-600 hover:text-green-900 font-medium flex items-center text-xs sm:text-sm" title="Restore Meeting">
+                                    <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"></path>
                                     </svg>
-                                    Restore
+                                    <span class="hidden sm:inline">Restore</span>
                                 </button>
-                                <button onclick="showDeleteConfirmModal(${meeting.id}, '${(meeting.title || 'Untitled Meeting').replace(/'/g, "\\'")}')" class="text-red-600 hover:text-red-900 font-medium flex items-center" title="Permanently Delete">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <button onclick="showDeleteConfirmModal(${meeting.id}, '${(meeting.title || 'Untitled Meeting').replace(/'/g, "\\'")}')" class="text-red-600 hover:text-red-900 font-medium flex items-center text-xs sm:text-sm" title="Permanently Delete">
+                                    <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                     </svg>
-                                    Delete
+                                    <span class="hidden sm:inline">Delete</span>
                                 </button>
                             </div>
                         </td>
@@ -3246,7 +3507,7 @@
                 }).join('');
             }
             tableHTML += `</tbody></table></div></div>`;
-
+            
             container.innerHTML = controlsHTML + tableHTML;
             
             // Store meetings data for filtering/sorting
@@ -3265,10 +3526,33 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Find the restored meeting in trash and add it back to currentMeetings
+                    const restoredMeeting = currentTrashMeetings.find(m => m.id == trashId);
+                    if (restoredMeeting) {
+                        // Remove from trash array
+                        currentTrashMeetings = currentTrashMeetings.filter(m => m.id != trashId);
+                        
+                        // Add back to currentMeetings
+                        const meetingToRestore = {
+                            ...restoredMeeting,
+                            type: 'meeting',
+                            color: restoredMeeting.color || 'blue',
+                            startTime: restoredMeeting.meeting_time || restoredMeeting.time,
+                            endTime: restoredMeeting.end_time || calculateEndTime(restoredMeeting.meeting_time || restoredMeeting.time, 60),
+                            date: restoredMeeting.meeting_date || restoredMeeting.date,
+                            dateEnd: restoredMeeting.end_date || restoredMeeting.meeting_date || restoredMeeting.date
+                        };
+                        currentMeetings.push(meetingToRestore);
+                        
+                        // Refresh displays
+                        renderSchedule();
+                        renderMiniCalendar();
+                        updateReminders();
+                    }
+                    
                     loadTrashMeetings();
                     loadDocuments();
                     loadStats();
-                    loadMeetings();
                     loadTrashCount(); // Update trash count
                     if (window.lilacNotifications) {
                         window.lilacNotifications.success('Meeting restored successfully!');
@@ -3333,14 +3617,9 @@
         function emptyTrash() {
             const message = 'Are you sure you want to empty the trash? This will permanently delete all meetings in the trash and cannot be undone.';
             
-            // Show bulk confirmation dialog
-            showBulkConfirmDialog(
-                'Empty Trash',
-                message,
-                () => {
-                    performEmptyTrash();
-                }
-            );
+            showBulkConfirmDialog('Empty Trash', message, function() {
+                performEmptyTrash();
+            });
         }
 
         function performEmptyTrash() {
@@ -3425,14 +3704,10 @@
                 return;
             }
 
-            // Show bulk confirmation dialog
-            showBulkConfirmDialog(
-                'Restore Meetings',
-                `Are you sure you want to restore ${selectedIds.length} meeting${selectedIds.length > 1 ? 's' : ''}?`,
-                () => {
-                    performBulkRestore(selectedIds);
-                }
-            );
+            const message = `Are you sure you want to restore ${selectedIds.length} meeting${selectedIds.length > 1 ? 's' : ''}?`;
+            showBulkConfirmDialog('Restore Meetings', message, function() {
+                performBulkRestore(selectedIds);
+            });
         }
 
         function performBulkRestore(meetingIds) {
@@ -3447,10 +3722,33 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Find and restore all selected meetings
+                    const restoredMeetings = currentTrashMeetings.filter(m => meetingIds.includes(m.id));
+                    restoredMeetings.forEach(restoredMeeting => {
+                        // Remove from trash array
+                        currentTrashMeetings = currentTrashMeetings.filter(m => m.id != restoredMeeting.id);
+                        
+                        // Add back to currentMeetings
+                        const meetingToRestore = {
+                            ...restoredMeeting,
+                            type: 'meeting',
+                            color: restoredMeeting.color || 'blue',
+                            startTime: restoredMeeting.meeting_time || restoredMeeting.time,
+                            endTime: restoredMeeting.end_time || calculateEndTime(restoredMeeting.meeting_time || restoredMeeting.time, 60),
+                            date: restoredMeeting.meeting_date || restoredMeeting.date,
+                            dateEnd: restoredMeeting.end_date || restoredMeeting.meeting_date || restoredMeeting.date
+                        };
+                        currentMeetings.push(meetingToRestore);
+                    });
+                    
+                    // Refresh displays
+                    renderSchedule();
+                    renderMiniCalendar();
+                    updateReminders();
+                    
                     loadTrashMeetings();
                     loadDocuments();
                     loadStats();
-                    loadMeetings();
                     loadTrashCount();
                     if (window.lilacNotifications) {
                         window.lilacNotifications.success(`${meetingIds.length} meeting${meetingIds.length > 1 ? 's' : ''} restored successfully!`);
@@ -3490,15 +3788,11 @@
                 return;
             }
 
-            // Show bulk confirmation dialog
-            showBulkConfirmDialog(
-                'Permanently Delete',
-                `Are you sure you want to permanently delete ${selectedIds.length} meeting${selectedIds.length > 1 ? 's' : ''}? This action cannot be undone.`,
-                () => {
-                    console.log('User confirmed bulk delete');
-                    performBulkDelete(selectedIds);
-                }
-            );
+            const message = `Are you sure you want to permanently delete ${selectedIds.length} meeting${selectedIds.length > 1 ? 's' : ''}? This action cannot be undone.`;
+            showBulkConfirmDialog('Delete Meetings', message, function() {
+                console.log('User confirmed bulk delete');
+                performBulkDelete(selectedIds);
+            });
         }
 
         function showBulkConfirmDialog(title, message, onConfirm) {
@@ -3512,30 +3806,42 @@
             titleElement.textContent = title;
             messageElement.textContent = message;
             
+            // Store the callback globally to avoid security issues
+            window.bulkConfirmCallback = onConfirm;
+            
             // Show the dialog
             dialog.classList.remove('hidden');
             
-            // Handle confirm button click
-            confirmBtn.onclick = function() {
-                console.log('Bulk confirm button clicked');
-                dialog.classList.add('hidden');
-                if (onConfirm) {
-                    onConfirm();
-                }
-            };
+            // Handle confirm button click - use direct function call
+            confirmBtn.onclick = handleBulkConfirm;
             
             // Handle cancel button click
-            cancelBtn.onclick = function() {
-                console.log('Bulk cancel button clicked');
-                dialog.classList.add('hidden');
-            };
+            cancelBtn.onclick = handleBulkCancel;
             
             // Handle clicking outside the dialog
             dialog.onclick = function(e) {
                 if (e.target === dialog) {
-                    dialog.classList.add('hidden');
+                    handleBulkCancel();
                 }
             };
+        }
+
+        function handleBulkConfirm() {
+            console.log('Bulk confirm button clicked');
+            const dialog = document.getElementById('bulk-confirm-dialog');
+            dialog.classList.add('hidden');
+            
+            if (window.bulkConfirmCallback) {
+                window.bulkConfirmCallback();
+                window.bulkConfirmCallback = null;
+            }
+        }
+
+        function handleBulkCancel() {
+            console.log('Bulk cancel button clicked');
+            const dialog = document.getElementById('bulk-confirm-dialog');
+            dialog.classList.add('hidden');
+            window.bulkConfirmCallback = null;
         }
 
         function performBulkDelete(meetingIds) {
@@ -3762,7 +4068,7 @@
                     {
                         text: 'Restore',
                         class: 'bg-green-600 hover:bg-green-700',
-                        onClick: () => {
+                        onClick: function() {
                             showRestoreConfirmModal(meeting.id, meeting.title || 'Untitled Meeting');
                         }
                     },
@@ -3779,29 +4085,35 @@
         function showRestoreConfirmModal(meetingId, meetingTitle) {
             const message = `Are you sure you want to restore "${meetingTitle}"? This will move it back to your calendar.`;
             
-            if (window.lilacNotifications && window.lilacNotifications.confirm) {
-                window.lilacNotifications.confirm(message, () => {
-                    restoreMeeting(meetingId);
-                });
-            } else {
-                if (confirm(message)) {
-                    restoreMeeting(meetingId);
+            // Store the meeting data globally to avoid callback issues
+            window.pendingRestoreMeeting = {
+                id: meetingId,
+                title: meetingTitle
+            };
+            
+            showBulkConfirmDialog('Restore Meeting', message, function() {
+                if (window.pendingRestoreMeeting) {
+                    restoreMeeting(window.pendingRestoreMeeting.id);
+                    window.pendingRestoreMeeting = null;
                 }
-            }
+            });
         }
 
         function showDeleteConfirmModal(meetingId, meetingTitle) {
             const message = `Are you sure you want to permanently delete "${meetingTitle}"? This action cannot be undone.`;
             
-            if (window.lilacNotifications && window.lilacNotifications.confirm) {
-                window.lilacNotifications.confirm(message, () => {
-                    permanentlyDeleteMeeting(meetingId, meetingTitle);
-                });
-            } else {
-                if (confirm(message)) {
-                    permanentlyDeleteMeeting(meetingId, meetingTitle);
+            // Store the meeting data globally to avoid callback issues
+            window.pendingDeleteMeeting = {
+                id: meetingId,
+                title: meetingTitle
+            };
+            
+            showBulkConfirmDialog('Delete Meeting', message, function() {
+                if (window.pendingDeleteMeeting) {
+                    permanentlyDeleteMeeting(window.pendingDeleteMeeting.id, window.pendingDeleteMeeting.title);
+                    window.pendingDeleteMeeting = null;
                 }
-            }
+            });
         }
 
         // Calendar date selection function
@@ -3901,8 +4213,54 @@
 	<!-- Sidebar -->
 	<?php include 'includes/sidebar.php'; ?>
 
+    <!-- Custom Scrollbar Styles -->
+    <style>
+        .trash-modal-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #64748b #f1f5f9;
+        }
+        .trash-modal-scroll::-webkit-scrollbar {
+            width: 14px;
+        }
+        .trash-modal-scroll::-webkit-scrollbar-track {
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin: 4px;
+        }
+        .trash-modal-scroll::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 8px;
+            border: 2px solid #f8fafc;
+            min-height: 40px;
+        }
+        .trash-modal-scroll::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .trash-modal-scroll::-webkit-scrollbar-thumb:active {
+            background: #334155;
+        }
+        .trash-modal-scroll::-webkit-scrollbar-corner {
+            background: #f8fafc;
+        }
+    </style>
+
     <!-- Main Content -->
     <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
+        
+        <!-- Trash Bin Button -->
+        <div class="mb-4 flex justify-end">
+            <button id="trash-bin-btn-main" onclick="openTrashBin()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2 relative">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                <span>Trash Bin</span>
+                <!-- Trash Count Badge -->
+                <div id="trash-count-badge-main" class="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold hidden">
+                    0
+                </div>
+            </button>
+        </div>
 
 
 
@@ -4077,50 +4435,60 @@
             </div>
         </div>
 
-        <!-- Trash Bin View -->
-        <div id="trash-view" class="space-y-6" style="display: none;">
-            <!-- Trash Header -->
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center space-x-4">
-                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Trash Bin</h2>
-                    <span class="text-lg text-gray-600 dark:text-gray-300">Deleted meetings can be restored or permanently deleted</span>
-                </div>
-                
-                <!-- Bulk Actions Buttons -->
-                <div class="flex items-center space-x-3">
-                    <button id="restore-all-btn" onclick="restoreAllSelected()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center space-x-2" style="display: none;">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"></path>
-                        </svg>
-                        <span>Restore All</span>
-                    </button>
-                    
-                    <button id="delete-all-btn" onclick="deleteAllSelected()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center space-x-2" style="display: none;">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                        <span>Delete</span>
-                    </button>
-                    
-                    <!-- Empty Trash Button -->
-                    <button onclick="emptyTrash()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center space-x-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                        <span>Empty Trash</span>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Trash Meetings Section -->
-            <div class="bg-white dark:bg-[#2a2f3a] p-6 rounded-lg shadow">
-                <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">Deleted Meetings</h3>
-                <div id="trash-container" class="space-y-4">
-                    <!-- Trash meetings will be inserted here by JavaScript -->
+        <!-- Trash Bin Modal -->
+        <div id="trash-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[9999] hidden">
+            <div class="flex items-center justify-center min-h-screen p-2 sm:p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+                    <!-- Modal Content -->
+                    <div class="flex-1 overflow-y-auto trash-modal-scroll" style="scroll-behavior: smooth;">
+                        <div class="p-4 sm:p-6">
+                            <!-- Trash Meetings Section -->
+                            <div class="bg-white p-6 rounded-lg shadow">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-xl font-bold text-gray-900">Deleted Meetings</h3>
+                                    <div class="flex items-center space-x-3">
+                                        <button onclick="emptyTrash()" class="bg-red-800 text-white px-4 py-2 rounded-lg hover:bg-red-900 transition-colors font-medium flex items-center space-x-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                            <span>Empty Trash</span>
+                                        </button>
+                                        <button onclick="hideTrashModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Bulk Actions Buttons -->
+                                <div class="mb-4">
+                                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                        <button id="restore-all-btn" onclick="restoreAllSelected()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center space-x-2" style="display: none;">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"></path>
+                                            </svg>
+                                            <span>Restore All</span>
+                                        </button>
+                                        
+                                        <button id="delete-all-btn" onclick="deleteAllSelected()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center space-x-2" style="display: none;">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                            <span>Delete</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div id="trash-container" class="space-y-4">
+                                    <!-- Trash meetings will be inserted here by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
@@ -4324,7 +4692,7 @@
     </div>
 
     <!-- Custom Confirmation Dialog for Event Details -->
-    <div id="custom-confirm-dialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] hidden">
+    <div id="custom-confirm-dialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] hidden">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
             <!-- Dialog Header -->
             <div class="flex items-center p-6 border-b border-gray-200 dark:border-gray-700">
@@ -4359,7 +4727,7 @@
     </div>
 
     <!-- Bulk Action Confirmation Dialog -->
-    <div id="bulk-confirm-dialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] hidden">
+    <div id="bulk-confirm-dialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] hidden">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
             <!-- Dialog Header -->
             <div class="flex items-center p-6 border-b border-gray-200 dark:border-gray-700">

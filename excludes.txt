@@ -1,9 +1,0 @@
-*.bat
-excludes.txt
-.git
-.gitignore
-*.md
-install.bat
-start-lilac-simple.bat
-setup-lilac.bat
-INSTALL-LILAC.bat 

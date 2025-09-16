@@ -1,7 +1,7 @@
 <!-- Mobile backdrop/overlay -->
 <div id="sidebar-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-[60] hidden lg:hidden"></div>
 
-<div id="sidebar" class="sidebar fixed top-0 left-0 w-64 h-screen bg-gradient-to-b from-blue-500 to-purple-600 text-white transition-transform duration-300 ease-in-out z-[70] flex flex-col shadow-2xl rounded-r-2xl -translate-x-full">
+<div id="sidebar" class="sidebar fixed top-0 left-0 w-64 h-screen bg-gradient-to-b from-blue-500 to-purple-600 text-white transition-transform duration-300 ease-in-out z-[70] flex flex-col shadow-2xl rounded-r-2xl translate-x-0">
            <div class="h-20 px-6 py-4 flex items-center justify-between">
          <div class="flex items-center justify-center flex-1">
              <img src="img/cpu-logo.png" alt="CPU Logo" class="w-12 h-12 object-contain cursor-pointer hover:scale-105 transition-transform duration-200" onclick="location.reload()"/>
@@ -162,9 +162,9 @@ window.LILACSidebar = {
         requestAnimationFrame(() => {
             // Apply sidebar visibility - always respect the isOpen state
             if (this.isOpen) {
-                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.remove('translate-x-0');
             } else {
-                sidebar.classList.add('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
             }
             
             // Handle backdrop (only on mobile)

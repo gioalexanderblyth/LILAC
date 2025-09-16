@@ -1,37 +1,37 @@
-﻿<?php
+<?php
 // Load dashboard data directly from database
 require_once 'config/database.php';
 
 function loadDashboardData() {
     try {
-        $db = new Database();
-        $conn = $db->getConnection();
+         = new Database();
+         = ->getConnection();
         
         // Get events count
-        $upcomingStmt = $conn->query("SELECT COUNT(*) as count FROM central_events WHERE status = 'upcoming'");
-        $upcomingEvents = $upcomingStmt->fetch()['count'];
+         = ->query("SELECT COUNT(*) as count FROM central_events WHERE status = 'upcoming'");
+         = ->fetch()['count'];
         
-        $completedStmt = $conn->query("SELECT COUNT(*) as count FROM central_events WHERE status = 'completed'");
-        $completedEvents = $completedStmt->fetch()['count'];
+         = ->query("SELECT COUNT(*) as count FROM central_events WHERE status = 'completed'");
+         = ->fetch()['count'];
         
         // Get documents count
-        $documentsStmt = $conn->query("SELECT COUNT(*) as count FROM enhanced_documents");
-        $documents = $documentsStmt->fetch()['count'];
+         = ->query("SELECT COUNT(*) as count FROM enhanced_documents");
+         = ->fetch()['count'];
         
         // Get awards count
-        $awardsStmt = $conn->query("SELECT COUNT(*) as count FROM awards");
-        $awards = $awardsStmt->fetch()['count'];
+         = ->query("SELECT COUNT(*) as count FROM awards");
+         = ->fetch()['count'];
         
         return [
             'success' => true,
             'data' => [
-                'upcoming_events' => $upcomingEvents,
-                'completed_events' => $completedEvents,
-                'documents' => $documents,
-                'awards' => $awards
+                'upcoming_events' => ,
+                'completed_events' => ,
+                'documents' => ,
+                'awards' => 
             ]
         ];
-    } catch (Exception $e) {
+    } catch (Exception ) {
         return [
             'success' => false,
             'data' => [
@@ -40,12 +40,12 @@ function loadDashboardData() {
                 'documents' => 0,
                 'awards' => 0
             ],
-            'error' => $e->getMessage()
+            'error' => ->getMessage()
         ];
     }
 }
 
-$dashboardData = loadDashboardData();
+ = loadDashboardData();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -200,7 +200,7 @@ $dashboardData = loadDashboardData();
         
         function loadDashboardData() {
             // Update counters with PHP data
-            const data = <?php echo json_encode($dashboardData['data']); ?>;
+            const data = <?php echo json_encode(['data']); ?>;
             
             const upcomingElement = document.getElementById('upcoming-events-count');
             const completedElement = document.getElementById('completed-events-count');

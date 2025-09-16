@@ -1,17 +1,6 @@
 {
-    "auto_id": 41,
+    "auto_id": 42,
     "documents": [
-        {
-            "id": 38,
-            "document_name": "KUMA-MOU",
-            "filename": "doc_68bb26295a0694.20330205.pdf",
-            "original_filename": "KUMA-MOU.pdf",
-            "file_size": 1086818,
-            "category": "MOUs & MOAs",
-            "description": "",
-            "upload_date": "2025-09-05 20:04:25",
-            "status": "Active"
-        },
         {
             "id": 39,
             "document_name": "ADMISSION-FORM-FOR-FOREIGN-STUDENT-2024-2",
@@ -35,48 +24,5 @@
             "status": "Active"
         }
     ],
-    "trash": [
-        {
-            "id": 32,
-            "document_name": "Drivers License",
-            "filename": "doc_68c067c4876eb8.84726999.jpg",
-            "original_filename": "Drivers_License.jpg",
-            "file_size": 45304,
-            "category": "",
-            "description": "",
-            "upload_date": "2025-09-09 19:45:40",
-            "status": "Active",
-            "ocr_text": "REPUBLIC OF THE PHILIPPINES NG &\r\npb | DEPARTMENT OF TRANSPORTATION &\r\nLAND TRANSPORTATION OFFICE O 3\r\nDRIVER'S LICENSE 2\r\nLast Name. First Mame. Middle Name =\r\nPATRICIO, CHRISJANF JOY MARCELINO 7\r\nNationality ~ Sex Date of Birth Weight (kg) Weight(m) El\r\n< PHL F 2001\/04\/20 71 1,60 =\r\na pi =\r\n. --, JIBAO-AN, PAVIA, ILOILO, REGION 6 =\r\nLicense No. Expwatan Date Agency Code\r\nF03-23-000121 2027\/04\/20  Fo3 ;\r\n\u00a2 8io0d 1 Eyes Color \u00a3\r\n2030s BT Back a 5 =\r\no OL Codes Conditions 7 Bid E\r\n77 ? - had afb imo von EE\r\nSignature of Licensee Asslgdnt S\u00e9oretary z\r\n5 eae EE A\r\n",
-            "original_id": 26,
-            "deleted_at": "2025-09-12T08:49:14+02:00"
-        },
-        {
-            "id": 36,
-            "document_name": "Drivers License (1)",
-            "filename": "doc_68c06db6e0dca6.34960612.jpg",
-            "original_filename": "Drivers_License.jpg",
-            "file_size": 45304,
-            "category": "",
-            "description": "",
-            "upload_date": "2025-09-09 20:11:02",
-            "status": "Active",
-            "ocr_text": "REPUBLIC OF THE PHILIPPINES NG &\r\npb | DEPARTMENT OF TRANSPORTATION &\r\nLAND TRANSPORTATION OFFICE O 3\r\nDRIVER'S LICENSE 2\r\nLast Name. First Mame. Middle Name =\r\nPATRICIO, CHRISJANF JOY MARCELINO 7\r\nNationality ~ Sex Date of Birth Weight (kg) Weight(m) El\r\n< PHL F 2001\/04\/20 71 1,60 =\r\na pi =\r\n. --, JIBAO-AN, PAVIA, ILOILO, REGION 6 =\r\nLicense No. Expwatan Date Agency Code\r\nF03-23-000121 2027\/04\/20  Fo3 ;\r\n\u00a2 8io0d 1 Eyes Color \u00a3\r\n2030s BT Back a 5 =\r\no OL Codes Conditions 7 Bid E\r\n77 ? - had afb imo von EE\r\nSignature of Licensee Asslgdnt S\u00e9oretary z\r\n5 eae EE A\r\n",
-            "original_id": 27,
-            "deleted_at": "2025-09-12T08:50:21+02:00"
-        },
-        {
-            "id": 37,
-            "document_name": "Drivers License",
-            "filename": "doc_68c06d2f737c40.92788394.jpg",
-            "original_filename": "Drivers_License.jpg",
-            "file_size": 45304,
-            "category": "",
-            "description": "",
-            "upload_date": "2025-09-09 20:08:47",
-            "status": "Active",
-            "ocr_text": "REPUBLIC OF THE PHILIPPINES NG &\r\npb | DEPARTMENT OF TRANSPORTATION &\r\nLAND TRANSPORTATION OFFICE O 3\r\nDRIVER'S LICENSE 2\r\nLast Name. First Mame. Middle Name =\r\nPATRICIO, CHRISJANF JOY MARCELINO 7\r\nNationality ~ Sex Date of Birth Weight (kg) Weight(m) El\r\n< PHL F 2001\/04\/20 71 1,60 =\r\na pi =\r\n. --, JIBAO-AN, PAVIA, ILOILO, REGION 6 =\r\nLicense No. Expwatan Date Agency Code\r\nF03-23-000121 2027\/04\/20  Fo3 ;\r\n\u00a2 8io0d 1 Eyes Color \u00a3\r\n2030s BT Back a 5 =\r\no OL Codes Conditions 7 Bid E\r\n77 ? - had afb imo von EE\r\nSignature of Licensee Asslgdnt S\u00e9oretary z\r\n5 eae EE A\r\n",
-            "original_id": 28,
-            "deleted_at": "2025-09-12T08:50:21+02:00"
-        }
-    ]
+    "trash": []
 }

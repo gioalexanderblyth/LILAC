@@ -1,5 +1,25 @@
 # LILAC System - Changelog
 
+## Version 1.1.1 - UI Improvements (2024-12-19)
+
+### ?? UI/UX Improvements
+
+#### Search Bar and Filter Button Removal
+- **Removed**: Search bar and filter button from main content area
+- **Issue**: Duplicate search functionality cluttering the interface
+- **Solution**: Removed the "Balanced Search + Filters" section below statistics
+- **Files Modified**: `mou-moa.php` - Removed duplicate search/filter elements
+- **Note**: Navbar search functionality remains intact
+
+#### Export Button Removal
+#### Export Button Removal
+- **Removed**: Export buttons from MOUs & MOAs page
+- **Issue**: Unwanted Export functionality cluttering the interface
+- **Solution**: Completely removed Export buttons and exportResults function
+- **Files Modified**: `mou-moa.php` - Removed Export buttons and related functionality
+
+---
+
 ## Version 1.1.0 - Critical Bug Fixes (2024-12-19)
 
 ### 🚨 Critical Issues Fixed

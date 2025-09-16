@@ -1224,9 +1224,95 @@ require_once 'classes/DateTimeUtility.php';
             <!-- Filter chips will be dynamically added here -->
         </div>
 
+        <!-- Export Button -->
+        <div class="flex justify-end mb-4">
+            <button id="export-results" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Export
+            </button>
+        </div>
+
+        <!-- Expiration Alerts Section -->
         <div id="expiration-alerts"></div>
 
 
+        <!-- Balanced Search + Filters -->
+        <div class="mb-4">
+            <div class="bg-white rounded-lg border border-gray-200 p-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 relative">
+                        <input type="text" id="search-mous" placeholder="Search MOUs..." class="w-64 md:w-96 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:border-cyan-500 focus:ring-0 text-gray-900 placeholder-gray-500">
+                        <div class="relative">
+                            <button id="filter-toggle" class="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50" onclick="toggleFiltersPanel(event)">Filter</button>
+                            <div id="filters-panel" class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-md shadow-lg p-3 hidden z-20">
+                                <div class="space-y-2">
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-700 mb-1">Status</label>
+                                        <select id="status-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
+                                            <option value="all">All Statuses</option>
+                                            <option value="Active">Active</option>
+                                            <option value="Expired">Expired</option>
+                                            <option value="Pending">Pending</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-700 mb-1">Agreement Type</label>
+                                        <select id="type-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
+                                            <option value="all">All Types</option>
+                                            <option value="MOU-Academic">Academic Partnership</option>
+                                            <option value="Student-Exchange">Student Exchange</option>
+                                            <option value="Research-Collaboration">Research</option>
+                                            <option value="International-MOU">International MOU</option>
+                                            <option value="Study-Abroad">Study Abroad</option>
+                                            <option value="Industry-Partnership">Industry Partnership</option>
+                                            <option value="Internship-Agreement">Internship</option>
+                                            <option value="MOU">General MOU</option>
+                                            <option value="MOA">General MOA</option>
+                                        </select>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-gray-700 mb-1">Date Range</label>
+                                            <select id="date-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
+                                                <option value="all">All Dates</option>
+                                                <option value="this-year">This Year</option>
+                                                <option value="last-year">Last Year</option>
+                                                <option value="expiring-soon">Expiring Soon</option>
+                                                <option value="expired">Expired</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-medium text-gray-700 mb-1">Sort By</label>
+                                            <select id="sort-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
+                                                <option value="date-desc">Newest First</option>
+                                                <option value="date-asc">Oldest First</option>
+                                                <option value="name-asc">A to Z</option>
+                                                <option value="name-desc">Z to A</option>
+                                                <option value="expiry-asc">Expiring Soon</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-1">
+                                        <button id="clear-filters" class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs hidden" onclick="clearAllFilters()">Clear Filters</button>
+                                        <button class="px-2.5 py-1.5 bg-black text-white rounded-md text-xs" onclick="toggleFiltersPanel(event)">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="export-results" aria-label="Export" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Export</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tag filter removed for now -->
 
         <!-- Enhanced MOUs Grid -->
         <div class="group relative">
@@ -1675,6 +1761,46 @@ require_once 'classes/DateTimeUtility.php';
             showNotification('All filters cleared', 'info');
         }
 
+        function exportResults() {
+            // Get current filtered results
+            const container = document.getElementById('mous-container');
+            const mouCards = container.querySelectorAll('.mou-card:not([style*="display: none"])');
+            
+            if (mouCards.length === 0) {
+                showNotification('No MOUs to export', 'warning');
+                return;
+            }
+
+            // Create CSV content
+            let csvContent = "Organization,Type,Status,Date Signed,End Date,Description\n";
+            
+            mouCards.forEach(card => {
+                const org = card.querySelector('.mou-organization')?.textContent || '';
+                const type = card.querySelector('.mou-type')?.textContent || '';
+                const status = card.querySelector('.mou-status')?.textContent || '';
+                const signed = card.querySelector('.signed-date')?.textContent || '';
+                const end = card.querySelector('.end-date')?.textContent || '';
+                const desc = card.querySelector('.mou-description')?.textContent || '';
+                
+                // Escape quotes and commas for CSV
+                const escape = (str) => `"${str.replace(/"/g, '""')}"`;
+                
+                csvContent += `${escape(org)},${escape(type)},${escape(status)},${escape(signed)},${escape(end)},${escape(desc)}\n`;
+            });
+
+            // Download CSV file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `MOUs_Export_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification(`Exported ${mouCards.length} MOUs`, 'success');
+        }
 
         function updateResultsCount() {
             const container = document.getElementById('mous-container');

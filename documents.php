@@ -1544,6 +1544,11 @@ require_once 'classes/DateTimeUtility.php';
         }
 
         function showErrorMessage(message) {
+            // Don't show network error notifications
+            if (message.includes('Network error') || message.includes('connection')) {
+                console.log('Network error suppressed:', message);
+                return;
+            }
             showNotification(message, 'error');
         }
 
@@ -1686,29 +1691,36 @@ require_once 'classes/DateTimeUtility.php';
         }
 
         function showUploadModal() {
-            const modal = document.createElement('div');
-            modal.id = 'upload-modal';
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
-            modal.addEventListener('click', function(e){ if (e.target === modal) modal.remove(); });
-            modal.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+            // Remove any existing modal
+            const existingModal = document.getElementById('upload-modal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Create modal with inline event handlers
+            const modalHTML = `
+                <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4" onclick="if(event.target === this) this.remove()">
+                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col">
                     <div class="flex items-center justify-between px-6 py-4 border-b">
                         <h3 class="text-lg font-semibold text-gray-900">File Upload</h3>
-                        <button type="button" class="text-gray-400 hover:text-gray-600" data-modal-close="upload-modal">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            <button type="button" onclick="document.getElementById('upload-modal').remove()" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
                         </button>
                     </div>
 
                     <div class="px-6 py-5 space-y-5 overflow-y-auto">
-                        <div id="drop-zone" class="border-2 border-dashed rounded-xl p-8 text-center bg-gray-50 border-gray-300">
+                            <div onclick="document.getElementById('single-file-input').click()" class="border-2 border-dashed rounded-xl p-8 text-center bg-gray-50 border-gray-300 cursor-pointer hover:bg-gray-100 transition-colors" style="cursor: pointer !important;">
                                                          <div class="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center bg-white shadow">
-                                 <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8"/></svg>
+                                    <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8"/>
+                                    </svg>
                              </div>
-                                                          <p class="text-sm font-medium text-gray-800 cursor-pointer" data-file-input="single-file-input">Click to Upload</p>
+                                <p class="text-sm font-medium text-gray-800">Click to Upload</p>
                              <p class="text-xs text-gray-500">or drag and drop</p>
-                             
                              <p class="text-[11px] text-gray-400 mt-1">Supports any kinds of document</p>
-                             <input id="single-file-input" type="file" multiple class="hidden" />
+                                <input id="single-file-input" type="file" multiple class="hidden" onchange="handleFileSelection(this.files)" />
                         </div>
 
                         <div id="upload-list" class="space-y-3"></div>
@@ -1739,325 +1751,170 @@ require_once 'classes/DateTimeUtility.php';
                     </div>
 
                     <div class="px-6 pb-6">
-                        <button id="begin-upload-btn" class="w-full bg-gray-800 text-white py-3 rounded-xl font-semibold disabled:opacity-50 hover:bg-gray-900 transition-colors" disabled>Upload</button>
+                            <button id="begin-upload-btn" onclick="handleUpload()" class="w-full bg-gray-800 text-white py-3 rounded-xl font-semibold disabled:opacity-50 hover:bg-gray-900 transition-colors" disabled>Upload</button>
+                        </div>
                     </div>
                 </div>
             `;
-            document.body.appendChild(modal);
 
-            const input = modal.querySelector('#single-file-input');
-            const dropZone = modal.querySelector('#drop-zone');
-            const list = modal.querySelector('#upload-list');
-            const uploadBtn = modal.querySelector('#begin-upload-btn');
+            // Insert modal
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-            let selectedFiles = [];
+            // Global variables for file handling
+            window.selectedFiles = [];
+            window.uploadList = document.getElementById('upload-list');
+            window.uploadBtn = document.getElementById('begin-upload-btn');
 
-            function resetList() {
-                list.innerHTML = '';
-                uploadBtn.disabled = selectedFiles.length === 0;
-            }
+            // Global function to handle file selection
+            window.handleFileSelection = function(files) {
+                console.log('Files selected:', files);
+                if (files && files.length > 0) {
+                    window.selectedFiles = Array.from(files);
+                    displaySelectedFiles();
+                    window.uploadBtn.disabled = false;
+                }
+            };
 
-            function makeRow(file, state, category = null) {
-                const id = 'row-' + Date.now();
-                const isUploading = state === 'uploading';
-                const isFailed = state === 'failed';
-                const isDone = state === 'done';
-                const row = document.createElement('div');
-                row.id = id;
-                row.className = 'bg-gray-50 rounded-xl px-4 py-3';
-                
-                // Category badge HTML
-                const categoryBadge = category ? `
-                    <div class="mt-1">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            📁 ${category}
-                        </span>
+            // Global function to display selected files
+            window.displaySelectedFiles = function() {
+                window.uploadList.innerHTML = '';
+                window.selectedFiles.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'bg-gray-50 rounded-lg p-3 flex items-center justify-between';
+                    fileItem.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
                     </div>
-                ` : '';
-                
-                row.innerHTML = `
-                    <div class="flex items-start justify-between">
-                        <div class="flex items-center gap-3 min-w-0 flex-1">
-                            <div class="min-w-0 flex-1">
-                                <p class="text-sm font-medium text-gray-900 truncate">${file.name}</p>
-                                ${categoryBadge}
-                                <div class="mt-1">
-                                    <div class="w-[420px] max-w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                        <div class="progress-bar h-full bg-gray-700 rounded-full transition-all duration-700 ease-out" data-progress="${isDone?100:isFailed?0:0}"></div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">${file.name}</p>
+                                <p class="text-xs text-gray-500">${Math.round(file.size / 1024)} KB</p>
                                     </div>
-                                    <div class="flex items-center gap-2 mt-1 text-xs">
-                                        <span class="text-gray-500">${Math.round(file.size/1024)}kb</span>
-                                        <span class="text-gray-400">${isUploading? 'Uploading...' : isFailed? '<span class=\'text-red-600\'>Upload Failed</span>' : isDone? '<span class=\'text-green-600\'>Completed</span>' : ''}</span>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 ml-3">
-                            <button class="text-gray-400 hover:text-red-600 transition-colors" title="Delete" data-act="delete">
+                        <button type="button" onclick="removeFileFromList(${index})" class="text-red-500 hover:text-red-700">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                             </button>
-                        </div>
-                    </div>`;
-                row.addEventListener('click', (e)=>{
-                    const act = e.target.closest('[data-act]')?.getAttribute('data-act');
-                    if (!act) return;
-                    if (act === 'delete') {
-                        // Remove the specific file from the list
-                        const fileName = e.target.closest('.bg-gray-50').querySelector('p').textContent;
-                        selectedFiles = selectedFiles.filter(f => f.name !== fileName);
-                        
-                        // Remove just this specific row instead of resetting the entire list
-                        const rowToRemove = e.target.closest('.bg-gray-50');
-                        if (rowToRemove) {
-                            rowToRemove.remove();
-                        }
-                        
-                        // Update upload button state
-                        uploadBtn.disabled = selectedFiles.length === 0;
-                    }
+                    `;
+                    window.uploadList.appendChild(fileItem);
                 });
-                return row;
-            }
+            };
 
-            async function setFiles(files) {
-                selectedFiles = Array.from(files);
-                resetList();
-                if (selectedFiles.length === 0) return;
-                
-                const autoCategorize = document.getElementById('auto-categorize')?.checked;
-                const statusElement = document.getElementById('categorization-status');
-                
-                if (autoCategorize && window.documentCategorizer) {
-                    statusElement.textContent = 'Analyzing files...';
-                    
-                    for (let i = 0; i < selectedFiles.length; i++) {
-                        const file = selectedFiles[i];
-                        let category = null;
-                        
-                        try {
-                            // Extract content and categorize
-                            const content = await window.documentCategorizer.extractContent(file);
-                            const result = await window.documentCategorizer.categorizeDocument(file, content);
-                            category = result.category;
-                            
-                            // Store category with file for later use
-                            file._category = category;
-                            file._confidence = result.confidence;
-                        } catch (error) {
-                            console.warn('Failed to categorize file:', file.name, error);
-                        }
-                        
-                        const row = makeRow(file, 'idle', category);
-                        list.appendChild(row);
-                        const bar = row.querySelector('.progress-bar');
-                        if (bar) {
-                            bar.style.width = '0%';
-                            requestAnimationFrame(() => {
-                                bar.style.width = '100%';
-                            });
-                        }
-                        
-                        // Update status
-                        statusElement.textContent = `Analyzed ${i + 1}/${selectedFiles.length} files`;
-                    }
-                    
-                    statusElement.textContent = 'Analysis complete';
-                } else {
-                    // No categorization, just add files normally
-                    selectedFiles.forEach((file, index) => {
-                        const row = makeRow(file, 'idle');
-                        list.appendChild(row);
-                        const bar = row.querySelector('.progress-bar');
-                        if (bar) {
-                            bar.style.width = '0%';
-                            requestAnimationFrame(() => {
-                                bar.style.width = '100%';
-                            });
-                        }
-                    });
+            // Global function to remove files
+            window.removeFileFromList = function(index) {
+                window.selectedFiles.splice(index, 1);
+                window.displaySelectedFiles();
+                if (window.selectedFiles.length === 0) {
+                    window.uploadBtn.disabled = true;
                 }
+            };
+
+            // Global function to handle upload
+            window.handleUpload = function() {
+                if (window.selectedFiles.length === 0) return;
                 
-                uploadBtn.disabled = false;
-            }
-
-                        input.addEventListener('change', async () => {
-                if (!input.files || input.files.length === 0) return;
-                await setFiles(input.files);
-            });
-
-            ;['dragover','dragleave','drop'].forEach(evt => {
-                dropZone.addEventListener(evt, e => {
-                    e.preventDefault();
-                    if (evt==='dragover') dropZone.classList.add('border-purple-500','bg-purple-50');
-                    if (evt!=='dragover') dropZone.classList.remove('border-purple-500','bg-purple-50');
-                    if (evt==='drop') {
-                        const files = e.dataTransfer.files;
-                        if (files && files.length > 0) {
-                            setFiles(files).catch(error => {
-                                console.error('Error setting files:', error);
-                            });
-                        }
-                    }
-                });
-            });
-
-            uploadBtn.addEventListener('click', () => {
-                if (selectedFiles.length === 0) return;
+                console.log('Starting upload for', window.selectedFiles.length, 'files');
                 
-                // Show uploading state for all files
-                list.innerHTML = '';
-                selectedFiles.forEach((file, index) => {
-                    const row = makeRow(file, 'uploading');
-                    row.id = `row-${index}`;
-                    list.appendChild(row);
-                    // Animate progress bar while uploading
-                    const bar = row.querySelector('.progress-bar');
-                    if (bar) {
-                        bar.style.width = '0%';
-                        let progress = 0;
-                        const step = () => {
-                            if (!document.getElementById(`row-${index}`)) return; // row removed
-                            progress = Math.min(progress + 4, 80);
-                            bar.style.width = progress + '%';
-                            if (progress < 80) {
-                                requestAnimationFrame(step);
-                            }
-                        };
-                        requestAnimationFrame(step);
-                    }
-                });
-
-                // Upload all files
+                window.uploadBtn.disabled = true;
+                window.uploadBtn.textContent = 'Uploading...';
+                
+                // Upload each file directly
                 let completedCount = 0;
                 let failedCount = 0;
                 
-                selectedFiles.forEach((file, index) => {
-                    uploadSingleFile(file, index, () => {
-                        // success
-                        const row = document.getElementById(`row-${index}`);
-                        if (row) {
-                            // Animate the violet progress bar to full
-                            const bar = row.querySelector('.progress-bar');
-                            if (bar) {
-                                requestAnimationFrame(() => {
-                                    bar.style.width = '100%';
-                                });
-                            }
-                            // Then switch row to completed state after animation
-                            bar.addEventListener('transitionend', () => {
-                                const currentRow = document.getElementById(`row-${index}`);
-                                if (currentRow) {
-                                    currentRow.innerHTML = makeRow(file, 'done').innerHTML;
-                                }
-                            }, { once: true });
-                        }
-                        completedCount++;
+                window.selectedFiles.forEach(async (file, index) => {
+                    try {
+                        console.log(`Uploading file ${index + 1}:`, file.name);
                         
-                        if (completedCount + failedCount === selectedFiles.length) {
-                            // All uploads completed
-                            uploadBtn.disabled = true;
-                            
-                            // Immediately add newly uploaded files to the display
-                            if (completedCount > 0) {
-                                // Add uploaded files directly to current documents list
-                                selectedFiles.forEach((file, index) => {
-                                    // Create a new document object for the uploaded file
-                                    const newDoc = {
-                                        id: Date.now() + index, // Temporary ID
-                                        document_name: file.name,
-                                        filename: file.name,
-                                        title: file.name,
-                                        file_size: file.size,
-                                        upload_date: new Date().toISOString(),
-                                        file_path: 'uploads/' + file.name,
-                                        type: file.type || 'application/octet-stream'
-                                    };
-                                    
-                                    // Add to current documents list
-                                    currentDocuments.unshift(newDoc); // Add to beginning
-                                    window.allDocuments.unshift(newDoc); // Add to global list
-                                    
-                                    // Add to existing file names set
-                                    existingFileNames.add(file.name.toLowerCase());
-                                });
-                                
-                                // Update the display immediately
-                                displayDocumentsByTime(currentDocuments);
-                                
-                                // Also refresh from server in background
-                                setTimeout(() => {
-                                    loadDocuments();
-                                    loadStats();
-                                }, 1000);
-                            }
-                            
-                            // Close modal after all uploads complete (regardless of success/failure)
-                            setTimeout(() => {
-                                const modal = document.getElementById('upload-modal');
-                                if (modal) {
-                                    modal.remove();
-                                }
-                            }, 1000);
+                        // Create FormData
+                        const formData = new FormData();
+                        formData.append('action', 'add');
+                        formData.append('file', file);
+                        
+                        // Generate document name
+                        let documentName = file.name.replace(/\.[^/.]+$/, "");
+                        formData.append('document_name', documentName);
+                        
+                        // Add award type if selected
+                        const awardTypeSelect = document.getElementById('award-type-select');
+                        if (awardTypeSelect && awardTypeSelect.value) {
+                            formData.append('award_type', awardTypeSelect.value);
                         }
-                    }, () => {
-                        // failed
-                        const row = document.getElementById(`row-${index}`);
-                        if (row) {
-                            row.innerHTML = makeRow(file, 'failed').innerHTML;
+                        
+                        // Add CSRF token
+                        const csrfToken = document.getElementById('csrf-token');
+                        if (csrfToken) {
+                            formData.append('csrf_token', csrfToken.value);
                         }
+                        
+                        // Upload to server
+                        const response = await fetch('api/documents.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const responseText = await response.text();
+                        console.log('Upload response:', responseText);
+                        
+                        let data;
+                        try {
+                            data = JSON.parse(responseText);
+                        } catch (e) {
+                            console.error('Failed to parse response:', e);
+                            throw new Error('Invalid response from server');
+                        }
+                        
+                        if (data && data.success) {
+                            completedCount++;
+                            console.log(`File ${index + 1} uploaded successfully:`, file.name);
+                        } else {
+                            failedCount++;
+                            console.log(`File ${index + 1} upload failed:`, data.message || 'Unknown error');
+                        }
+                        
+                    } catch (error) {
                         failedCount++;
+                        console.error(`Error uploading file ${index + 1}:`, error);
+                    }
+                    
+                    // Check if all uploads are complete
+                    if (completedCount + failedCount === window.selectedFiles.length) {
+                        console.log(`All uploads complete: ${completedCount} success, ${failedCount} failed`);
                         
-                        if (completedCount + failedCount === selectedFiles.length) {
-                            // All uploads completed
-                            uploadBtn.disabled = false;
-                            
-                            // Immediately add newly uploaded files to the display
-                            if (completedCount > 0) {
-                                // Add uploaded files directly to current documents list
-                                selectedFiles.forEach((file, index) => {
-                                    // Create a new document object for the uploaded file
-                                    const newDoc = {
-                                        id: Date.now() + index, // Temporary ID
-                                        document_name: file.name,
-                                        filename: file.name,
-                                        title: file.name,
-                                        file_size: file.size,
-                                        upload_date: new Date().toISOString(),
-                                        file_path: 'uploads/' + file.name,
-                                        type: file.type || 'application/octet-stream'
-                                    };
-                                    
-                                    // Add to current documents list
-                                    currentDocuments.unshift(newDoc); // Add to beginning
-                                    window.allDocuments.unshift(newDoc); // Add to global list
-                                    
-                                    // Add to existing file names set
-                                    existingFileNames.add(file.name.toLowerCase());
-                                });
-                                
-                                // Update the display immediately
-                                displayDocumentsByTime(currentDocuments);
-                                
-                                // Also refresh from server in background
+                        window.uploadBtn.textContent = 'Upload Complete';
+                        
                                 setTimeout(() => {
+                    document.getElementById('upload-modal').remove();
+                            
+                            // Reload documents to show the new files
+                            if (typeof loadDocuments === 'function') {
                                     loadDocuments();
+                            }
+                            if (typeof loadStats === 'function') {
                                     loadStats();
-                                }, 1000);
                             }
                             
-                            // Close modal after all uploads complete (regardless of success/failure)
-                            setTimeout(() => {
-                                const modal = document.getElementById('upload-modal');
-                                if (modal) {
-                                    modal.remove();
+                            // Show result message
+                            if (typeof showNotification === 'function') {
+                                if (failedCount === 0) {
+                                    showNotification(`${completedCount} file(s) uploaded successfully!`, 'success');
+                                } else {
+                                    showNotification(`${completedCount} uploaded, ${failedCount} failed`, 'warning');
+                                }
+                            } else {
+                                if (failedCount === 0) {
+                                    alert(`${completedCount} file(s) uploaded successfully!`);
+                                } else {
+                                    alert(`${completedCount} uploaded, ${failedCount} failed`);
+                                }
                                 }
                             }, 1000);
                         }
                     });
-                });
-            });
+            };
         }
 
         function displaySelectedFiles(files) {
@@ -3929,16 +3786,16 @@ require_once 'classes/DateTimeUtility.php';
 		<!-- Content Area -->
 		<div class="">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-3 gap-3 mb-4">
                 <!-- Total Documents Card -->
-                <div class="bg-white bg-opacity-80 backdrop-blur-xl rounded-2xl border border-white border-opacity-30 p-6 shadow-lg">
+                <div class="bg-white bg-opacity-80 backdrop-blur-xl rounded-xl border border-white border-opacity-30 p-3 shadow-lg">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Total Documents</p>
-                            <p id="total-documents" class="text-2xl font-bold text-gray-900">0</p>
+                            <p class="text-xs font-medium text-gray-600">Total Documents</p>
+                            <p id="total-documents" class="text-lg font-bold text-gray-900">0</p>
                         </div>
-                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                         </div>
@@ -3946,14 +3803,14 @@ require_once 'classes/DateTimeUtility.php';
                 </div>
 
                 <!-- Recent Documents Card -->
-                <div class="bg-white bg-opacity-80 backdrop-blur-xl rounded-2xl border border-white border-opacity-30 p-6 shadow-lg">
+                <div class="bg-white bg-opacity-80 backdrop-blur-xl rounded-xl border border-white border-opacity-30 p-3 shadow-lg">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Recent (30 days)</p>
-                            <p id="recent-documents" class="text-2xl font-bold text-gray-900">0</p>
+                            <p class="text-xs font-medium text-gray-600">Recent (30 days)</p>
+                            <p id="recent-documents" class="text-lg font-bold text-gray-900">0</p>
                         </div>
-                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                         </div>
@@ -3961,14 +3818,14 @@ require_once 'classes/DateTimeUtility.php';
                 </div>
 
                 <!-- Document Categories Card -->
-                <div class="bg-white bg-opacity-80 backdrop-blur-xl rounded-2xl border border-white border-opacity-30 p-6 shadow-lg">
+                <div class="bg-white bg-opacity-80 backdrop-blur-xl rounded-xl border border-white border-opacity-30 p-3 shadow-lg">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Categories</p>
-                            <p id="document-types" class="text-2xl font-bold text-gray-900">0</p>
+                            <p class="text-xs font-medium text-gray-600">Categories</p>
+                            <p id="document-types" class="text-lg font-bold text-gray-900">0</p>
                         </div>
-                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                             </svg>
                         </div>

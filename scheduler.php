@@ -1,104 +1,40 @@
 <?php
-// Load data directly from database to avoid HTTP request issues
-require_once 'config/database.php';
+// Load data using the new SchedulerManager class
+require_once 'classes/SchedulerManager.php';
+require_once 'classes/DateTimeUtility.php';
 
-function loadMeetingsData() {
-    try {
-        // Load meetings from JSON file
-        $DATA_DIR = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'data';
-        $DATA_FILE = $DATA_DIR . DIRECTORY_SEPARATOR . 'meetings.json';
-        
-        if (!is_dir($DATA_DIR)) {
-            @mkdir($DATA_DIR, 0777, true);
-        }
-        if (!file_exists($DATA_FILE)) {
-            @file_put_contents($DATA_FILE, json_encode([ 'next_id' => 1, 'meetings' => [], 'trash' => [] ], JSON_PRETTY_PRINT));
-        }
-        
-        $raw = @file_get_contents($DATA_FILE);
-        if ($raw === false || trim($raw) === '') {
-            $meetings = [];
-        } else {
-            $data = json_decode($raw, true);
-            $meetings = isset($data['meetings']) && is_array($data['meetings']) ? $data['meetings'] : [];
-        }
-        
-        // Load events from central_events table
-        $events = [];
-        try {
-            $db = new Database();
-            $pdo = $db->getConnection();
-            
-            $stmt = $pdo->prepare("
-                SELECT id, title, description, start, end, location, status
-                FROM central_events 
-                WHERE status = 'upcoming' OR (status = 'completed' AND start >= DATE_SUB(NOW(), INTERVAL 30 DAY))
-                ORDER BY start ASC
-            ");
-            $stmt->execute();
-            $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-        } catch (Exception $e) {
-            // Database connection failed, use empty events
-            $events = [];
-        }
-        
-        // Load trash meetings
-        $trashMeetings = [];
-        if (isset($data['trash']) && is_array($data['trash'])) {
-            $trashMeetings = $data['trash'];
-        }
-        
-        // Combine and format data
-        $allItems = [];
-        
-        // Add meetings
-        foreach ($meetings as $m) {
-            $allItems[] = [
-                'id' => $m['id'],
-                'title' => $m['title'],
-                'meeting_date' => $m['date'],
-                'meeting_time' => $m['time'],
-                'end_date' => $m['end_date'],
-                'end_time' => $m['end_time'],
-                'description' => isset($m['description']) ? $m['description'] : '',
-                'is_all_day' => isset($m['is_all_day']) ? $m['is_all_day'] : '0',
-                'color' => isset($m['color']) ? $m['color'] : 'blue',
-                'organizer' => isset($m['organizer']) ? $m['organizer'] : '',
-                'venue' => isset($m['venue']) ? $m['venue'] : '',
-                'location' => isset($m['venue']) ? $m['venue'] : ''
-            ];
-        }
-        
-            // Add events
-            foreach ($events as $e) {
-                $startDateTime = new DateTime($e['start']);
-                $endDateTime = $e['end'] ? new DateTime($e['end']) : $startDateTime->modify('+2 hours');
-                
-                $allItems[] = [
-                    'id' => 'event_' . (string)$e['id'],
-                    'title' => $e['title'],
-                    'meeting_date' => $startDateTime->format('Y-m-d'),
-                    'meeting_time' => $startDateTime->format('H:i'),
-                    'end_date' => $endDateTime->format('Y-m-d'),
-                    'end_time' => $endDateTime->format('H:i'),
-                    'description' => $e['description'] ?: '',
-                    'is_all_day' => '0',
-                    'color' => 'green',
-                    'organizer' => 'LILAC',
-                    'venue' => $e['location'] ?: '',
-                    'location' => $e['location'] ?: ''
-                ];
-            }
-        
-        return $allItems;
-    } catch (Exception $e) {
-        return [];
-    }
+// Initialize scheduler manager
+$schedulerManager = new SchedulerManager();
+
+// Load meetings data (single source of truth - database only)
+$meetingsResult = $schedulerManager->loadMeetingsData();
+$meetings = $meetingsResult['success'] ? $meetingsResult['data'] : [];
+
+// Load upcoming events for reminders
+$upcomingResult = $schedulerManager->getUpcomingEvents(5);
+$upcomingEvents = $upcomingResult['success'] ? $upcomingResult['data'] : [];
+
+// No trash meetings - using database with proper deletion
+// Format meetings data for display (single source - database only)
+$allItems = [];
+foreach ($meetings as $meeting) {
+    $allItems[] = [
+        'id' => $meeting['id'],
+        'title' => $meeting['title'],
+        'meeting_date' => DateTimeUtility::formatDate($meeting['start']),
+        'meeting_time' => DateTimeUtility::formatTime($meeting['start']),
+        'end_date' => DateTimeUtility::formatDate($meeting['end']),
+        'end_time' => DateTimeUtility::formatTime($meeting['end']),
+        'description' => $meeting['description'] ?? '',
+        'is_all_day' => '0',
+        'color' => 'text-blue-600',
+        'organizer' => 'LILAC',
+        'location' => $meeting['location'] ?? ''
+    ];
 }
+// Events are already included in meetings data (single source of truth)
 
-$meetingsData = loadMeetingsData();
-$trashData = $meetingsData['trash'] ?? [];
+// Data is already loaded above using SchedulerManager
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -195,6 +131,8 @@ $trashData = $meetingsData['trash'] ?? [];
     </style>
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js?v=1.1"></script>
+    <script src="js/date-time-utility.js"></script>
+    <script src="js/scheduler-management.js"></script>
     <script>
         // Force cache refresh - version 1.1
         // Scheduler script loaded
@@ -213,7 +151,7 @@ $trashData = $meetingsData['trash'] ?? [];
         // Initialize Scheduler functionality
         let currentMeetings = [];
         let currentWeek = new Date();
-        let selectedDate = new Date();
+        // selectedDate is now managed by scheduler-management.js
         let currentView = 'week'; // 'day', 'week', 'month'
         let clickedDateString = null; // Track the exact clicked date string
         
@@ -2490,15 +2428,17 @@ $trashData = $meetingsData['trash'] ?? [];
         function loadDocuments() {
             try {
                 // Use PHP data directly instead of HTTP requests
-                const meetingsData = <?php echo json_encode($meetingsData); ?>;
+                const meetingsData = <?php echo json_encode($meetingsData ?? []); ?>;
                 
                 if (Array.isArray(meetingsData)) {
                     currentDocuments = meetingsData;
                     displayDocuments(meetingsData);
                     loadStats();
                 } else {
-                    console.error('Error loading meetings: Invalid data format');
+                    console.log('Meetings data is not an array, using empty array');
+                    currentDocuments = [];
                     displayDocuments([]);
+                    loadStats();
                 }
             } catch (error) {
                 console.error('Error loading meetings:', error);
@@ -3175,29 +3115,58 @@ $trashData = $meetingsData['trash'] ?? [];
             fetch('api/scheduler.php?action=get_trash')
                 .then(response => {
                     console.log('Trash count API response status:', response.status);
-                    return response.json();
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(responseText => {
+                    if (!responseText || responseText.trim() === '') {
+                        console.log('Main API returned empty response, trying fallback...');
+                        // Try fallback API instead of throwing error
+                        return fetch('api/scheduler_simple.php?action=get_trash')
+                            .then(response => response.text())
+                            .then(fallbackText => {
+                                if (fallbackText && fallbackText.trim() !== '') {
+                                    return JSON.parse(fallbackText);
+                                }
+                                throw new Error('Both APIs returned empty responses');
+                            });
+                    }
+                    return JSON.parse(responseText);
                 })
                 .then(data => {
                     console.log('Trash count API response data:', data);
                     if (data.success && Array.isArray(data.meetings)) {
                         updateTrashCount(data.meetings.length);
                     } else {
-                        console.error('Trash count API returned invalid data:', data);
-                        updateTrashCount(0);
+                        console.log('Trash count API returned invalid data, using fallback');
+                        // Fallback to PHP data
+                        try {
+                            const trashData = <?php echo json_encode($trashData ?? []); ?>;
+                            if (Array.isArray(trashData)) {
+                                updateTrashCount(trashData.length);
+                            } else {
+                                updateTrashCount(0);
+                            }
+                        } catch (fallbackError) {
+                            console.error('PHP fallback also failed:', fallbackError);
+                            updateTrashCount(0);
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('Error loading trash count from API:', error);
-                    // Fallback to PHP data if API fails
+                    // Final fallback to PHP data
                     try {
-                        const trashData = <?php echo json_encode($trashData); ?>;
+                        const trashData = <?php echo json_encode($trashData ?? []); ?>;
                         if (Array.isArray(trashData)) {
                             updateTrashCount(trashData.length);
                         } else {
-                    updateTrashCount(0);
+                            updateTrashCount(0);
                         }
                     } catch (fallbackError) {
-                        console.error('Fallback also failed:', fallbackError);
+                        console.error('All fallbacks failed:', fallbackError);
                         updateTrashCount(0);
                     }
                 });
@@ -4799,9 +4768,6 @@ $trashData = $meetingsData['trash'] ?? [];
                     <div id="event-time" class="text-gray-900 dark:text-white"></div>
                 </div>
 
-
-
-
             </div>
 
             <!-- Modal Footer -->
@@ -4815,10 +4781,12 @@ $trashData = $meetingsData['trash'] ?? [];
             </div>
         </div>
     </div>
+    </div>
 
     <!-- Footer -->
     <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
+
 </body>
 </html>

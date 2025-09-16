@@ -1,3 +1,6 @@
+<?php
+require_once 'classes/DateTimeUtility.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -11,17 +14,19 @@
     <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        if (window['pdfjsLib']) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
-    </script>
+    <script src="js/error-handler.js"></script>
+    <script src="js/security-utils.js"></script>
+    <script src="js/awards-check.js"></script>
+    <script src="js/mou-moa-config.js"></script>
+    <script src="js/mou-moa-management.js"></script>
+    <script src="js/modal-handlers.js"></script>
+    <script src="js/text-config.js"></script>
+    <script src="js/date-time-utility.js"></script>
+    <script src="js/lazy-loader.js"></script>
+    <!-- PDF.js is handled by the shared document system -->
     <script>
         // Initialize MOUs functionality
         let currentDocuments = [];
-        let expiringDocuments = [];
-        let showExpiringOnly = false;
         const CATEGORY = 'MOUs & MOAs';
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -92,6 +97,7 @@
             const description = formEl.querySelector('#mou-description')?.value || '';
 
             const formData = new FormData();
+            formData.append('csrf_token', document.getElementById('csrf-token').value);
             if (editingMouId) {
                 formData.append('action', 'update');
                 formData.append('id', editingMouId);
@@ -120,6 +126,11 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Check for awards earned after successful MOU creation
+                    if (window.checkAwardCriteria) {
+                        window.checkAwardCriteria('mou', data.newMouId || data.document_id);
+                    }
+                    
                     formEl.reset();
                     loadDocuments();
                     loadStats();
@@ -158,14 +169,21 @@
 
                     displayDocuments(currentDocuments);
                     loadStats();
+                    
+                    // Check for upcoming expirations
+                    notifyUpcomingExpirations();
                 } else {
                     console.error('Error loading MOUs:', mousData.message);
                     showNotification('Error loading MOUs: ' + mousData.message, 'error');
+                    displayDocuments([]);
+                    loadStats();
                 }
             })
             .catch(error => {
                 console.error('Error loading MOUs:', error);
                 showNotification('Network error. Please try again.', 'error');
+                displayDocuments([]);
+                loadStats();
             });
         }
 
@@ -217,26 +235,37 @@
             fetch('api/mous.php?action=get_stats')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        updateStats(data.stats);
+                    if (data.success && data.data && data.data.stats) {
+                        updateStats(data.data.stats);
+                    } else {
+                        console.log('No stats data available, using defaults');
+                        updateStats({total: 0, active: 0, expiringSoon: 0});
                     }
                 })
-                .catch(error => console.error('Error loading stats:', error));
+                .catch(error => {
+                    console.error('Error loading stats:', error);
+                    updateStats({total: 0, active: 0, expiringSoon: 0});
+                });
         }
 
         function updateStats(stats) {
+            // Ensure stats object exists and has default values
+            if (!stats) {
+                stats = {total: 0, active: 0, expiringSoon: 0};
+            }
+            
             const totalMOUsElement = document.getElementById('total-mous');
             const activeMOUsElement = document.getElementById('active-mous');
             const expiringMOUsElement = document.getElementById('expiring-mous');
             
-            if (totalMOUsElement && typeof stats.total !== 'undefined') {
-                totalMOUsElement.textContent = stats.total;
+            if (totalMOUsElement) {
+                totalMOUsElement.textContent = stats.total || 0;
             }
-            if (activeMOUsElement && typeof stats.active !== 'undefined') {
-                activeMOUsElement.textContent = stats.active;
+            if (activeMOUsElement) {
+                activeMOUsElement.textContent = stats.active || 0;
             }
-            if (expiringMOUsElement && typeof stats.expiringSoon !== 'undefined') {
-                expiringMOUsElement.textContent = stats.expiringSoon;
+            if (expiringMOUsElement) {
+                expiringMOUsElement.textContent = stats.expiringSoon || 0;
             }
         }
 
@@ -558,6 +587,7 @@
                 filePath = `uploads/${filePath}`;
             }
 
+            // Use shared document viewer from documents.php
             const overlay = document.getElementById('document-viewer-overlay');
             const titleEl = document.getElementById('document-viewer-title');
             const contentEl = document.getElementById('document-viewer-content');
@@ -672,6 +702,7 @@
         function deleteMOU(id) {
             const formData = new FormData();
             formData.append('action', 'delete');
+            formData.append('csrf_token', document.getElementById('csrf-token').value);
             formData.append('id', id);
             
             fetch('api/mous.php', {
@@ -1349,6 +1380,8 @@
                 </button>
             </div>
             <form id="mou-form" class="space-y-4">
+                <!-- CSRF Token -->
+                <input type="hidden" id="csrf-token" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="mou-organization" class="block text-xs font-medium text-gray-700 mb-1">Organization *</label>
@@ -1687,29 +1720,8 @@
         });
     </script>
 
-    <!-- Document Viewer Modal -->
-    <div id="document-viewer-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-[80] hidden" onclick="this.classList.add('hidden')">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col" onclick="event.stopPropagation()">
-                <div class="flex items-center justify-between px-4 py-3 border-b">
-                    <h3 id="document-viewer-title" class="text-lg font-semibold text-gray-900"></h3>
-                    <div class="flex items-center gap-2">
-                        <button id="document-viewer-open" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Open in New Tab</button>
-                        <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="flex-1 bg-gray-50 p-2 overflow-y-auto overflow-x-hidden min-h-0">
-                    <div id="document-viewer-content" class="w-full h-full overflow-y-auto overflow-x-hidden"></div>
-                </div>
-                <div class="flex items-center justify-end gap-2 px-4 py-3 border-t">
-                    <button id="document-viewer-download" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Download</button>
-                    <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Shared Document Viewer Modal -->
+    <?php include 'components/shared-document-viewer.php'; ?>
 
 </body>
 

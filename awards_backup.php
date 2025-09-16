@@ -3464,9 +3464,6 @@ LILAC Awards - Keyboard Shortcuts:
             monthElement.textContent = currentMonth;
         }
     }
-    
-    // Close the renderMonthlyTrendChart function
-    }
 
     // Function to refresh chart data (can be called from other parts of the code)
     function refreshMonthlyTrendChart() {
@@ -3502,8 +3499,10 @@ LILAC Awards - Keyboard Shortcuts:
     });
     </script>
 
+    
+
     <script>
-        // Essential functions only - 2024-12-19-4
+        // Clean script block - 2024-12-19-3
         function showAddAwardModal(){ openAddAwardModal(); }
         function openAddAwardModal(){
             document.getElementById('add-award-modal').classList.remove('hidden');
@@ -3535,7 +3534,7 @@ LILAC Awards - Keyboard Shortcuts:
             closeImportDataModal();
         }
         
-        // Simplified functions for stability
+        // Toggle award details dropdown
         function toggleAwardDetails(awardType) {
             const detailsElement = document.getElementById(`${awardType}-details`);
             const arrowElement = document.getElementById(`${awardType}-arrow`);
@@ -3555,57 +3554,30 @@ LILAC Awards - Keyboard Shortcuts:
             }
         }
         
-        // Simplified event listeners for stability
         document.getElementById('award-modal-form')?.addEventListener('submit', function(e){
             e.preventDefault();
             closeAddAwardModal();
         });
-        
-        // Simplified functions for stability
-        function displayAwardReport(summary) {
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            modal.innerHTML = `
-                <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                    <div class="p-6 border-b border-gray-200">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-2xl font-bold text-gray-900">Award Application Report</h2>
-                            <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <p class="text-gray-600 mt-2">Comprehensive overview of award readiness and missing requirements</p>
-                    </div>
-                    <div class="p-6">
-                        ${generateReportContent(summary)}
-                    </div>
-                    <div class="p-6 border-t border-gray-200 flex justify-end">
-                        <button onclick="this.closest('.fixed').remove()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        }
-
-        function generateReportContent(summary) {
-            return '<div class="p-4"><h3 class="text-lg font-semibold">Award Report</h3><p>Report functionality temporarily simplified for stability.</p></div>';
-        }
     </script>
 
     <script>
-    // Simplified chart function for stability
+    // ... existing code ...
     function renderAwardsLineChart() {
-        console.log('Chart function called - simplified for stability');
-    }
-    </script>
+        const canvas = document.getElementById('awardsLineChartCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
 
-</body>
+        // Gradients per provided design
+        const gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
+        gradientStroke.addColorStop(0, '#ff6c00');
+        gradientStroke.addColorStop(1, '#ff3b74');
 
-</html>
+        const gradientBkgrd = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradientBkgrd.addColorStop(0, 'rgba(244,94,132,0.2)');
+        gradientBkgrd.addColorStop(1, 'rgba(249,135,94,0)');
+
+        // Shadow plugin (Chart.js v4)
+        const lineShadow = {
             id: 'lineShadowAwards',
             beforeDatasetsDraw(chart) {
                 const { ctx } = chart;
@@ -3821,10 +3793,95 @@ LILAC Awards - Keyboard Shortcuts:
     }
 
     function generateReportContent(summary) {
-        return '<div class="p-4"><h3 class="text-lg font-semibold">Award Report</h3><p>Report functionality temporarily simplified for stability.</p></div>';
+        const awardNames = {
+            'leadership': 'Internationalization (IZN) Leadership Award',
+            'education': 'Outstanding International Education Program Award',
+            'emerging': 'Emerging Leadership Award',
+            'regional': 'Best Regional Office for Internationalization Award',
+            'global': 'Global Citizenship Award'
+        };
+
+        let content = '<div class="space-y-6">';
+        
+        summary.forEach(award => {
+            const readinessColor = award.readiness === 'Ready to Apply' ? 'green' : 
+                                 award.readiness === 'Nearly Ready' ? 'yellow' : 'red';
+            const readinessIcon = award.readiness === 'Ready to Apply' ? '✅' : 
+                                award.readiness === 'Nearly Ready' ? '⚠️' : '❌';
+            
+            content += `
+                <div class="border border-gray-200 rounded-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-gray-900">${awardNames[award.award_type] || award.award_type}</h3>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium bg-${readinessColor}-100 text-${readinessColor}-800">
+                            ${readinessIcon} ${award.readiness}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <div class="text-2xl font-bold text-blue-600">${award.satisfied_count}/${award.total_count}</div>
+                            <div class="text-sm text-blue-800">Criteria Satisfied</div>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="text-2xl font-bold text-green-600">${award.document_count}</div>
+                            <div class="text-sm text-green-800">Documents Uploaded</div>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div class="text-2xl font-bold text-purple-600">${award.event_count}</div>
+                            <div class="text-sm text-purple-800">Events Created</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-medium text-gray-900 mb-2">Progress</h4>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-${readinessColor}-500 h-2 rounded-full" style="width: ${(award.satisfied_count / award.total_count) * 100}%"></div>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-2">
+                            ${award.total_count - award.satisfied_count} criteria remaining to complete this award
+                        </p>
+                    </div>
+                </div>
+            `;
+        });
+        
+        content += '</div>';
+        
+        // Add summary statistics
+        const totalAwards = summary.length;
+        const readyAwards = summary.filter(a => a.readiness === 'Ready to Apply').length;
+        const nearlyReadyAwards = summary.filter(a => a.readiness === 'Nearly Ready').length;
+        const incompleteAwards = summary.filter(a => a.readiness === 'Incomplete').length;
+        
+        content = `
+            <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Overall Summary</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600">${totalAwards}</div>
+                        <div class="text-sm text-blue-800" data-text="awards.totalAwards">Total Awards</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">${readyAwards}</div>
+                        <div class="text-sm text-green-800">Ready to Apply</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-yellow-600">${nearlyReadyAwards}</div>
+                        <div class="text-sm text-yellow-800">Nearly Ready</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-red-600">${incompleteAwards}</div>
+                        <div class="text-sm text-red-800">Incomplete</div>
+                    </div>
+                </div>
+            </div>
+        ` + content;
+        
+        return content;
     }
 
-    // End of JavaScript - Cache buster: 2024-12-19-4
+    // End of JavaScript - Cache buster: 2024-12-19-2
     </script>
 
 </body>

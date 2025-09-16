@@ -106,7 +106,11 @@ try {
             }
             
             $result = $centralEvents->getEventById($eventId);
-            api_respond($result['success'], $result);
+            if ($result['success']) {
+                api_respond(true, ['event' => $result['event']]);
+            } else {
+                api_respond(false, ['message' => $result['error']]);
+            }
             break;
             
         case 'migrate_events':

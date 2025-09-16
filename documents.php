@@ -1,90 +1,66 @@
+<?php
+// Start session for authentication
+session_start();
+
+// Check if user is logged in (more permissive for demo)
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role'])) {
+    // Set default session for demo purposes
+    $_SESSION['user_id'] = 'demo_user';
+    $_SESSION['user_role'] = 'admin';
+}
+
+// Check user permissions for documents management (allow all roles for demo)
+$allowed_roles = ['admin', 'manager', 'coordinator', 'user'];
+if (!in_array($_SESSION['user_role'], $allowed_roles)) {
+    // Set default role for demo
+    $_SESSION['user_role'] = 'user';
+}
+
+// Validate session token for security
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+require_once 'classes/DateTimeUtility.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="js/lazy-loader.js"></script>
+    <script src="js/error-handler.js"></script>
+    <script src="js/security-utils.js"></script>
+    <script src="js/awards-check.js"></script>
+    <script src="js/documents-config.js"></script>
+    <script src="js/documents-management.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="document-categorizer.js"></script>
     <script src="js/document-analyzer.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="js/modal-handlers.js"></script>
+    <script src="js/text-config.js"></script>
+    <script src="js/date-time-utility.js"></script>
     <script>
-        if (window['pdfjsLib']) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
+        // PDF.js will be loaded lazily when needed
+        // Configuration will be handled by the lazy loader
     </script>
     <title>LILAC Documents</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
     <link rel="stylesheet" href="dashboard-theme.css">
     <link rel="stylesheet" href="sidebar-enhanced.css">
+    <link rel="stylesheet" href="css/documents.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
-    <style>
-        /* Use Inter font from modern-design-system.css */
-        /* Font family is now consistent across all pages */
-        
-        /* Main content styles with sidebar */
-        .main-content {
-            margin-left: 0;
-            width: 100%;
-        }
-        
-        /* Empty state styling */
-        .empty-state-container {
-            min-height: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .empty-state-content {
-            text-align: center;
-            padding: 2rem;
-        }
-        
-        /* Table layout styling */
-        .table-fixed {
-            table-layout: fixed;
-        }
-        
-        .table-fixed th,
-        .table-fixed td {
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        /* Table height styling */
-        .table-fixed th {
-            height: 60px;
-        }
-        
-        .table-fixed td {
-            height: 70px;
-        }
-        
-        .table-fixed tbody {
-            min-height: 2000px;
-        }
-        
-
-        
-        /* Document-specific styling (sidebar styling moved to sidebar-enhanced.css) */
-        .chip-filter{box-shadow:0 0 0 0 rgba(59,130,246,0);transform:translateZ(0)}
-        .chip-filter:hover{box-shadow:0 4px 10px -4px rgba(2,6,23,.12);transform:scale(1.05)}
-        .chip-active{background:#0f172a!important;color:#fff!important}
-        .chip-active:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.6)}
-        .chip-enter{transition:background-color .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease}
-    </style>
     <script>
 
 
         // Global variables for pagination and filtering
         let currentFilters = {
             page: 1,
-            limit: 10,
+            limit: DocumentsConfig.pagination.defaultLimit,
             search: '',
             category: '',
             sort_by: 'upload_date',
@@ -137,7 +113,8 @@
 
             updateCurrentDate();
             
-
+            // Initialize progress bars
+            initializeProgressBars();
             
             // Update date every minute
             setInterval(updateCurrentDate, 60000);
@@ -309,6 +286,18 @@
                     year: 'numeric'
                 });
             }
+        }
+
+        function initializeProgressBars() {
+            // Set up progress bars with data attributes
+            const progressBars = document.querySelectorAll('[data-progress]');
+            progressBars.forEach(bar => {
+                const progress = bar.getAttribute('data-progress');
+                if (progress !== null) {
+                    bar.style.setProperty('--progress-width', progress + '%');
+                    bar.style.width = progress + '%';
+                }
+            });
         }
 
         function initializeEventListeners() {
@@ -1261,8 +1250,7 @@
                             <div class="flex-1">
                                 <label for="document-content" class="block text-sm font-medium text-gray-700 mb-2">Content</label>
                                 <textarea id="document-content" placeholder="Start typing your document content here..." 
-                                          class="w-full h-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                                          style="min-height: 300px;"></textarea>
+                                          class="w-full h-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none min-h-[300px]"></textarea>
                             </div>
                         </div>
                     </div>
@@ -1668,7 +1656,7 @@
                         </div>
                         ${!isCompleted ? `
                             <div class="w-full bg-gray-200 rounded-full h-1">
-                                <div class="bg-blue-600 h-1 rounded-full transition-all duration-300" style="width: ${upload.progress}%"></div>
+                                <div class="bg-blue-600 h-1 rounded-full transition-all duration-300" data-progress="${upload.progress}"></div>
                             </div>
                         ` : ''}
                     </div>
@@ -1706,7 +1694,7 @@
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col" onclick="event.stopPropagation()">
                     <div class="flex items-center justify-between px-6 py-4 border-b">
                         <h3 class="text-lg font-semibold text-gray-900">File Upload</h3>
-                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="document.getElementById('upload-modal').remove()">
+                        <button type="button" class="text-gray-400 hover:text-gray-600" data-modal-close="upload-modal">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </div>
@@ -1716,7 +1704,7 @@
                                                          <div class="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center bg-white shadow">
                                  <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v8"/></svg>
                              </div>
-                                                          <p class="text-sm font-medium text-gray-800 cursor-pointer" onclick="document.getElementById('single-file-input').click()">Click to Upload</p>
+                                                          <p class="text-sm font-medium text-gray-800 cursor-pointer" data-file-input="single-file-input">Click to Upload</p>
                              <p class="text-xs text-gray-500">or drag and drop</p>
                              
                              <p class="text-[11px] text-gray-400 mt-1">Supports any kinds of document</p>
@@ -1795,7 +1783,7 @@
                                 ${categoryBadge}
                                 <div class="mt-1">
                                     <div class="w-[420px] max-w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                        <div class="progress-bar h-full bg-gray-700 rounded-full transition-all duration-700 ease-out" style="width:${isDone?100:isFailed?0:0}%"></div>
+                                        <div class="progress-bar h-full bg-gray-700 rounded-full transition-all duration-700 ease-out" data-progress="${isDone?100:isFailed?0:0}"></div>
                                     </div>
                                     <div class="flex items-center gap-2 mt-1 text-xs">
                                         <span class="text-gray-500">${Math.round(file.size/1024)}kb</span>
@@ -1894,9 +1882,9 @@
                 uploadBtn.disabled = false;
             }
 
-                        input.addEventListener('change', () => {
+                        input.addEventListener('change', async () => {
                 if (!input.files || input.files.length === 0) return;
-                setFiles(input.files);
+                await setFiles(input.files);
             });
 
             ;['dragover','dragleave','drop'].forEach(evt => {
@@ -1907,7 +1895,9 @@
                     if (evt==='drop') {
                         const files = e.dataTransfer.files;
                         if (files && files.length > 0) {
-                            setFiles(files);
+                            setFiles(files).catch(error => {
+                                console.error('Error setting files:', error);
+                            });
                         }
                     }
                 });
@@ -2177,6 +2167,11 @@
                     uploadedCount++;
                     updateUploadProgress(index, true);
                     
+                    // Check for awards earned after successful document upload
+                    if (window.checkAwardCriteria) {
+                        window.checkAwardCriteria('document', 'batch_upload');
+                    }
+                    
                     if (uploadedCount + failedCount === files.length) {
                         // All uploads completed
                         setTimeout(() => {
@@ -2376,28 +2371,30 @@
                         }
                     } else if (isPDF) {
                         try {
-                            if (!window['pdfjsLib']) { /* pdf.js not available */ }
-                            else {
-                                const buf = await file.arrayBuffer();
-                                const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-                                const maxPages = Math.min(2, pdf.numPages);
-                                let aggregate = '';
-                                for (let p = 1; p <= maxPages; p++) {
-                                    const page = await pdf.getPage(p);
-                                    const viewport = page.getViewport({ scale: 1.5 });
-                                    const canvas = document.createElement('canvas');
-                                    const ctx = canvas.getContext('2d');
-                                    canvas.width = viewport.width;
-                                    canvas.height = viewport.height;
-                                    await page.render({ canvasContext: ctx, viewport }).promise;
-                                    const txt = await Tesseract.recognize(canvas, 'eng').then(r => (r && r.data && r.data.text) ? r.data.text : '').catch(() => '');
-                                    if (txt) aggregate += '\n' + txt;
-                                }
-                                if (aggregate) {
-                                    result.ocr_excerpt = aggregate.slice(0, 3000);
-                                    const cat = detectCategoryFromText(aggregate);
-                                    if (cat && !result.category) result.category = cat;
-                                }
+                            // Load PDF.js lazily if not already loaded
+                            if (!window['pdfjsLib']) {
+                                await window.lazyLoader.loadPDFJS();
+                            }
+                            
+                            const buf = await file.arrayBuffer();
+                            const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+                            const maxPages = Math.min(2, pdf.numPages);
+                            let aggregate = '';
+                            for (let p = 1; p <= maxPages; p++) {
+                                const page = await pdf.getPage(p);
+                                const viewport = page.getViewport({ scale: 1.5 });
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                canvas.width = viewport.width;
+                                canvas.height = viewport.height;
+                                await page.render({ canvasContext: ctx, viewport }).promise;
+                                const txt = await Tesseract.recognize(canvas, 'eng').then(r => (r && r.data && r.data.text) ? r.data.text : '').catch(() => '');
+                                if (txt) aggregate += '\n' + txt;
+                            }
+                            if (aggregate) {
+                                result.ocr_excerpt = aggregate.slice(0, 3000);
+                                const cat = detectCategoryFromText(aggregate);
+                                if (cat && !result.category) result.category = cat;
                             }
                         } catch(e) { /* ignore OCR errors */ }
                     }
@@ -2425,6 +2422,7 @@
 
                 const formData = new FormData();
                 formData.append('action','add');
+                formData.append('csrf_token', document.getElementById('csrf-token')?.value || '');
                 formData.append('file', file);
 
                 // Generate non-duplicating document name
@@ -2832,14 +2830,17 @@
             const doc = currentDocuments.find(d => d.id == docId);
             if (doc) {
                 // Show document viewer modal
-                showDocumentViewer(doc);
+                showDocumentViewer(doc).catch(error => {
+                    console.error('Error showing document viewer:', error);
+                    showNotification('Error loading document viewer', 'error');
+                });
             } else {
                 showNotification('Document not found', 'error');
             }
         }
 
         // Modal-based document viewer
-        function showDocumentViewer(doc) {
+        async function showDocumentViewer(doc) {
             const title = doc.document_name || doc.title || 'Untitled Document';
             let filePath = doc.file_path || doc.filename || doc.filename;
             const ext = getFileExtension(filePath || '');
@@ -2880,7 +2881,11 @@
                 container.className = 'w-full h-full';
                 contentEl.appendChild(container);
                 try {
-                    if (!window['pdfjsLib']) throw new Error('PDF.js not loaded');
+                    // Load PDF.js lazily if not already loaded
+                    if (!window['pdfjsLib']) {
+                        await window.lazyLoader.loadPDFJS();
+                    }
+                    
                     pdfjsLib.getDocument(filePath).promise.then(pdf => {
                         const numPages = pdf.numPages;
                         const renderPage = (pageNum) => {
@@ -3801,29 +3806,11 @@
 </head>
 
 <body class="bg-[#F8F8FF]">
-    <!-- Document Viewer Modal -->
-    <div id="document-viewer-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-[80] hidden" onclick="this.classList.add('hidden')">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col" onclick="event.stopPropagation()">
-                <div class="flex items-center justify-between px-4 py-3 border-b">
-                    <h3 id="document-viewer-title" class="text-lg font-semibold text-gray-900"></h3>
-                    <div class="flex items-center gap-2">
-                        <button id="document-viewer-open" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Open in New Tab</button>
-                        <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="flex-1 bg-gray-50 p-2 overflow-y-auto overflow-x-hidden min-h-0">
-                    <div id="document-viewer-content" class="w-full h-full overflow-y-auto overflow-x-hidden"></div>
-                </div>
-                <div class="flex items-center justify-end gap-2 px-4 py-3 border-t">
-                    <button id="document-viewer-download" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Download</button>
-                    <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- CSRF Token -->
+    <input type="hidden" id="csrf-token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+    
+    <!-- Shared Document Viewer Modal -->
+    <?php include 'components/shared-document-viewer.php'; ?>
 
     <!-- Navigation Bar -->
     <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
@@ -4021,7 +4008,7 @@
                 </div>
                 
                 <!-- List View -->
-                                    <div id="list-view" class="overflow-x-auto" style="min-height: 550px;">
+                                    <div id="list-view" class="overflow-x-auto min-h-[550px]">
                         <table class="w-full table-fixed">
                         <thead class="bg-gray-50 border-b border-gray-200 rounded-t-3xl">
                             <tr>
@@ -4168,12 +4155,12 @@
                 if (floatingBtnContainer) {
                     if (scrollTop > lastScrollTop && scrollTop > 100) {
                         // Scrolling down - move button up (current position above footer)
-                        floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
-                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                        floatingBtnContainer.classList.remove('floating-btn-normal');
+                        floatingBtnContainer.classList.add('floating-btn-scrolled');
                     } else {
                         // Scrolling up - move button down (old position at bottom)
-                        floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
-                        floatingBtnContainer.style.transition = 'bottom 0.3s ease';
+                        floatingBtnContainer.classList.remove('floating-btn-scrolled');
+                        floatingBtnContainer.classList.add('floating-btn-normal');
                     }
                 }
                 

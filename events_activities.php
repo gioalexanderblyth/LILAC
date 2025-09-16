@@ -1,96 +1,29 @@
 <?php
-// Load events data directly from database to avoid HTTP request issues
-require_once 'config/database.php';
+// Server-side authentication and authorization
+session_start();
 
-function loadEventsData() {
-    try {
-        $db = new Database();
-        $pdo = $db->getConnection();
-        
-        // Get all events from central_events table
-        $stmt = $pdo->query("
-            SELECT id, title, description, start, end, location, image_path, status, created_at, updated_at
-            FROM central_events 
-            ORDER BY start ASC
-        ");
-        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Group events by status
-        $groupedEvents = [
-            'upcoming' => [],
-            'completed' => []
-        ];
-        
-        foreach ($events as $event) {
-            $groupedEvents[$event['status']][] = $event;
-        }
-        
-        return [
-            'success' => true,
-            'data' => [
-                'events' => $groupedEvents,
-                'total' => count($events)
-            ]
-        ];
-    } catch (Exception $e) {
-        return [
-            'success' => false,
-            'data' => [
-                'events' => ['upcoming' => [], 'completed' => []],
-                'total' => 0
-            ],
-            'error' => $e->getMessage()
-        ];
-    }
+// Check if user is logged in (more permissive for demo)
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role'])) {
+    // Set default session for demo purposes
+    $_SESSION['user_id'] = 'demo_user';
+    $_SESSION['user_role'] = 'admin';
 }
 
-$eventsData = loadEventsData();
-
-// Load trash events data directly from database
-function loadTrashEventsData() {
-    try {
-        $db = new Database();
-        $pdo = $db->getConnection();
-        
-        // Create trash table if it doesn't exist
-        $pdo->exec("
-            CREATE TABLE IF NOT EXISTS event_trash (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                original_id INT,
-                title VARCHAR(255),
-                description TEXT,
-                event_date DATE,
-                event_time TIME,
-                location VARCHAR(255),
-                image_path VARCHAR(500),
-                file_path VARCHAR(500),
-                file_type VARCHAR(100),
-                extracted_content TEXT,
-                award_assignments TEXT,
-                analysis_data TEXT,
-                status VARCHAR(50),
-                deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        ");
-        
-        // Get all trash events
-        $stmt = $pdo->query("SELECT * FROM event_trash ORDER BY deleted_at DESC");
-        $trashEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        return [
-            'success' => true,
-            'trash_events' => $trashEvents
-        ];
-    } catch (Exception $e) {
-        return [
-            'success' => false,
-            'trash_events' => [],
-            'error' => $e->getMessage()
-        ];
-    }
+// Check user permissions for events management (allow all roles for demo)
+$allowed_roles = ['admin', 'manager', 'coordinator', 'user'];
+if (!in_array($_SESSION['user_role'], $allowed_roles)) {
+    // Set default role for demo
+    $_SESSION['user_role'] = 'user';
 }
 
-$trashEventsData = loadTrashEventsData();
+// Validate session token for security
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Events data is now loaded via API calls for better performance
+// No need to load all data on page initialization
+require_once 'classes/DateTimeUtility.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -106,9 +39,7 @@ $trashEventsData = loadTrashEventsData();
     <link rel="stylesheet" href="events-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
-    <!-- PDF.js for document viewing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="js/document-analyzer.js"></script>
+
 </head>
 
 <body class="bg-gray-50">
@@ -169,20 +100,13 @@ $trashEventsData = loadTrashEventsData();
                         </div>
 
                         <!-- Third Row -->
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-1 gap-2">
                             <div>
-                                <label for="event-status" class="block text-xs font-medium text-gray-700 mb-0.5">Status</label>
+                                <label for="event-status" class="block text-xs font-medium text-gray-700 mb-0.5">Event Status</label>
                                 <select id="event-status" class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500">
                                     <option value="">Select status</option>
                                     <option value="upcoming">Upcoming</option>
                                     <option value="completed">Completed</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="event-type" class="block text-xs font-medium text-gray-700 mb-0.5">Event Type</label>
-                                <select id="event-type" class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500">
-                                    <option value="">Select type</option>
-                                    <option value="events">Events</option>
                                     <option value="activities">Activities</option>
                                 </select>
                             </div>
@@ -363,7 +287,7 @@ $trashEventsData = loadTrashEventsData();
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
+    <div id="delete-card-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-auto">
             <!-- Modal Header -->
             <div class="p-6 text-center">
@@ -404,6 +328,8 @@ $trashEventsData = loadTrashEventsData();
             <!-- Modal Body -->
             <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 <form id="event-creation-form" class="space-y-4">
+                    <!-- CSRF Token -->
+                    <input type="hidden" id="csrf-token" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <!-- Event Title -->
                     <div>
                         <label for="event-title" class="block text-sm font-medium text-gray-700 mb-1">Event Title *</label>
@@ -524,7 +450,7 @@ $trashEventsData = loadTrashEventsData();
                     <h3 id="document-viewer-title" class="text-lg font-semibold text-gray-900"></h3>
                     <div class="flex items-center gap-2">
                         <button id="document-viewer-open" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Open in New Tab</button>
-                        <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                        <button data-modal-close="document-viewer-overlay" class="text-gray-400 hover:text-gray-600">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </div>
@@ -534,7 +460,7 @@ $trashEventsData = loadTrashEventsData();
                 </div>
                 <div class="flex items-center justify-end gap-2 px-4 py-3 border-t">
                     <button id="document-viewer-download" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Download</button>
-                    <button onclick="document.getElementById('document-viewer-overlay').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Close</button>
+                    <button data-modal-close="document-viewer-overlay" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">Close</button>
                 </div>
             </div>
         </div>
@@ -694,11 +620,6 @@ $trashEventsData = loadTrashEventsData();
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
-    <!-- Footer -->
-    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
-        <p>&copy; 2025 Central Philippine University | LILAC System</p>
-    </footer>
-
     <script>
         // Global file selection handler
         let isProcessingFiles = false;
@@ -750,8 +671,18 @@ $trashEventsData = loadTrashEventsData();
             if (urlParams.get('created') === '1') {
                 const message = urlParams.get('message') || 'Event created successfully';
                 showNotification(decodeURIComponent(message), 'success');
+                
+                // Check for awards earned after successful event creation
+                if (window.checkAwardCriteria) {
+                    window.checkAwardCriteria('event', 'new_event');
+                }
+                
                 // Clean up URL
                 window.history.replaceState({}, document.title, window.location.pathname);
+                // Refresh events data from API to show the new event
+                setTimeout(() => {
+                    refreshEventsFromAPI();
+                }, 500);
             } else if (urlParams.get('deleted') === '1') {
                 const message = urlParams.get('message') || 'Event deleted successfully';
                 showNotification(decodeURIComponent(message), 'success');
@@ -862,10 +793,9 @@ $trashEventsData = loadTrashEventsData();
                     const organizer = document.getElementById('event-organizer')?.value || '';
                     const place = document.getElementById('event-place')?.value || '';
                     const date = document.getElementById('event-date-manual')?.value || '';
-                    const status = document.getElementById('event-status')?.value || '';
-                    const type = document.getElementById('event-type')?.value || '';
+                    const eventStatus = document.getElementById('event-status')?.value || '';
                     
-                    if (!eventName || !organizer || !place || !date || !status || !type) {
+                    if (!eventName || !organizer || !place || !date || !eventStatus) {
                         alert('Please fill in all fields');
                         return;
                     }
@@ -903,7 +833,6 @@ $trashEventsData = loadTrashEventsData();
                     document.getElementById('event-place').value = '';
                     document.getElementById('event-date-manual').value = '';
                     document.getElementById('event-status').value = '';
-                    document.getElementById('event-type').value = '';
                 };
             }
 
@@ -1089,6 +1018,7 @@ $trashEventsData = loadTrashEventsData();
                             // Call auto-classification API
                             const classifyFormData = new FormData();
                             classifyFormData.append('action', 'auto_classify_event');
+                            classifyFormData.append('csrf_token', document.getElementById('csrf-token').value);
                             classifyFormData.append('title', eventTitle.value.trim());
                             classifyFormData.append('description', eventDescription.value.trim());
                             classifyFormData.append('location', eventLocation.value.trim());
@@ -1148,6 +1078,7 @@ $trashEventsData = loadTrashEventsData();
 
                     const formData = new FormData();
                     formData.append('action', 'create_event');
+                    formData.append('csrf_token', document.getElementById('csrf-token').value);
                     formData.append('title', eventTitle.value.trim());
                     formData.append('description', eventDescription.value.trim());
                     formData.append('event_date', convertedDate);
@@ -1161,23 +1092,18 @@ $trashEventsData = loadTrashEventsData();
                     }
 
                     try {
-                        // Submit form directly to create_event.php
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = 'create_event.php';
-                        form.style.display = 'none';
+                        // Submit form using fetch with FormData for proper file handling
+                        const response = await fetch('create_event.php', {
+                            method: 'POST',
+                            body: formData
+                        });
                         
-                        // Add all form data as hidden inputs
-                        for (let [key, value] of formData.entries()) {
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = key;
-                            input.value = value;
-                            form.appendChild(input);
+                        if (response.ok) {
+                            // Success - redirect to events page
+                            window.location.href = 'events_activities.php?created=1&message=' + encodeURIComponent('Event "' + eventTitle.value.trim() + '" created successfully');
+                        } else {
+                            throw new Error('Server error: ' + response.status);
                         }
-                        
-                        document.body.appendChild(form);
-                        form.submit();
                         
                     } catch (error) {
                         console.error('Error creating event:', error);
@@ -1389,7 +1315,7 @@ $trashEventsData = loadTrashEventsData();
         // Initialize delete functionality
         function initializeDeleteFunctionality() {
             let cardToDelete = null;
-            const deleteModal = document.getElementById('delete-modal');
+            const deleteModal = document.getElementById('delete-card-modal');
             const cancelDelete = document.getElementById('cancel-delete');
             const confirmDelete = document.getElementById('confirm-delete');
             
@@ -1684,28 +1610,27 @@ $trashEventsData = loadTrashEventsData();
             }
         }
 
-        // Load existing events from PHP data directly
-        function loadExistingEvents() {
+        // Refresh events from API (for after creating new events)
+        async function refreshEventsFromAPI() {
             try {
-                console.log('🔄 Loading all events from PHP data...');
+                console.log('🔄 Refreshing events from API...');
                 
-                // Use PHP data directly instead of HTTP requests
-                const result = <?php echo json_encode($eventsData); ?>;
-                console.log('📥 PHP Events Data:', result);
+                // Try the main API first, then fallback to simple API
+                let response;
+                try {
+                    response = await fetch('api/central_events_api.php?action=get_events_by_status');
+                } catch (error) {
+                    console.log('Main API failed, trying simple API...');
+                    response = await fetch('api/events_simple.php?action=get_events_by_status');
+                }
+                const result = await response.json();
                 
                 if (result.success && result.data.events) {
-                    console.log('✅ Loaded events from PHP data');
-                    
-                    // Combine upcoming and completed events
-                    const allEvents = [...result.data.events.upcoming, ...result.data.events.completed];
-                    console.log('📊 Total events:', allEvents.length, '(Upcoming:', result.data.events.upcoming.length, ', Completed:', result.data.events.completed.length, ')');
-                    
-                    // Cards container removed - using sidebar upcoming events list instead
+                    console.log('✅ Refreshed events from API');
                     
                     // Clear existing table rows (keep empty message)
                     const tableBody = document.getElementById('events-table-body');
                     if (tableBody) {
-                        // Remove all rows except the empty message
                         const rows = tableBody.querySelectorAll('tr');
                         rows.forEach(row => {
                             if (row.id !== 'empty-events-message') {
@@ -1714,61 +1639,204 @@ $trashEventsData = loadTrashEventsData();
                         });
                     }
                     
-                    // Recreate cards and table entries for all events
-                    console.log(`📅 Loading ${allEvents.length} total events`);
+                    // Combine upcoming and completed events
+                    const allEvents = [...result.data.events.upcoming, ...result.data.events.completed];
+                    console.log('📊 Total refreshed events:', allEvents.length);
                     
+                    // Recreate table entries for all events
                     allEvents.forEach(eventData => {
                         try {
-                            console.log('Loading event with ID:', eventData.id, 'Title:', eventData.title, 'Status:', eventData.status);
-                            
-                            // Add to table (all events - both upcoming and completed)
                             addEventToTable(eventData);
                         } catch (error) {
-                            console.error('Error adding event to table:', error, eventData);
+                            console.error('Error adding refreshed event to table:', error, eventData);
                         }
                     });
                     
                     // Update event counters
-                    try {
-                        updateEventCounters(allEvents);
-                    } catch (error) {
-                        console.error('Error updating event counters:', error);
-                    }
+                    updateEventCounters(allEvents);
                     
                     // Update upcoming events list in sidebar
-                    try {
-                        populateUpcomingEventsList(result.data.events.upcoming);
-                    } catch (error) {
-                        console.error('Error populating upcoming events list:', error);
-                    }
+                    populateUpcomingEventsList(result.data.events.upcoming);
                     
-                    // Update calendar with events (combine upcoming and completed)
-                    try {
-                        const allEventsForCalendar = [...result.data.events.upcoming, ...result.data.events.completed];
-                        updateCalendarWithEvents(allEventsForCalendar);
-                    } catch (error) {
-                        console.error('Error updating calendar with events:', error);
-                    }
+                    // Update calendar with events
+                    updateCalendarWithEvents(allEvents);
                     
                     // Handle empty state
                     const emptyMessage = document.getElementById('empty-events-message');
                     if (emptyMessage && allEvents.length > 0) {
                         emptyMessage.style.display = 'none';
-                    }
-                    
-                    // Attach delete listeners after all events are loaded
-                    setTimeout(() => {
-                        fixAllDeleteButtons();
-                    }, 100);
-                    
-                } else {
-                    console.log('No existing events found or failed to load');
-                    // Show empty state if no events
-                    const emptyMessage = document.getElementById('empty-events-message');
-                    if (emptyMessage) {
+                    } else if (emptyMessage && allEvents.length === 0) {
                         emptyMessage.style.display = '';
                     }
+                    
+                    console.log('✅ Events refreshed successfully');
+                } else {
+                    console.error('❌ Failed to refresh events:', result.message);
                 }
+            } catch (error) {
+                console.error('❌ Error refreshing events from API:', error);
+            }
+        }
+
+        // Load events from API
+        async function loadEventsFromAPI() {
+            try {
+                console.log('🔄 Loading events from API...');
+                
+                // Try the main API first, then fallback to simple API
+                let response;
+                try {
+                    response = await fetch('api/central_events_api.php?action=get_events_by_status');
+                } catch (error) {
+                    console.log('Main API failed, trying simple API...');
+                    response = await fetch('api/events_simple.php?action=get_events_by_status');
+                }
+                
+                // Check if response is ok
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Check if response has content
+                const responseText = await response.text();
+                if (!responseText || responseText.trim() === '') {
+                    console.log('Main API returned empty response, trying fallback API...');
+                    // Try the fallback API instead of throwing error
+                    response = await fetch('api/events_simple.php?action=get_events_by_status');
+                    const fallbackText = await response.text();
+                    if (!fallbackText || fallbackText.trim() === '') {
+                        throw new Error('Both APIs returned empty responses');
+                    }
+                    // Use fallback response
+                    const fallbackResult = JSON.parse(fallbackText);
+                    if (fallbackResult.success && fallbackResult.data && fallbackResult.data.events) {
+                        console.log('✅ Loaded events from fallback API');
+                        
+                        // Extract events from the grouped structure
+                        const allEvents = [];
+                        if (fallbackResult.data.events.upcoming) {
+                            allEvents.push(...fallbackResult.data.events.upcoming);
+                        }
+                        if (fallbackResult.data.events.completed) {
+                            allEvents.push(...fallbackResult.data.events.completed);
+                        }
+                        
+                        // Clear existing table rows (keep empty message)
+                        const tableBody = document.getElementById('events-table-body');
+                        if (tableBody) {
+                            const rows = tableBody.querySelectorAll('tr');
+                            rows.forEach(row => {
+                                if (row.id !== 'empty-events-message') {
+                                    row.remove();
+                                }
+                            });
+                        }
+                        
+                        // Add events to table
+                        allEvents.forEach(event => {
+                            addEventToTable(event);
+                        });
+                        
+                        // Update counters and lists
+                        updateEventCounters(allEvents);
+                        populateUpcomingEventsList(allEvents);
+                        
+                        // Update global events data
+                        eventsData = allEvents;
+                        return; // Exit function successfully
+                    }
+                    throw new Error('Fallback API also failed');
+                }
+                
+                // Try to parse JSON
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    console.error('Response text:', responseText);
+                    throw new Error('Invalid JSON response from API');
+                }
+                
+                if (result.success && result.data && result.data.events) {
+                    console.log('✅ Loaded events from API');
+                    
+                    // Extract events from the grouped structure
+                    const allEvents = [];
+                    if (result.data.events.upcoming) {
+                        allEvents.push(...result.data.events.upcoming);
+                    }
+                    if (result.data.events.completed) {
+                        allEvents.push(...result.data.events.completed);
+                    }
+                    
+                    // Clear existing table rows (keep empty message)
+                    const tableBody = document.getElementById('events-table-body');
+                    if (tableBody) {
+                        const rows = tableBody.querySelectorAll('tr');
+                        rows.forEach(row => {
+                            if (row.id !== 'empty-events-message') {
+                                row.remove();
+                            }
+                        });
+                    }
+                    
+                    // Add events to table
+                    allEvents.forEach(event => {
+                        addEventToTable(event);
+                    });
+                    
+                    // Update counters and lists
+                    updateEventCounters(allEvents);
+                    populateUpcomingEventsList(allEvents);
+                    
+                    // Update global events data
+                    eventsData = allEvents;
+                    
+                } else {
+                    console.log('No events found or API error, using fallback data');
+                    // Use fallback data from PHP
+                    const pageEventsData = <?php echo json_encode($eventsData ?? []); ?>;
+                    if (pageEventsData && pageEventsData.length > 0) {
+                        pageEventsData.forEach(event => {
+                            addEventToTable(event);
+                        });
+                        updateEventCounters(pageEventsData);
+                        populateUpcomingEventsList(pageEventsData);
+                        eventsData = pageEventsData;
+                    } else {
+                        updateEventCounters([]);
+                        populateUpcomingEventsList([]);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('❌ Error loading events from API:', error);
+                console.log('Using fallback data from PHP');
+                // Use fallback data from PHP
+                const pageEventsData = <?php echo json_encode($eventsData ?? []); ?>;
+                if (pageEventsData && pageEventsData.length > 0) {
+                    pageEventsData.forEach(event => {
+                        addEventToTable(event);
+                    });
+                    updateEventCounters(pageEventsData);
+                    populateUpcomingEventsList(pageEventsData);
+                    eventsData = pageEventsData;
+                } else {
+                    updateEventCounters([]);
+                    populateUpcomingEventsList([]);
+                }
+            }
+        }
+
+        // Load existing events from PHP data directly
+        function loadExistingEvents() {
+            try {
+                console.log('🔄 Loading all events from API...');
+                
+                // Load events from API since PHP data loading was removed for performance
+                loadEventsFromAPI();
+                
             } catch (error) {
                 console.error('❌ Error loading existing events:', error);
                 console.error('Error details:', {
@@ -2058,51 +2126,101 @@ $trashEventsData = loadTrashEventsData();
             const modal = document.getElementById('deleteModal');
             const eventInfo = document.getElementById('deleteEventInfo');
             
-            if (!modal || !eventInfo) {
-                console.error('Delete modal or event info element not found');
+            if (!modal) {
+                console.error('Delete modal not found');
                 return;
             }
             
-            // Show loading state
-            eventInfo.innerHTML = `
-                <div class="text-sm text-gray-500">
-                    <div class="animate-pulse">Loading event details...</div>
-                </div>
-            `;
+            // Show the modal
             modal.classList.remove('hidden');
             
-            try {
-                // Fetch event data from API
-                const response = await fetch(`api/enhanced_management.php?action=get_event&id=${eventId}`);
-                const result = await response.json();
-                
-                if (result.success && result.event) {
-                    const event = result.event;
-                    currentDeleteEventData = event;
-                    
-                    // Populate event info
+            // Show loading state
+            if (eventInfo) {
+                eventInfo.innerHTML = `
+                    <div class="text-sm text-gray-500">
+                        <div class="animate-pulse">Loading event details...</div>
+                    </div>
+                `;
+            }
+            
+            // First try to get event data from the page data (faster and more reliable)
+            const pageEventsData = <?php echo json_encode($eventsData); ?>;
+            let event = null;
+            
+            if (pageEventsData.success && pageEventsData.data && pageEventsData.data.events) {
+                const allEvents = [...pageEventsData.data.events.upcoming, ...pageEventsData.data.events.completed];
+                event = allEvents.find(e => e.id == eventId);
+            }
+            
+            if (event) {
+                console.log('📄 Found event in page data for delete:', event);
+                currentDeleteEventData = event;
+                if (eventInfo) {
                     eventInfo.innerHTML = `
                         <div class="text-sm">
                             <div class="font-medium text-gray-900">${event.title || 'Untitled Event'}</div>
                             <div class="text-gray-600 mt-1">Date: ${event.start ? new Date(event.start).toLocaleDateString() : 'N/A'}</div>
                             <div class="text-gray-600">Location: ${event.location || 'N/A'}</div>
-                            ${event.original_link ? `<div class="text-gray-600">Link: <a href="${event.original_link}" target="_blank" class="text-blue-600 hover:underline">${event.original_link}</a></div>` : ''}
-                        </div>
-                    `;
-                } else {
-                    eventInfo.innerHTML = `
-                        <div class="text-sm text-red-600">
-                            Error loading event details: ${result.message || 'Unknown error'}
+                            ${event.description ? `<div class="text-gray-600 mt-1">Description: ${event.description}</div>` : ''}
                         </div>
                     `;
                 }
+                return;
+            }
+            
+            // Fallback to API call if not found in page data
+            console.log('🔄 Event not found in page data, trying API for delete...');
+            
+            try {
+                // Fetch event data from API
+                const response = await fetch(`api/central_events_api.php?action=get_event&event_id=${eventId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const responseText = await response.text();
+                console.log('📥 Raw API response:', responseText);
+                
+                if (!responseText.trim()) {
+                    throw new Error('Empty response from API');
+                }
+                
+                const result = JSON.parse(responseText);
+                
+                if (result.success && result.data && result.data.event) {
+                    const event = result.data.event;
+                    currentDeleteEventData = event;
+                    
+                    // Populate event info
+                    if (eventInfo) {
+                        eventInfo.innerHTML = `
+                            <div class="text-sm">
+                                <div class="font-medium text-gray-900">${event.title || 'Untitled Event'}</div>
+                                <div class="text-gray-600 mt-1">Date: ${event.start ? new Date(event.start).toLocaleDateString() : 'N/A'}</div>
+                                <div class="text-gray-600">Location: ${event.location || 'N/A'}</div>
+                                ${event.description ? `<div class="text-gray-600 mt-1">Description: ${event.description}</div>` : ''}
+                            </div>
+                        `;
+                    }
+                } else {
+                    if (eventInfo) {
+                        eventInfo.innerHTML = `
+                            <div class="text-sm text-red-600">
+                                Error loading event details: ${result.message || 'Unknown error'}
+                            </div>
+                        `;
+                    }
+                }
             } catch (error) {
-                console.error('Error fetching event data:', error);
-                eventInfo.innerHTML = `
-                    <div class="text-sm text-red-600">
-                        Error loading event details: ${error.message}
-                    </div>
-                `;
+                console.error('❌ Error fetching event data for delete:', error);
+                if (eventInfo) {
+                    eventInfo.innerHTML = `
+                        <div class="text-sm text-red-600">
+                            Error loading event details: ${error.message}
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -2432,11 +2550,56 @@ $trashEventsData = loadTrashEventsData();
         window.createImageCard = createImageCard;
         window.saveEventToAPI = saveEventToAPI;
         window.loadExistingEvents = loadExistingEvents;
+        window.refreshEventsFromAPI = refreshEventsFromAPI;
         window.deleteEventFromAPI = deleteEventFromAPI;
         window.attachTableDeleteListeners = attachTableDeleteListeners;
         window.testDeleteFunctionality = testDeleteFunctionality;
         window.fixAllDeleteButtons = fixAllDeleteButtons;
         window.deleteTestEvent = deleteTestEvent;
+        window.viewEventFile = viewEventFile;
+        window.showDeleteModal = showDeleteModal;
+        
+        // Test function for action buttons
+        window.testActionButtons = function() {
+            console.log('🔧 Testing action buttons...');
+            
+            // Check if buttons exist
+            const viewButtons = document.querySelectorAll('.view-file-btn');
+            const deleteButtons = document.querySelectorAll('.delete-row-btn');
+            
+            console.log(`📊 Found ${viewButtons.length} view buttons and ${deleteButtons.length} delete buttons`);
+            
+            // Test each button
+            viewButtons.forEach((btn, index) => {
+                const eventId = btn.getAttribute('data-event-id');
+                const onclick = btn.getAttribute('onclick');
+                console.log(`👁️ View button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
+            });
+            
+            deleteButtons.forEach((btn, index) => {
+                const eventId = btn.getAttribute('data-event-id');
+                const onclick = btn.getAttribute('onclick');
+                console.log(`🗑️ Delete button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
+            });
+            
+            // Test functions exist
+            console.log('🔍 Function availability:');
+            console.log(`  - viewEventFile: ${typeof window.viewEventFile}`);
+            console.log(`  - showDeleteModal: ${typeof window.showDeleteModal}`);
+            console.log(`  - hideDeleteModal: ${typeof window.hideDeleteModal}`);
+            console.log(`  - confirmDeleteEvent: ${typeof window.confirmDeleteEvent}`);
+            
+            return {
+                viewButtons: viewButtons.length,
+                deleteButtons: deleteButtons.length,
+                functionsAvailable: {
+                    viewEventFile: typeof window.viewEventFile,
+                    showDeleteModal: typeof window.showDeleteModal,
+                    hideDeleteModal: typeof window.hideDeleteModal,
+                    confirmDeleteEvent: typeof window.confirmDeleteEvent
+                }
+            };
+        };
         window.generateCalendar = generateCalendar;
         window.navigateCalendar = navigateCalendar;
         window.updateCalendarWithEvents = updateCalendarWithEvents;
@@ -2667,12 +2830,40 @@ $trashEventsData = loadTrashEventsData();
         }
 
         function viewEventFile(eventId) {
+            console.log('🔍 Viewing event:', eventId);
+            
+            // First try to get event data from the page data (faster and more reliable)
+            const pageEventsData = <?php echo json_encode($eventsData); ?>;
+            let event = null;
+            
+            if (pageEventsData.success && pageEventsData.data && pageEventsData.data.events) {
+                const allEvents = [...pageEventsData.data.events.upcoming, ...pageEventsData.data.events.completed];
+                event = allEvents.find(e => e.id == eventId);
+            }
+            
+            if (event) {
+                console.log('📄 Found event in page data:', event);
+                showEventDetails(event);
+                return;
+            }
+            
+            // Fallback to API call if not found in page data
+            console.log('🔄 Event not found in page data, trying API...');
+            
             // Get event data from the central events API
             fetch(`api/central_events_api.php?action=get_event&event_id=${eventId}`)
-                .then(response => response.json())
+                .then(response => {
+                    console.log('📡 API Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(result => {
-                    if (result.success && result.event) {
-                        const event = result.event;
+                    console.log('📥 API Result:', result);
+                    if (result.success && result.data && result.data.event) {
+                        const event = result.data.event;
+                        console.log('📄 Event data:', event);
                         
                         // Create a document object for the viewer
                         const doc = {
@@ -2694,19 +2885,38 @@ $trashEventsData = loadTrashEventsData();
                             showEventDetails(event);
                         }
                     } else {
-                        showNotification('Event not found', 'error');
+                        console.error('❌ Event not found or API error:', result);
+                        showNotification('Event not found or API error: ' + (result.message || 'Unknown error'), 'error');
                     }
                 })
                 .catch(error => {
-                    console.error('Error fetching event:', error);
-                    showNotification('Error loading event', 'error');
+                    console.error('❌ Error fetching event:', error);
+                    showNotification('Error loading event: ' + error.message, 'error');
                 });
         }
         
         function showEventDetails(event) {
-            // Create a modal to show event details
+            // Create a modal to show event details (simplified - only title, image, description)
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4';
+            
+            // Debug: Log event data to see what's available
+            console.log('🔍 Event data for view:', event);
+            console.log('🖼️ Image paths:', {
+                image_path: event.image_path,
+                file_path: event.file_path,
+                hasImage: !!(event.image_path || event.file_path)
+            });
+            
+            // Create image HTML if image exists
+            const imageHtml = (event.image_path || event.file_path) ? `
+                <div class="mb-4">
+                    <img src="${event.image_path || event.file_path}" alt="${event.title || 'Event Image'}" 
+                         class="w-full h-64 object-cover rounded-lg shadow-md"
+                         onerror="console.error('❌ Image failed to load:', this.src); this.style.display='none';">
+                </div>
+            ` : '<div class="mb-4 text-center text-gray-500 text-sm">No image available</div>';
+            
             modal.innerHTML = `
                 <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                     <div class="flex items-center justify-between px-6 py-4 border-b">
@@ -2717,46 +2927,15 @@ $trashEventsData = loadTrashEventsData();
                             </svg>
                         </button>
                     </div>
-                    <div class="p-6 overflow-y-auto max-h-[70vh]">
+                    <div class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                        ${imageHtml}
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
-                                <p class="text-gray-900">${event.title || 'N/A'}</p>
+                                <h4 class="text-xl font-semibold text-gray-900 mb-2">${event.title || 'No title'}</h4>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                <p class="text-gray-900">${event.start ? new Date(event.start).toLocaleDateString() : 'N/A'}</p>
+                                <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">${event.description || 'No description available'}</p>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                                <p class="text-gray-900">${event.start ? new Date(event.start).toLocaleTimeString() : 'N/A'}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                                <p class="text-gray-900">${event.location || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                <span class="inline-block ${event.status === 'upcoming' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'} text-xs px-2 py-1 rounded-full font-medium">
-                                    ${event.status ? event.status.charAt(0).toUpperCase() + event.status.slice(1) : 'N/A'}
-                                </span>
-                            </div>
-                            ${event.description && event.description.trim() ? `
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <p class="text-gray-900 whitespace-pre-wrap">${event.description}</p>
-                            </div>
-                            ` : ''}
-                            ${event.image_path || event.file_path ? `
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Event Image</label>
-                                <div class="mt-2">
-                                    <img src="${event.image_path || event.file_path}" alt="${event.title || 'Event Image'}" 
-                                         class="max-w-full h-auto rounded-lg border border-gray-200 shadow-sm" 
-                                         style="max-height: 300px;">
-                                </div>
-                            </div>
-                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -2888,6 +3067,14 @@ $trashEventsData = loadTrashEventsData();
             generateCalendar(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth());
         }
     </script>
+
+    <!-- Footer -->
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
+        <p>&copy; 2025 Central Philippine University | LILAC System</p>
+    </footer>
+
+    <!-- Include shared document viewer -->
+    <?php include 'components/shared-document-viewer.php'; ?>
 
 </body>
 

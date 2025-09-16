@@ -102,7 +102,7 @@ class CentralEventsSystem {
             $today = new DateTime();
             $status = $startDate < $today ? 'completed' : 'upcoming';
             
-            // Check if event already exists (by title and start)
+            // Check if event already exists (by title and start date)
             $stmt = $this->pdo->prepare("
                 SELECT id FROM central_events 
                 WHERE title = ? AND start = ?
@@ -141,8 +141,8 @@ class CentralEventsSystem {
             } else {
                 // Insert new event
                 $stmt = $this->pdo->prepare("
-                    INSERT INTO central_events (title, description, start, end, location, image_path, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO central_events (title, description, start, end, location, status)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
                     $eventData['title'],
@@ -150,7 +150,6 @@ class CentralEventsSystem {
                     $start,
                     $end,
                     $eventData['location'] ?? null,
-                    $eventData['image_path'] ?? null,
                     $status
                 ]);
                 
@@ -184,7 +183,7 @@ class CentralEventsSystem {
         try {
             $stmt = $this->pdo->query("
                 SELECT * FROM central_events 
-                ORDER BY event_date ASC, event_time ASC
+                ORDER BY start ASC
             ");
             $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
             

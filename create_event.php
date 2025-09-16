@@ -6,7 +6,7 @@
 // Handle POST request for event creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        require_once 'config/database.php';
+        require_once 'classes/EventsManager.php';
         
         // Get form data
         $title = $_POST['title'] ?? '';
@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $location = $_POST['location'] ?? '';
         $originalLink = $_POST['original_link'] ?? '';
         $awardType = $_POST['award_type'] ?? '';
+        $imagePath = '';
         
         // Validate required fields
         if (empty($title)) {
@@ -25,34 +26,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Event date is required');
         }
         
-        $db = new Database();
-        $pdo = $db->getConnection();
+        // Handle image upload
+        if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = 'uploads/events/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            $fileExtension = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            
+            if (in_array($fileExtension, $allowedExtensions)) {
+                $fileName = uniqid('event_', true) . '.' . $fileExtension;
+                $uploadPath = $uploadDir . $fileName;
+                
+                if (move_uploaded_file($_FILES['file']['tmp_name'], $uploadPath)) {
+                    $imagePath = $uploadPath;
+                } else {
+                    throw new Exception('Failed to upload image');
+                }
+            } else {
+                throw new Exception('Invalid image file type. Allowed: ' . implode(', ', $allowedExtensions));
+            }
+        }
         
-        // Convert date and time to start/end DATETIME
-        $start = $eventDate . ' ' . ($eventTime ?: '09:00:00');
-        $end = $eventDate . ' ' . ($eventTime ? date('H:i:s', strtotime($eventTime . ' +2 hours')) : '11:00:00');
+        // Initialize events manager
+        $eventsManager = new EventsManager();
         
-        // Determine status based on start date
-        $startDateObj = new DateTime($start);
-        $today = new DateTime();
-        $status = $startDateObj < $today ? 'completed' : 'upcoming';
+        // Prepare event data
+        $eventData = [
+            'title' => $title,
+            'description' => $description,
+            'event_date' => $eventDate,
+            'event_time' => $eventTime,
+            'location' => $location,
+            'image_path' => $imagePath
+        ];
         
-        // Insert the event
-        $stmt = $pdo->prepare("
-            INSERT INTO central_events (title, description, start, end, location, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ");
+        // Create event using the manager
+        $result = $eventsManager->createEvent($eventData);
         
-        $stmt->execute([
-            $title,
-            $description,
-            $start,
-            $end,
-            $location,
-            $status
-        ]);
+        if (!$result['success']) {
+            throw new Exception($result['error']);
+        }
         
-        $eventId = $pdo->lastInsertId();
+        $eventId = $result['event_id'];
         
         // Redirect back to events page with success message
         $message = urlencode('Event "' . $title . '" created successfully');

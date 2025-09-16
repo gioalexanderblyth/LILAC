@@ -144,7 +144,7 @@ require_once 'classes/DateTimeUtility.php';
                     'image/png', 
                     'image/jpg'
                 ];
-
+                
                 if (!allowedTypes.includes(fileInput.files[0].type)) {
                     showNotification('Only PDF, JPG, JPEG, and PNG files are allowed for certificates', 'error');
                     return;
@@ -216,7 +216,7 @@ require_once 'classes/DateTimeUtility.php';
                     
                     // Clear form
                     document.getElementById('award-form').reset();
-    
+                    
                     // Refresh display
                     loadDocuments();
                     loadStats();
@@ -521,7 +521,7 @@ require_once 'classes/DateTimeUtility.php';
                 const date = new Date(award.upload_date);
                 const timeAgo = getTimeAgo(date);
                 const amount = `+ ${Math.floor(Math.random() * 500) + 100}`; // Simulate points
-
+                
                 return `
                     <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                         <div class="flex-shrink-0">
@@ -688,7 +688,7 @@ require_once 'classes/DateTimeUtility.php';
                         month: 'short', 
                         day: 'numeric'
                     });
-    
+                    
                     return `<tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
@@ -782,7 +782,7 @@ require_once 'classes/DateTimeUtility.php';
                 });
                 document.getElementById('viewAwardDateAdded').textContent = getTimeAgo(new Date(award.upload_date));
                 document.getElementById('viewAwardDescription').textContent = award.description || 'No description provided.';
-
+                
                 // Handle certificate file
                 const certificateSection = document.getElementById('viewAwardCertificate');
                 if (award.filename) {
@@ -810,7 +810,7 @@ require_once 'classes/DateTimeUtility.php';
                         </div>
                     `;
                 }
-
+                
                 // Show modal
                 document.getElementById('viewAwardModal').classList.remove('hidden');
             }
@@ -1011,14 +1011,14 @@ require_once 'classes/DateTimeUtility.php';
                 // Get all documents
                 const documentsResponse = await fetch('api/documents.php?action=get_all');
                 const documentsData = await documentsResponse.json();
-
+                
                 // Get all events from central system
                 const eventsResponse = await fetch('api/central_events_api.php?action=get_events_for_awards');
                 const eventsData = await eventsResponse.json();
-
+                
                 const contentList = document.getElementById('available-content-list');
                 contentList.innerHTML = '';
-
+                
                 if (documentsData.success && documentsData.documents.length > 0) {
                     documentsData.documents.forEach(doc => {
                         if (doc.status === 'Active') {
@@ -1047,7 +1047,7 @@ require_once 'classes/DateTimeUtility.php';
                         }
                     });
                 }
-
+                
                 if (eventsData.success && eventsData.events.length > 0) {
                     eventsData.events.forEach(event => {
                         if (event.status === 'Active') {
@@ -1076,7 +1076,7 @@ require_once 'classes/DateTimeUtility.php';
                         }
                     });
                 }
-
+                
                 if (contentList.children.length === 0) {
                     contentList.innerHTML = `
                         <div class="text-center text-gray-500 py-8">
@@ -1087,7 +1087,7 @@ require_once 'classes/DateTimeUtility.php';
                         </div>
                     `;
                 }
-
+                
             } catch (error) {
                 console.error('Error loading content:', error);
                 document.getElementById('available-content-list').innerHTML = `
@@ -1110,7 +1110,7 @@ require_once 'classes/DateTimeUtility.php';
 
             try {
                 showNotification(`Analyzing ${contentType}: ${contentTitle}`, 'info');
-
+                
                 // Perform analysis via API
                 const response = await fetch('api/checklist.php', {
                     method: 'POST',
@@ -1119,13 +1119,13 @@ require_once 'classes/DateTimeUtility.php';
                     },
                     body: `action=analyze_single_content&content_type=${encodeURIComponent(contentType)}&content_id=${encodeURIComponent(contentId)}`
                 });
-
+                
                 const result = await response.json();
-
+                
                 if (result.success) {
                     displaySingleAnalysisResults(result.analysis, contentType, contentTitle);
                     showNotification('Analysis completed successfully!', 'success');
-    
+                    
                     // Refresh the page data
                     if (typeof loadAwardDocumentCounts === 'function') {
                         loadAwardDocumentCounts();
@@ -1174,7 +1174,7 @@ require_once 'classes/DateTimeUtility.php';
             try {
                 const response = await fetch('api/documents.php?action=get_award_counters');
                 const result = await response.json();
-
+                
                 if (result.success && result.counters) {
                     updateAwardCounters(result.counters);
                 }
@@ -1195,7 +1195,7 @@ require_once 'classes/DateTimeUtility.php';
                     if (scoreElement) {
                         scoreElement.textContent = counter.total_content || 0;
                     }
-    
+                    
                     // Update readiness status
                     updateAwardReadiness(awardType, counter);
                 }
@@ -1269,7 +1269,7 @@ require_once 'classes/DateTimeUtility.php';
 
             try {
                 showNotification('Starting comprehensive analysis of all documents and events...', 'info');
-
+                
                 // Perform batch analysis via API
                 const response = await fetch('api/checklist.php', {
                     method: 'POST',
@@ -1278,13 +1278,13 @@ require_once 'classes/DateTimeUtility.php';
                     },
                     body: 'action=analyze_all_content'
                 });
-
+                
                 const result = await response.json();
-
+                
                 if (result.success) {
                     displayBatchAnalysisResults(result.analysis);
                     showNotification('Comprehensive analysis completed successfully!', 'success');
-    
+                    
                     // Refresh the page data
                     if (typeof loadAwardDocumentCounts === 'function') {
                         loadAwardDocumentCounts();
@@ -1298,7 +1298,7 @@ require_once 'classes/DateTimeUtility.php';
                 } else {
                     throw new Error(result.message || 'Batch analysis failed');
                 }
-
+                
             } catch (error) {
                 console.error('Error analyzing all documents and events:', error);
                 showNotification(`Error in batch analysis: ${error.message}`, 'error');
@@ -1372,7 +1372,7 @@ require_once 'classes/DateTimeUtility.php';
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Supported Awards</h4>
                         <div class="space-y-2">
                 `;
-
+                
                 analysis.supported_awards.forEach(award => {
                     content += `
                         <div class="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -1391,7 +1391,7 @@ require_once 'classes/DateTimeUtility.php';
                         </div>
                     `;
                 });
-
+                
                 content += `
                         </div>
                     </div>
@@ -1404,7 +1404,7 @@ require_once 'classes/DateTimeUtility.php';
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Satisfied Criteria</h4>
                         <div class="space-y-2">
                 `;
-
+                
                 analysis.satisfied_criteria.forEach(criterion => {
                     content += `
                         <div class="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1423,7 +1423,7 @@ require_once 'classes/DateTimeUtility.php';
                         </div>
                     `;
                 });
-
+                
                 content += `
                         </div>
                     </div>
@@ -1436,7 +1436,7 @@ require_once 'classes/DateTimeUtility.php';
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Keywords Found</h4>
                         <div class="flex flex-wrap gap-2">
                 `;
-
+                
                 analysis.keywords_found.forEach(keyword => {
                     content += `
                         <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
@@ -1444,7 +1444,7 @@ require_once 'classes/DateTimeUtility.php';
                         </span>
                     `;
                 });
-
+                
                 content += `
                         </div>
                     </div>
@@ -1457,7 +1457,7 @@ require_once 'classes/DateTimeUtility.php';
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Recommendations</h4>
                         <div class="space-y-2">
                 `;
-
+                
                 analysis.recommendations.forEach(rec => {
                     content += `
                         <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1466,7 +1466,7 @@ require_once 'classes/DateTimeUtility.php';
                         </div>
                     `;
                 });
-
+                
                 content += `
                         </div>
                     </div>
@@ -1544,13 +1544,13 @@ require_once 'classes/DateTimeUtility.php';
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Award Breakdown</h4>
                         <div class="space-y-4">
                 `;
-
+                
                 analysis.award_breakdown.forEach(award => {
                     const readinessColor = award.readiness === 'Ready to Apply' ? 'green' : 
                                          award.readiness === 'Nearly Ready' ? 'yellow' : 'red';
                     const readinessIcon = award.readiness === 'Ready to Apply' ? '✅' : 
                                         award.readiness === 'Nearly Ready' ? '⚠️' : '❌';
-    
+                    
                     content += `
                         <div class="border border-gray-200 rounded-lg p-4">
                             <div class="flex items-center justify-between mb-3">
@@ -1579,7 +1579,7 @@ require_once 'classes/DateTimeUtility.php';
                         </div>
                     `;
                 });
-
+                
                 content += `
                         </div>
                     </div>
@@ -1592,7 +1592,7 @@ require_once 'classes/DateTimeUtility.php';
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Missing Criteria</h4>
                         <div class="space-y-2">
                 `;
-
+                
                 analysis.missing_criteria.forEach(missing => {
                     content += `
                         <div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -1611,7 +1611,7 @@ require_once 'classes/DateTimeUtility.php';
                         </div>
                     `;
                 });
-
+                
                 content += `
                         </div>
                     </div>
@@ -1641,7 +1641,7 @@ require_once 'classes/DateTimeUtility.php';
                             ${results.map(result => `
                                 <div class="border border-gray-200 rounded-lg p-4">
                                     <h4 class="text-lg font-semibold text-gray-900 mb-3">${result.awardType}</h4>
-                    
+                                    
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                         <div class="bg-blue-50 p-3 rounded-lg">
                                             <div class="text-sm text-blue-600 font-medium">Documents</div>
@@ -1740,10 +1740,10 @@ require_once 'classes/DateTimeUtility.php';
         async function showAwardChecklists() {
             try {
                 showNotification('Loading award checklists...', 'info');
-
+                
                 const response = await fetch('api/checklist.php?action=get_all_checklists');
                 const result = await response.json();
-
+                
                 if (result.success) {
                     displayAwardChecklists(result.checklists);
                     showNotification('Award checklists loaded!', 'success');
@@ -1788,7 +1788,7 @@ require_once 'classes/DateTimeUtility.php';
                                             </span>
                                         </div>
                                     </div>
-                    
+                                    
                                     <div class="grid grid-cols-3 gap-4 mb-4">
                                         <div class="text-center">
                                             <div class="text-2xl font-bold text-blue-600">${checklist.document_count}</div>
@@ -1858,7 +1858,7 @@ require_once 'classes/DateTimeUtility.php';
                 });
 
                 const result = await response.json();
-
+                
                 if (result.success) {
                     showNotification('Criterion status updated!', 'success');
                     // Refresh the checklist display
@@ -1875,20 +1875,20 @@ require_once 'classes/DateTimeUtility.php';
         // Load readiness summary
         async function loadReadinessSummary() {
             try {
-
-
+                showNotification('Loading readiness summary...', 'info');
+                
                 const response = await fetch('api/checklist.php?action=get_readiness_summary');
                 const result = await response.json();
-
+                
                 if (result.success) {
                     displayReadinessSummary(result.summary);
-    
+                    showNotification('Readiness summary loaded!', 'success');
                 } else {
-    
+                    showNotification('Failed to load readiness summary', 'error');
                 }
             } catch (error) {
                 console.error('Error loading readiness summary:', error);
-
+                showNotification('Error loading readiness summary', 'error');
             }
         }
 
@@ -1916,7 +1916,7 @@ require_once 'classes/DateTimeUtility.php';
                             </span>
                         </div>
                     </div>
-    
+                    
                     <div class="space-y-2">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Documents:</span>
@@ -1931,7 +1931,7 @@ require_once 'classes/DateTimeUtility.php';
                             <span class="font-medium text-green-600">${item.satisfied_count}/${item.total_count}</span>
                         </div>
                     </div>
-    
+                    
                     <div class="mt-3">
                         <div class="w-full bg-gray-200 rounded-full h-2">
                             <div class="h-2 rounded-full ${
@@ -1944,7 +1944,7 @@ require_once 'classes/DateTimeUtility.php';
                             ${Math.round(item.readiness.satisfaction_rate * 100)}% Complete
                         </div>
                     </div>
-    
+                    
                     <button onclick="showDetailedChecklist('${item.award_type}')" class="w-full mt-3 px-3 py-2 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
                         View Details
                     </button>
@@ -1956,10 +1956,10 @@ require_once 'classes/DateTimeUtility.php';
         async function showDetailedChecklist(awardType) {
             try {
                 showNotification('Loading detailed checklist...', 'info');
-
+                
                 const response = await fetch(`api/checklist.php?action=get_award_checklist&award_type=${encodeURIComponent(awardType)}`);
                 const result = await response.json();
-
+                
                 if (result.success) {
                     displayDetailedChecklist(result);
                     showNotification('Detailed checklist loaded!', 'success');
@@ -2052,7 +2052,7 @@ require_once 'classes/DateTimeUtility.php';
                                                     item.satisfied ? 'text-green-800' : 'text-red-800'
                                                 }">${item.criterion}</h6>
                                             </div>
-                            
+                                            
                                             ${item.supporting_content.length > 0 ? `
                                                 <div class="ml-8 mb-3">
                                                     <p class="text-sm text-gray-600 mb-2">Supporting Content:</p>
@@ -2068,7 +2068,7 @@ require_once 'classes/DateTimeUtility.php';
                                                     </div>
                                                 </div>
                                             ` : ''}
-                            
+                                            
                                             ${!item.satisfied && item.suggestions.length > 0 ? `
                                                 <div class="ml-8">
                                                     <p class="text-sm text-gray-600 mb-2">💡 Suggestions:</p>
@@ -2080,7 +2080,7 @@ require_once 'classes/DateTimeUtility.php';
                                                 </div>
                                             ` : ''}
                                         </div>
-                        
+                                        
                                         <button onclick="toggleCriterionStatus('${checklist.award_type}', '${item.criterion}', ${!item.satisfied})" 
                                                 class="ml-4 px-3 py-1 text-xs rounded ${
                                                     item.satisfied ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -2164,7 +2164,7 @@ require_once 'classes/DateTimeUtility.php';
             const recommendationsHTML = recommendations.map(rec => {
                 const colorClass = rec.type === 'critical' ? 'red' : rec.type === 'improvement' ? 'yellow' : 'blue';
                 const priorityColor = rec.priority === 'High' ? 'text-red-600' : rec.priority === 'Medium' ? 'text-yellow-600' : 'text-blue-600';
-
+                
                 return `
                     <div class="border-l-4 border-${colorClass}-500 pl-4 py-3 bg-${colorClass}-50 rounded-lg">
                         <div class="flex items-start justify-between">
@@ -2961,7 +2961,7 @@ LILAC Awards - Keyboard Shortcuts:
                             Refresh Status
                         </button>
                     </div>
-    
+                    
                     <div id="readiness-summary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <!-- Readiness cards will be loaded here -->
                         <div class="col-span-full text-center py-8 text-gray-500">
@@ -3464,9 +3464,6 @@ LILAC Awards - Keyboard Shortcuts:
             monthElement.textContent = currentMonth;
         }
     }
-    
-    // Close the renderMonthlyTrendChart function
-    }
 
     // Function to refresh chart data (can be called from other parts of the code)
     function refreshMonthlyTrendChart() {
@@ -3482,10 +3479,30 @@ LILAC Awards - Keyboard Shortcuts:
         }
     });
 
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + R to refresh chart
+        if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+            e.preventDefault();
+            refreshMonthlyTrendChart();
+        }
+        
+        // Ctrl/Cmd + B to toggle sidebar
+        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+            e.preventDefault();
+            if (window.toggleSidebar) {
+                window.toggleSidebar();
+            } else {
+                try { window.dispatchEvent(new CustomEvent('sidebar:toggle')); } catch (_) {}
+            }
+        }
+    });
     </script>
 
+    
+
     <script>
-        // Essential functions only - 2024-12-19-4
+        // Essential functions only - 2024-12-19-3
         function showAddAwardModal(){ openAddAwardModal(); }
         function openAddAwardModal(){
             document.getElementById('add-award-modal').classList.remove('hidden');
@@ -3524,7 +3541,7 @@ LILAC Awards - Keyboard Shortcuts:
             
             if (detailsElement && arrowElement) {
                 const isHidden = detailsElement.classList.contains('hidden');
-
+                
                 if (isHidden) {
                     // Show details
                     detailsElement.classList.remove('hidden');
@@ -3588,227 +3605,3 @@ LILAC Awards - Keyboard Shortcuts:
 </body>
 
 </html>
-            id: 'lineShadowAwards',
-            beforeDatasetsDraw(chart) {
-                const { ctx } = chart;
-                ctx.save();
-                ctx.shadowBlur = 8;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 6;
-                ctx.shadowColor = 'rgba(244,94,132,0.35)';
-            },
-            afterDatasetsDraw(chart) {
-                chart.ctx.restore();
-            }
-        };
-        if (typeof Chart !== 'undefined') Chart.register(lineShadow);
-
-        if (window.awardsLineChart) {
-            window.awardsLineChart.destroy();
-        }
-
-        window.awardsLineChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
-                datasets: [{
-                    label: 'Income',
-                    data: [5500, 2500, 10000, 6000, 14000, 1500, 7000, 20000],
-                    backgroundColor: gradientBkgrd,
-                    borderColor: gradientStroke,
-                    pointBorderColor: 'rgba(255,255,255,0)',
-                    pointBackgroundColor: 'rgba(255,255,255,0)',
-                    pointBorderWidth: 0,
-                    pointHoverRadius: 8,
-                    pointHoverBackgroundColor: gradientStroke,
-                    pointHoverBorderColor: 'rgba(220,220,220,1)',
-                    pointHoverBorderWidth: 4,
-                    pointRadius: 1,
-                    borderWidth: 5,
-                    pointHitRadius: 16,
-                    tension: 0.35,
-                    fill: 'start'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#fff',
-                        displayColors: false,
-                        titleColor: '#000',
-                        bodyColor: '#000'
-                    }
-                },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
-
-    // Award Criteria Dropdown and Linking Functions
-    function updateCriterionStatus(checkbox) {
-        const award = checkbox.dataset.award;
-        const criterion = checkbox.dataset.criterion;
-        const isChecked = checkbox.checked;
-        
-        // Update the criterion status via API
-        fetch('api/checklist.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `action=update_criterion_status&award_type=${encodeURIComponent(award)}&criterion=${encodeURIComponent(criterion)}&satisfied=${isChecked ? '1' : '0'}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log(`Criterion ${criterion} status updated to ${isChecked ? 'satisfied' : 'not satisfied'}`);
-                // Refresh the readiness summary if it exists
-                if (typeof loadReadinessSummary === 'function') {
-                    loadReadinessSummary();
-                }
-            } else {
-                console.error('Failed to update criterion status:', data.message);
-                // Revert checkbox state
-                checkbox.checked = !isChecked;
-            }
-        })
-        .catch(error => {
-            console.error('Error updating criterion status:', error);
-            // Revert checkbox state
-            checkbox.checked = !isChecked;
-        });
-    }
-
-    // Function to update checklist status automatically based on counters
-    function updateChecklistStatusAutomatically() {
-        const awardTypes = ['leadership', 'education', 'emerging', 'regional', 'global'];
-        
-        awardTypes.forEach(awardType => {
-            fetch(`api/checklist.php?action=get_checklist_status&award_type=${encodeURIComponent(awardType)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    data.status.forEach(criterionStatus => {
-                        const checkbox = document.querySelector(`input[data-award="${awardType}"][data-criterion="${criterionStatus.criterion}"]`);
-                        const statusElement = document.getElementById(`${awardType}-${criterionStatus.criterion}-status`);
-        
-                        if (checkbox) {
-                            checkbox.checked = criterionStatus.satisfied;
-                        }
-        
-                        if (statusElement) {
-                            if (criterionStatus.satisfied) {
-                                statusElement.textContent = 'Auto-assigned';
-                                statusElement.className = 'text-xs text-green-600 ml-2';
-                            } else {
-                                statusElement.textContent = 'Not assigned';
-                                statusElement.className = 'text-xs text-gray-500 ml-2';
-                            }
-                        }
-                    });
-                }
-            })
-            .catch(error => {
-                console.error(`Error loading checklist status for ${awardType}:`, error);
-            });
-        });
-    }
-
-    // Load available content when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        updateChecklistStatusAutomatically();
-        // Set up periodic refresh of checklist data
-        setInterval(refreshChecklistData, 30000); // Refresh every 30 seconds
-    });
-
-    // Function to refresh checklist data
-    function refreshChecklistData() {
-        if (typeof loadAwardDocumentCounts === 'function') {
-            loadAwardDocumentCounts();
-        }
-        if (typeof loadReadinessSummary === 'function') {
-            loadReadinessSummary();
-        }
-        if (typeof updateChecklistStatusAutomatically === 'function') {
-            updateChecklistStatusAutomatically();
-        }
-    }
-
-    function generateAwardReport() {
-        // Show loading state
-        const reportButton = event.target;
-        const originalText = reportButton.textContent;
-        reportButton.textContent = 'Generating...';
-        reportButton.disabled = true;
-
-        // Fetch readiness summary for all awards
-        fetch('api/checklist.php?action=get_readiness_summary')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                displayAwardReport(data.summary);
-            } else {
-                console.error('Failed to generate report:', data.message);
-                alert('Failed to generate report. Please try again.');
-            }
-        })
-        .catch(error => {
-            console.error('Error generating report:', error);
-            alert('Error generating report. Please try again.');
-        })
-        .finally(() => {
-            // Restore button state
-            reportButton.textContent = originalText;
-            reportButton.disabled = false;
-        });
-    }
-
-    function displayAwardReport(summary) {
-        // Create modal for the report
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        modal.innerHTML = `
-            <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                <div class="p-6 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-2xl font-bold text-gray-900">Award Application Report</h2>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <p class="text-gray-600 mt-2">Comprehensive overview of award readiness and missing requirements</p>
-                </div>
-                <div class="p-6">
-                    ${generateReportContent(summary)}
-                </div>
-                <div class="p-6 border-t border-gray-200 flex justify-end">
-                    <button onclick="this.closest('.fixed').remove()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors">
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-    }
-
-    function generateReportContent(summary) {
-    }
-
-    // End of JavaScript - Cache buster: 2024-12-19-4
-    </script>
-
-</body>
-
-</html>
-

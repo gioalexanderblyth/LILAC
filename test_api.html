@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test</h1>
+    <button onclick="testAwardsAPI()">Test Awards API</button>
+    <button onclick="testMOUAPI()">Test MOU API</button>
+    <div id="results"></div>
+
+    <script>
+        async function testAwardsAPI() {
+            try {
+                const response = await fetch('api/awards.php?action=get_stats');
+                const data = await response.text();
+                document.getElementById('results').innerHTML = '<h3>Awards API Response:</h3><pre>' + data + '</pre>';
+            } catch (error) {
+                document.getElementById('results').innerHTML = '<h3>Awards API Error:</h3><pre>' + error.message + '</pre>';
+            }
+        }
+
+        async function testMOUAPI() {
+            try {
+                const response = await fetch('api/mous.php?action=list');
+                const data = await response.text();
+                document.getElementById('results').innerHTML = '<h3>MOU API Response:</h3><pre>' + data + '</pre>';
+            } catch (error) {
+                document.getElementById('results').innerHTML = '<h3>MOU API Error:</h3><pre>' + error.message + '</pre>';
+            }
+        }
+    </script>
+</body>
+</html>

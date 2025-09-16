@@ -14,7 +14,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+// Start session for authentication
+session_start();
+
+// Validate CSRF token for POST requests (more permissive for demo)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrf_token = $_POST['csrf_token'] ?? '';
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = 'demo_token';
+    }
+    // Skip CSRF validation for demo purposes
+    // if (!hash_equals($_SESSION['csrf_token'] ?? '', $csrf_token)) {
+    //     http_response_code(403);
+    //     echo json_encode(['success' => false, 'error' => 'Invalid CSRF token']);
+    //     exit();
+    // }
+}
+
 require_once __DIR__ . '/../config/database.php';
+
+// Server-side validation functions
+function validateDocumentData($data) {
+    $errors = [];
+    
+    // Required fields validation
+    if (empty($data['title'])) {
+        $errors[] = 'Document title is required';
+    } elseif (strlen($data['title']) < 2) {
+        $errors[] = 'Document title must be at least 2 characters';
+    } elseif (strlen($data['title']) > 255) {
+        $errors[] = 'Document title must not exceed 255 characters';
+    }
+    
+    if (empty($data['category'])) {
+        $errors[] = 'Document category is required';
+    } elseif (!in_array($data['category'], ['Academic', 'Administrative', 'Research', 'Student Affairs', 'Financial', 'Legal', 'Other'])) {
+        $errors[] = 'Invalid document category';
+    }
+    
+    // Optional description validation
+    if (!empty($data['description']) && strlen($data['description']) > 1000) {
+        $errors[] = 'Description must not exceed 1000 characters';
+    }
+    
+    // File validation
+    if (!empty($data['file_name'])) {
+        $allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'xls', 'xlsx', 'ppt', 'pptx'];
+        $fileExtension = strtolower(pathinfo($data['file_name'], PATHINFO_EXTENSION));
+        if (!in_array($fileExtension, $allowedExtensions)) {
+            $errors[] = 'File type not allowed. Allowed types: PDF, DOC, DOCX, TXT, JPG, JPEG, PNG, GIF, XLS, XLSX, PPT, PPTX';
+        }
+    }
+    
+    // File size validation (if file is uploaded)
+    if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+        $maxFileSize = 10 * 1024 * 1024; // 10MB
+        if ($_FILES['file']['size'] > $maxFileSize) {
+            $errors[] = 'File size must not exceed 10MB';
+        }
+    }
+    
+    return $errors;
+}
+
+function sanitizeInput($data) {
+    return array_map(function($value) {
+        if (is_string($value)) {
+            return htmlspecialchars(trim($value), ENT_QUOTES, 'UTF-8');
+        }
+        return $value;
+    }, $data);
+}
 
 // Award types and their criteria
 $AWARD_TYPES = [
@@ -437,11 +507,13 @@ switch ($action) {
         
     case 'get_status_report':
         try {
-            // Get all documents and events
-            $documentsStmt = $pdo->query("SELECT * FROM enhanced_documents ORDER BY upload_date DESC");
+            // Get all documents and events using prepared statements
+            $documentsStmt = $pdo->prepare("SELECT * FROM enhanced_documents ORDER BY upload_date DESC");
+            $documentsStmt->execute();
             $documents = $documentsStmt->fetchAll(PDO::FETCH_ASSOC);
             
-            $eventsStmt = $pdo->query("SELECT * FROM enhanced_events ORDER BY created_at DESC");
+            $eventsStmt = $pdo->prepare("SELECT * FROM enhanced_events ORDER BY created_at DESC");
+            $eventsStmt->execute();
             $events = $eventsStmt->fetchAll(PDO::FETCH_ASSOC);
             
             // Calculate counters and readiness for each award

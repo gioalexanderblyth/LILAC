@@ -88,7 +88,8 @@ if (class_exists('Database')) {
 			requirements TEXT NOT NULL,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)");
-		$stmt = $pdo->query("SELECT id, name, description, category, requirements FROM uploaded_awards ORDER BY id DESC LIMIT 2000");
+		$stmt = $pdo->prepare("SELECT id, name, description, category, requirements FROM uploaded_awards ORDER BY id DESC LIMIT 2000");
+		$stmt->execute();
 		$uploadedAwards = $stmt->fetchAll(PDO::FETCH_ASSOC);
 	} catch (Throwable $e) {
 		$uploadedAwards = [];

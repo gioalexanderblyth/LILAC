@@ -49,7 +49,6 @@ require_once 'classes/DateTimeUtility.php';
     <title>LILAC Documents</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
-    <link rel="stylesheet" href="dashboard-theme.css">
     <link rel="stylesheet" href="sidebar-enhanced.css">
     <link rel="stylesheet" href="css/documents.css">
     <script src="connection-status.js"></script>
@@ -2682,15 +2681,63 @@ require_once 'classes/DateTimeUtility.php';
             });
         }
 
+        // Helper function to get document type from extension
+        function getDocumentTypeFromExtension(extension) {
+            const typeMap = {
+                'pdf': 'pdf',
+                'jpg': 'image',
+                'jpeg': 'image',
+                'png': 'image',
+                'gif': 'image',
+                'webp': 'image',
+                'bmp': 'image',
+                'svg': 'image',
+                'txt': 'text',
+                'doc': 'unknown',
+                'docx': 'unknown'
+            };
+            return typeMap[extension] || 'unknown';
+        }
+
         // Enhanced view document function
         function viewDocument(docId) {
             const doc = currentDocuments.find(d => d.id == docId);
             if (doc) {
-                // Show document viewer modal
-                showDocumentViewer(doc).catch(error => {
-                    console.error('Error showing document viewer:', error);
-                    showNotification('Error loading document viewer', 'error');
-                });
+                // Use the shared document viewer component
+                if (window.documentViewer) {
+                    const title = doc.document_name || doc.title || 'Untitled Document';
+                    let filePath = doc.file_path || doc.filename;
+                    const ext = getFileExtension(filePath || '');
+                    
+                    if (filePath && !filePath.startsWith('uploads/') && !filePath.startsWith('/uploads/')) {
+                        filePath = `uploads/${filePath}`;
+                    }
+                    
+                    // Check if file exists before trying to view it
+                    fetch(filePath, { method: 'HEAD' })
+                        .then(response => {
+                            if (response.ok) {
+                                // File exists, proceed with viewing
+                    const documentType = getDocumentTypeFromExtension(ext);
+                    window.documentViewer.showDocument(filePath, documentType, title);
+                            } else {
+                                // File doesn't exist, show error and offer to remove from database
+                                showNotification(`File not found: ${title}. The file may have been deleted.`, 'error');
+                                console.error('File not found:', filePath);
+                                
+                                // Optionally, you could add a button to remove the database record
+                                if (confirm('Would you like to remove this file from the database?')) {
+                                    deleteDocument(docId);
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking file existence:', error);
+                            showNotification(`Error accessing file: ${title}`, 'error');
+                        });
+                } else {
+                    showNotification('Document viewer not available', 'error');
+                }
             } else {
                 showNotification('Document not found', 'error');
             }
@@ -2712,7 +2759,10 @@ require_once 'classes/DateTimeUtility.php';
             const downloadBtn = document.getElementById('document-viewer-download');
             const openBtn = document.getElementById('document-viewer-open');
 
-            if (!overlay || !titleEl || !contentEl || !downloadBtn) return;
+            if (!overlay || !titleEl || !contentEl || !downloadBtn) {
+                showNotification('Document viewer elements not found', 'error');
+                return;
+            }
 
             titleEl.textContent = title;
             contentEl.innerHTML = '';

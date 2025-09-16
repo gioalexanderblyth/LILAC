@@ -44,7 +44,6 @@ foreach ($meetings as $meeting) {
     <title>LILAC Scheduler</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
-    <link rel="stylesheet" href="dashboard-theme.css">
     <link rel="stylesheet" href="sidebar-enhanced.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

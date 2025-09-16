@@ -11,7 +11,6 @@ require_once 'classes/DateTimeUtility.php';
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/error-handler.js"></script>
     <script src="js/security-utils.js"></script>
-    <script src="js/awards-check.js"></script>
     <script src="js/awards-config.js"></script>
     <script src="js/awards-management.js"></script>
     <script src="js/text-config.js"></script>
@@ -19,7 +18,6 @@ require_once 'classes/DateTimeUtility.php';
     <script src="js/lazy-loader.js"></script>
     <script src="js/modal-handlers.js"></script>
     <link rel="stylesheet" href="modern-design-system.css">
-    <link rel="stylesheet" href="dashboard-theme.css">
     <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
@@ -30,7 +28,7 @@ require_once 'classes/DateTimeUtility.php';
         const CATEGORY = 'Awards';
         
         document.addEventListener('DOMContentLoaded', function() {
-            loadDocuments();
+            displayAwards(); // Show awards instead of documents
             loadStats();
             initializeEventListeners();
             updateCurrentDate();
@@ -218,7 +216,7 @@ require_once 'classes/DateTimeUtility.php';
                     document.getElementById('award-form').reset();
     
                     // Refresh display
-                    loadDocuments();
+                    displayAwards();
                     loadStats();
                     showNotification('Award added successfully!', 'success');
                     hideAddAwardConfirmModal();
@@ -360,7 +358,7 @@ require_once 'classes/DateTimeUtility.php';
                 donut.innerHTML = `
                     <div class="flex items-center justify-center h-full text-gray-500">
                         <div class="text-center">
-                            <div class="text-2xl mb-2">📊</div>
+                            <div class="text-2xl mb-1">📊</div>
                             <div class="text-sm">${message}</div>
                         </div>
                     </div>
@@ -382,7 +380,7 @@ require_once 'classes/DateTimeUtility.php';
                 donut.innerHTML = `
                     <div class="flex items-center justify-center h-full text-gray-500">
                         <div class="text-center">
-                            <div class="text-2xl mb-2">📊</div>
+                            <div class="text-2xl mb-1">📊</div>
                             <div class="text-sm">No data available</div>
                         </div>
                     </div>
@@ -560,19 +558,19 @@ require_once 'classes/DateTimeUtility.php';
                     </div>
                     <div class="p-6 space-y-4">
                         <div>
-                            <h4 class="font-semibold text-gray-900 mb-2">Academic Excellence Awards</h4>
+                            <h4 class="font-semibold text-gray-900 mb-1">Academic Excellence Awards</h4>
                             <p class="text-gray-600 text-sm">Recognizes outstanding academic performance, research contributions, and scholarly achievements.</p>
                         </div>
                         <div>
-                            <h4 class="font-semibold text-gray-900 mb-2">Research & Innovation Awards</h4>
+                            <h4 class="font-semibold text-gray-900 mb-1">Research & Innovation Awards</h4>
                             <p class="text-gray-600 text-sm">Honors groundbreaking research, innovative projects, and significant contributions to knowledge.</p>
                         </div>
                         <div>
-                            <h4 class="font-semibold text-gray-900 mb-2">Leadership & Service Awards</h4>
+                            <h4 class="font-semibold text-gray-900 mb-1">Leadership & Service Awards</h4>
                             <p class="text-gray-600 text-sm">Acknowledges exceptional leadership, community service, and positive impact on society.</p>
                         </div>
                         <div class="bg-blue-50 p-4 rounded-lg">
-                            <h5 class="font-medium text-blue-900 mb-2">Submission Requirements</h5>
+                            <h5 class="font-medium text-blue-900 mb-1">Submission Requirements</h5>
                             <ul class="text-sm text-blue-800 space-y-1">
                                 <li>• Complete application form with supporting documents</li>
                                 <li>• Academic transcripts and achievements</li>
@@ -602,6 +600,74 @@ require_once 'classes/DateTimeUtility.php';
             if (modal) {
                 modal.remove();
             }
+        }
+
+        function displayAwards() {
+            const container = document.getElementById('awards-container');
+            
+            // Load received awards data (not readiness progress)
+            fetch('api/awards.php?action=get_awards_by_period&period=This Year')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text();
+            })
+            .then(text => {
+                if (!text.trim()) {
+                    throw new Error('Empty response from server');
+                }
+                return JSON.parse(text);
+            })
+            .then(data => {
+                if (data.success && data.awards) {
+                    let awardsHTML = '';
+                    
+                    data.awards.forEach(award => {
+                        const awardDate = new Date(award.date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                        
+                        awardsHTML += `
+                            <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-lg font-semibold text-gray-900">${award.title}</h3>
+                                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                        Received
+                                    </span>
+                                </div>
+                                <div class="mb-4">
+                                    <p class="text-gray-600 text-sm mb-1">${award.description}</p>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Recipient:</span>
+                                        <span class="font-medium">${award.recipient}</span>
+                                    </div>
+                                    </div>
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-500">Date:</span>
+                                        <span class="font-medium">${awardDate}</span>
+                                </div>
+                                    <div>
+                                        <span class="text-gray-500">Amount:</span>
+                                        <span class="font-medium">${award.amount}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    container.innerHTML = awardsHTML;
+                } else {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">No awards received this year</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading awards:', error);
+                container.innerHTML = '<p class="text-red-500 text-center py-8">Error loading awards data</p>';
+            });
         }
 
         function displayDocuments(documents) {
@@ -672,7 +738,7 @@ require_once 'classes/DateTimeUtility.php';
                             <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                             </svg>
-                            <h3 class="text-lg font-medium text-gray-900 mb-2">No awards yet</h3>
+                            <h3 class="text-lg font-medium text-gray-900 mb-1">No awards yet</h3>
                             <p class="text-gray-500 mb-4">Add your first award to get started</p>
                             <button onclick="document.getElementById('award-title').focus()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
                                 Add Award
@@ -862,7 +928,7 @@ require_once 'classes/DateTimeUtility.php';
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        loadDocuments();
+                        displayAwards();
                         loadStats();
                         hideDeleteModal();
                         showNotification('Award deleted successfully', 'success');
@@ -993,7 +1059,7 @@ require_once 'classes/DateTimeUtility.php';
                             <h4 class="text-md font-medium text-gray-900 mb-3">Available Documents and Events</h4>
                             <div id="available-content-list" class="space-y-2 max-h-96 overflow-y-auto">
                                 <div class="text-center text-gray-500 py-8">
-                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-1"></div>
                                     Loading content...
                                 </div>
                             </div>
@@ -1023,7 +1089,7 @@ require_once 'classes/DateTimeUtility.php';
                     documentsData.documents.forEach(doc => {
                         if (doc.status === 'Active') {
                             const item = document.createElement('div');
-                            item.className = 'flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer';
+                            item.className = 'flex items-center justify-between p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer';
                             item.onclick = () => analyzeSingleContent('document', doc.id, doc.document_name);
                             item.innerHTML = `
                                 <div class="flex items-center">
@@ -1052,7 +1118,7 @@ require_once 'classes/DateTimeUtility.php';
                     eventsData.events.forEach(event => {
                         if (event.status === 'Active') {
                             const item = document.createElement('div');
-                            item.className = 'flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer';
+                            item.className = 'flex items-center justify-between p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer';
                             item.onclick = () => analyzeSingleContent('event', event.id, event.title);
                             item.innerHTML = `
                                 <div class="flex items-center">
@@ -1172,59 +1238,74 @@ require_once 'classes/DateTimeUtility.php';
         // Load award document counts from API
         async function loadAwardDocumentCounts() {
             try {
-                const response = await fetch('api/documents.php?action=get_award_counters');
-                const result = await response.json();
+                const response = await fetch('api/checklist_working.php?action=get_readiness_summary');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const text = await response.text();
+                if (!text.trim()) {
+                    throw new Error('Empty response from server');
+                }
+                const result = JSON.parse(text);
 
-                if (result.success && result.counters) {
-                    updateAwardCounters(result.counters);
+                if (result.success && result.summary) {
+                    updateAwardCounters(result.summary);
                 }
             } catch (error) {
                 console.error('Error loading award document counts:', error);
+                // Set default values to prevent UI errors
+                updateAwardCounters([]);
             }
         }
 
         // Update award counters in UI
-        function updateAwardCounters(counters) {
-            const awardTypes = ['leadership', 'education', 'emerging', 'regional', 'global'];
+        function updateAwardCounters(summary) {
+            // Map award keys to element IDs
+            const awardMapping = {
+                'leadership': 'leadership-score',
+                'education': 'education-score', 
+                'emerging': 'emerging-score',
+                'regional': 'regional-score',
+                'citizenship': 'citizenship-score'
+            };
             
-            awardTypes.forEach(awardType => {
-                const counter = counters[awardType];
-                if (counter) {
-                    // Update document count displays
-                    const scoreElement = document.getElementById(`${awardType}-score`);
-                    if (scoreElement) {
-                        scoreElement.textContent = counter.total_content || 0;
-                    }
-    
-                    // Update readiness status
-                    updateAwardReadiness(awardType, counter);
+            summary.forEach(award => {
+                const elementId = awardMapping[award.award_key];
+                const scoreElement = document.getElementById(elementId);
+                
+                if (scoreElement) {
+                    // Show total documents that match this award
+                    scoreElement.textContent = award.total_documents || 0;
                 }
+                
+                // Update readiness status
+                updateAwardReadiness(award.award_key, award);
             });
 
             // Update analysis metrics
-            const totalDocuments = Object.values(counters).reduce((a, b) => a + (b.total_content || 0), 0);
+            const totalDocuments = summary.length > 0 ? summary.reduce((a, b) => a + (b.total_documents || 0), 0) : 0;
             const activitiesCountElement = document.getElementById('activities-count');
             const overallScoreElement = document.getElementById('overall-score');
             
             if (activitiesCountElement) activitiesCountElement.textContent = totalDocuments;
             if (overallScoreElement) overallScoreElement.textContent = totalDocuments;
             
-            // Find best match (based on total content)
-            const bestMatch = Object.entries(counters).reduce((a, b) => 
-                (counters[a[0]].total_content || 0) > (counters[b[0]].total_content || 0) ? a : b
-            );
+            // Find best match (based on total documents)
+            const bestMatch = summary.length > 0 ? summary.reduce((a, b) => 
+                (b.total_documents || 0) > (a.total_documents || 0) ? b : a
+            ) : null;
             
             const bestMatchElement = document.getElementById('best-match');
             if (bestMatchElement) {
-                if (counters[bestMatch[0]].total_content > 0) {
+                if (bestMatch && bestMatch.total_documents > 0) {
                     const awardNames = {
                         'leadership': 'Internationalization (IZN) Leadership',
                         'education': 'Outstanding International Education Program',
                         'emerging': 'Emerging Leadership',
                         'regional': 'Best Regional Office for Internationalization',
-                        'global': 'Global Citizenship'
+                        'citizenship': 'Global Citizenship'
                     };
-                    bestMatchElement.textContent = awardNames[bestMatch[0]] + ' Award';
+                    bestMatchElement.textContent = awardNames[bestMatch.award_key] + ' Award';
                 } else {
                     bestMatchElement.textContent = 'None';
                 }
@@ -1282,9 +1363,14 @@ require_once 'classes/DateTimeUtility.php';
                 const result = await response.json();
 
                 if (result.success) {
-                    displayBatchAnalysisResults(result.analysis);
-                    showNotification('Comprehensive analysis completed successfully!', 'success');
-    
+                    showNotification(`Analysis completed! Found ${result.total_analyzed} items with ${result.results.length} award matches.`, 'success');
+                    
+                    // Update counters immediately
+                    updateAwardMatchCounters();
+                    
+                    // Show detailed compliance report
+                    showDetailedComplianceReport(result.results);
+                    
                     // Refresh the page data
                     if (typeof loadAwardDocumentCounts === 'function') {
                         loadAwardDocumentCounts();
@@ -1348,7 +1434,7 @@ require_once 'classes/DateTimeUtility.php';
 
             let content = `
                 <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Analysis Summary</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Analysis Summary</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="text-center">
                             <div class="text-2xl font-bold text-blue-600">${analysis.supported_awards?.length || 0}</div>
@@ -1377,7 +1463,7 @@ require_once 'classes/DateTimeUtility.php';
                     content += `
                         <div class="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                             <div class="flex items-center">
-                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
                                     <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                     </svg>
@@ -1409,7 +1495,7 @@ require_once 'classes/DateTimeUtility.php';
                     content += `
                         <div class="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
                             <div class="flex items-center">
-                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
                                     <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path>
                                     </svg>
@@ -1597,7 +1683,7 @@ require_once 'classes/DateTimeUtility.php';
                     content += `
                         <div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
                             <div class="flex items-center">
-                                <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                                <div class="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center mr-3">
                                     <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                     </svg>
@@ -1659,7 +1745,7 @@ require_once 'classes/DateTimeUtility.php';
 
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <h5 class="font-medium text-gray-900 mb-2">✅ Satisfied Criteria (${result.satisfied_criteria.length})</h5>
+                                            <h5 class="font-medium text-gray-900 mb-1">✅ Satisfied Criteria (${result.satisfied_criteria.length})</h5>
                                             <ul class="space-y-1">
                                                 ${result.satisfied_criteria.map(criterion => `
                                                     <li class="text-sm text-green-700 flex items-center">
@@ -1672,7 +1758,7 @@ require_once 'classes/DateTimeUtility.php';
                                             </ul>
                                         </div>
                                         <div>
-                                            <h5 class="font-medium text-gray-900 mb-2">❌ Missing Criteria (${result.unsatisfied_criteria.length})</h5>
+                                            <h5 class="font-medium text-gray-900 mb-1">❌ Missing Criteria (${result.unsatisfied_criteria.length})</h5>
                                             <ul class="space-y-1">
                                                 ${result.unsatisfied_criteria.map(criterion => `
                                                     <li class="text-sm text-red-700 flex items-center">
@@ -1688,7 +1774,7 @@ require_once 'classes/DateTimeUtility.php';
 
                                     ${(result.documents && result.documents.length > 0) || (result.events && result.events.length > 0) ? `
                                         <div class="mt-4">
-                                            <h5 class="font-medium text-gray-900 mb-2">📄 Content for this Award</h5>
+                                            <h5 class="font-medium text-gray-900 mb-1">📄 Content for this Award</h5>
                                             <div class="space-y-2">
                                                 ${result.documents ? result.documents.map(doc => `
                                                     <div class="flex items-center justify-between p-2 bg-blue-50 rounded border-l-4 border-blue-400">
@@ -1805,7 +1891,7 @@ require_once 'classes/DateTimeUtility.php';
                                     </div>
 
                                     <div class="space-y-2">
-                                        <h5 class="font-medium text-gray-900 mb-2">Checklist Progress</h5>
+                                        <h5 class="font-medium text-gray-900 mb-1">Checklist Progress</h5>
                                         ${checklist.checklist.map(item => `
                                             <div class="flex items-center justify-between p-2 rounded ${
                                                 item.satisfied ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
@@ -1826,7 +1912,7 @@ require_once 'classes/DateTimeUtility.php';
 
                                     ${checklist.unsatisfied_criteria.length > 0 ? `
                                         <div class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                                            <h6 class="font-medium text-yellow-800 mb-2">💡 Suggestions for Missing Criteria</h6>
+                                            <h6 class="font-medium text-yellow-800 mb-1">💡 Suggestions for Missing Criteria</h6>
                                             <ul class="text-sm text-yellow-700 space-y-1">
                                                 ${checklist.checklist.filter(item => !item.satisfied).slice(0, 2).map(item => `
                                                     <li>• ${item.suggestions[0] || 'Create content that demonstrates ' + item.criterion}</li>
@@ -1875,20 +1961,28 @@ require_once 'classes/DateTimeUtility.php';
         // Load readiness summary
         async function loadReadinessSummary() {
             try {
-
-
-                const response = await fetch('api/checklist.php?action=get_readiness_summary');
-                const result = await response.json();
+                const response = await fetch('api/checklist_working.php?action=get_readiness_summary');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const text = await response.text();
+                if (!text.trim()) {
+                    throw new Error('Empty response from server');
+                }
+                const result = JSON.parse(text);
 
                 if (result.success) {
                     displayReadinessSummary(result.summary);
-    
                 } else {
-    
+                    console.log('No readiness data available');
                 }
             } catch (error) {
                 console.error('Error loading readiness summary:', error);
-
+                // Show fallback message
+                const summaryContainer = document.getElementById('readiness-summary');
+                if (summaryContainer) {
+                    summaryContainer.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">Unable to load readiness data</div>';
+                }
             }
         }
 
@@ -1901,55 +1995,166 @@ require_once 'classes/DateTimeUtility.php';
                 return;
             }
             
-            container.innerHTML = summary.map(item => `
-                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div class="flex items-center justify-between mb-3">
-                        <h4 class="font-semibold text-gray-900 text-sm">${item.award_type}</h4>
-                        <div class="flex items-center gap-1">
-                            <span class="text-lg">${item.readiness.icon}</span>
-                            <span class="px-2 py-1 rounded-full text-xs font-medium ${
-                                item.readiness.color === 'green' ? 'bg-green-100 text-green-800' :
-                                item.readiness.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
-                            }">
-                                ${item.readiness.status}
-                            </span>
+            // Calculate overall readiness
+            const totalAwards = summary.length;
+            const readyAwards = summary.filter(item => item.is_ready).length;
+            const overallReadiness = Math.round((readyAwards / totalAwards) * 100);
+            
+            // Award name mapping
+            const awardNames = {
+                'leadership': 'International Leadership Award',
+                'education': 'Outstanding International Education Program',
+                'emerging': 'Emerging Leadership Award',
+                'regional': 'Best Regional Office for International',
+                'citizenship': 'Global Citizenship Award'
+            };
+            
+            // Criteria mapping for each award
+            const awardCriteria = {
+                'leadership': [
+                    'Champion Bold Innovation',
+                    'Cultivate Global Citizens', 
+                    'Nurture Lifelong Learning',
+                    'Lead with Purpose',
+                    'Ethical and Inclusive Leadership'
+                ],
+                'education': [
+                    'Expand Access to Global Opportunities',
+                    'Foster Collaborative Innovation',
+                    'Embrace Inclusivity and Beyond',
+                    'Drive Academic Excellence',
+                    'Build Sustainable Partnerships'
+                ],
+                'emerging': [
+                    'Pioneer New Frontiers',
+                    'Adapt and Transform',
+                    'Build Capacity',
+                    'Create Impact'
+                ],
+                'regional': [
+                    'Comprehensive Internationalization Efforts',
+                    'Cooperation and Collaboration',
+                    'Measurable Impact'
+                ],
+                'citizenship': [
+                    'Ignite Intercultural Understanding',
+                    'Empower Changemakers',
+                    'Cultivate Active Engagement'
+                ]
+            };
+            
+            let html = `
+                <!-- Overall Readiness Meter - Horizontal Layout -->
+                <div class="col-span-full bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-4 border border-blue-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="relative w-16 h-16">
+                                <svg class="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
+                                    <path class="text-gray-200" stroke="currentColor" stroke-width="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+                                    <path class="text-blue-600" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="${overallReadiness}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span class="text-lg font-bold text-blue-600">${overallReadiness}%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">Institution Award Readiness</h3>
+                                <p class="text-sm text-gray-600">${readyAwards} of ${totalAwards} awards ready • Overall readiness across all CHED awards</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-blue-600">${overallReadiness}%</div>
+                            <p class="text-sm text-gray-500">Overall Score</p>
+                        </div>
                         </div>
                     </div>
     
-                    <div class="space-y-2">
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-600">Documents:</span>
-                            <span class="font-medium text-blue-600">${item.document_count}</span>
+                <!-- Individual Award Cards - Horizontal Grid -->
+                <div class="col-span-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            `;
+            
+            summary.forEach(award => {
+                const awardName = awardNames[award.award_key] || award.award_key;
+                const criteria = awardCriteria[award.award_key] || [];
+                const satisfiedCriteria = JSON.parse(award.satisfied_criteria || '[]');
+                const missingCriteria = criteria.filter(c => !satisfiedCriteria.includes(c));
+                
+                // Determine status and color
+                let statusText, statusColor, statusBg, progressColor;
+                if (award.readiness_percentage >= 80) {
+                    statusText = 'Ready';
+                    statusColor = 'text-green-800';
+                    statusBg = 'bg-green-100';
+                    progressColor = 'bg-green-500';
+                } else if (award.readiness_percentage >= 50) {
+                    statusText = 'In Progress';
+                    statusColor = 'text-yellow-800';
+                    statusBg = 'bg-yellow-100';
+                    progressColor = 'bg-yellow-500';
+                } else {
+                    statusText = 'Not Started';
+                    statusColor = 'text-red-800';
+                    statusBg = 'bg-red-100';
+                    progressColor = 'bg-red-500';
+                }
+                
+                html += `
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <!-- Award Header -->
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">${award.readiness.icon}</span>
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900 leading-tight">${awardName}</h4>
+                                    <p class="text-xs text-gray-500">${award.total_documents} docs • ${award.total_events} events</p>
                         </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-600">Events:</span>
-                            <span class="font-medium text-purple-600">${item.event_count}</span>
                         </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-600">Criteria:</span>
-                            <span class="font-medium text-green-600">${item.satisfied_count}/${item.total_count}</span>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-gray-900">${award.readiness_percentage}%</div>
+                                <span class="px-2 py-1 rounded-full text-xs font-medium ${statusBg} ${statusColor}">
+                                    ${statusText}
+                                </span>
                         </div>
                     </div>
     
-                    <div class="mt-3">
+                        <!-- Progress Bar -->
+                        <div class="mb-3">
                         <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="h-2 rounded-full ${
-                                item.readiness.color === 'green' ? 'bg-green-500' :
-                                item.readiness.color === 'yellow' ? 'bg-yellow-500' :
-                                'bg-red-500'
-                            }" style="width: ${Math.round(item.readiness.satisfaction_rate * 100)}%"></div>
+                                <div class="${progressColor} h-2 rounded-full transition-all duration-500" style="width: ${award.readiness_percentage}%"></div>
                         </div>
-                        <div class="text-xs text-gray-500 mt-1 text-center">
-                            ${Math.round(item.readiness.satisfaction_rate * 100)}% Complete
+                        </div>
+                        
+                        <!-- Criteria Summary -->
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div class="text-center">
+                                <div class="text-green-600 font-semibold">${satisfiedCriteria.length}</div>
+                                <div class="text-gray-500">Satisfied</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-red-600 font-semibold">${missingCriteria.length}</div>
+                                <div class="text-gray-500">Missing</div>
                         </div>
                     </div>
     
-                    <button onclick="showDetailedChecklist('${item.award_type}')" class="w-full mt-3 px-3 py-2 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
-                        View Details
-                    </button>
+                        <!-- Quick Actions -->
+                        <div class="mt-3 pt-2 border-t border-gray-100">
+                            <div class="text-xs text-gray-600">
+                                ${award.readiness_percentage === 0 ? 
+                                    'Start uploading documents and events' :
+                                    award.readiness_percentage < 50 ? 
+                                    'Build more documentation' :
+                                    award.readiness_percentage < 80 ? 
+                                    'Strengthen remaining criteria' :
+                                    'Ready for application!'
+                                }
                 </div>
-            `).join('');
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
         }
 
         // Show detailed checklist for a specific award
@@ -1995,7 +2200,7 @@ require_once 'classes/DateTimeUtility.php';
                             'bg-red-50 border border-red-200'
                         }">
                             <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2">
                                     <span class="text-3xl">${checklist.readiness.icon}</span>
                                     <div>
                                         <h4 class="font-semibold text-lg ${
@@ -2046,7 +2251,7 @@ require_once 'classes/DateTimeUtility.php';
                                 }">
                                     <div class="flex items-start justify-between">
                                         <div class="flex-1">
-                                            <div class="flex items-center gap-3 mb-2">
+                                            <div class="flex items-center gap-3 mb-1">
                                                 <span class="text-2xl">${item.satisfied ? '✅' : '❌'}</span>
                                                 <h6 class="font-medium ${
                                                     item.satisfied ? 'text-green-800' : 'text-red-800'
@@ -2055,7 +2260,7 @@ require_once 'classes/DateTimeUtility.php';
                             
                                             ${item.supporting_content.length > 0 ? `
                                                 <div class="ml-8 mb-3">
-                                                    <p class="text-sm text-gray-600 mb-2">Supporting Content:</p>
+                                                    <p class="text-sm text-gray-600 mb-1">Supporting Content:</p>
                                                     <div class="space-y-1">
                                                         ${item.supporting_content.map(content => `
                                                             <div class="flex items-center gap-2 text-sm">
@@ -2071,7 +2276,7 @@ require_once 'classes/DateTimeUtility.php';
                             
                                             ${!item.satisfied && item.suggestions.length > 0 ? `
                                                 <div class="ml-8">
-                                                    <p class="text-sm text-gray-600 mb-2">💡 Suggestions:</p>
+                                                    <p class="text-sm text-gray-600 mb-1">💡 Suggestions:</p>
                                                     <ul class="text-sm text-gray-700 space-y-1">
                                                         ${item.suggestions.slice(0, 3).map(suggestion => `
                                                             <li>• ${suggestion}</li>
@@ -2347,7 +2552,7 @@ LILAC Awards - Keyboard Shortcuts:
 
 
         <!-- Tab Navigation -->
-        <div class="mb-2">
+        <div class="mb-1">
             <div class="border-b border-gray-200 px-4">
                 <div class="flex items-center justify-between">
                     <nav class="flex space-x-8" aria-label="Tabs">
@@ -2369,7 +2574,7 @@ LILAC Awards - Keyboard Shortcuts:
         <div id="tab-overview-content" class="tab-content">
             <!-- Stats Cards -->
             <div class="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3 bg-gray-50 p-2 rounded-lg">
-            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="text-xl font-extrabold text-gray-900" id="total-awards">0</div>
@@ -2380,7 +2585,7 @@ LILAC Awards - Keyboard Shortcuts:
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="text-xl font-extrabold text-gray-900" id="leadership-score">0</div>
@@ -2391,7 +2596,7 @@ LILAC Awards - Keyboard Shortcuts:
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="text-xl font-extrabold text-gray-900" id="education-score">0</div>
@@ -2402,7 +2607,7 @@ LILAC Awards - Keyboard Shortcuts:
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="text-xl font-extrabold text-gray-900" id="emerging-score">0</div>
@@ -2413,7 +2618,7 @@ LILAC Awards - Keyboard Shortcuts:
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="text-xl font-extrabold text-gray-900" id="regional-score">0</div>
@@ -2424,7 +2629,7 @@ LILAC Awards - Keyboard Shortcuts:
                     </div>
                 </div>
             </div>
-            <div class="bg-white rounded-xl p-3 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
+            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
                 <div class="flex items-start justify-between">
                     <div>
                         <div class="text-xl font-extrabold text-gray-900" id="global-score">0</div>
@@ -2452,7 +2657,7 @@ LILAC Awards - Keyboard Shortcuts:
                         </select>
                     </div>
                 </div>
-                <div class="mb-2">
+                <div class="mb-1">
                                             <div class="text-2xl font-bold text-gray-900"></div>
                 </div>
                 <div class="w-full">
@@ -2735,217 +2940,311 @@ LILAC Awards - Keyboard Shortcuts:
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <!-- Award Criteria -->
                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">CHED Award Criteria</h3>
-                    <div class="space-y-4">
-                        <!-- International Leadership Award -->
-                        <div class="border-l-4 border-blue-500 pl-4">
-                            <div class="flex items-center justify-between">
-                                <div class="flex-1">
-                            <h4 class="font-medium text-gray-900">International Leadership Award</h4>
-                            <p class="text-sm text-gray-600">Demonstrated leadership in international partnerships, student exchanges, and global initiatives</p>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xl font-bold text-gray-900">CHED Award Criteria</h3>
+                        <div class="flex items-center gap-1 text-sm text-gray-600 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+                            <span class="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+                            <span>All criteria not started</span>
                         </div>
-                                <button onclick="toggleAwardDetails('leadership')" class="ml-4 p-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
-                                    <svg id="leadership-arrow" class="w-5 h-5 text-blue-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    </div>
+                    
+                    <!-- Award Cards Grid -->
+                    <div class="grid grid-cols-1 gap-2">
+                        <!-- International Leadership Award -->
+                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200 hover:shadow-md transition-all duration-200">
+                            <div class="p-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
+                                            <span class="text-white text-sm">🏆</span>
+                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-sm">International Leadership Award</h4>
+                                            <p class="text-xs text-gray-600">Leadership in international partnerships</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="toggleAwardDetails('leadership')" class="p-1 rounded bg-white hover:bg-blue-50 transition-colors border border-blue-200">
+                                        <svg id="leadership-arrow" class="w-3 h-3 text-blue-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
                                 </button>
                             </div>
-                            <div id="leadership-details" class="hidden mt-3 p-4 bg-blue-50 rounded-lg">
-                                <div class="space-y-2">
-                                    <div class="flex items-center text-sm text-blue-800">
-                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                <div id="leadership-details" class="hidden space-y-1">
+                                    <div class="bg-white rounded p-1.5 border border-blue-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
                                                data-award="leadership" data-criterion="Champion Bold Innovation"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Champion Bold Innovation</span>
-                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Champion Bold Innovation-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Champion Bold Innovation</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Champion Bold Innovation-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-blue-800">
-                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-blue-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
                                                data-award="leadership" data-criterion="Cultivate Global Citizens"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Cultivate Global Citizens</span>
-                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Cultivate Global Citizens-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Cultivate Global Citizens</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Cultivate Global Citizens-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-blue-800">
-                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-blue-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
                                                data-award="leadership" data-criterion="Nurture Lifelong Learning"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Nurture Lifelong Learning</span>
-                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Nurture Lifelong Learning-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Nurture Lifelong Learning</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Nurture Lifelong Learning-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-blue-800">
-                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-blue-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
                                                data-award="leadership" data-criterion="Lead with Purpose"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Lead with Purpose</span>
-                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Lead with Purpose-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Lead with Purpose</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Lead with Purpose-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-blue-800">
-                                        <input type="checkbox" class="mr-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-blue-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
                                                data-award="leadership" data-criterion="Ethical and Inclusive Leadership"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Ethical and Inclusive Leadership</span>
-                                        <span class="text-xs text-blue-600 ml-2" id="leadership-Ethical and Inclusive Leadership-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Ethical and Inclusive Leadership</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Ethical and Inclusive Leadership-status">Not Started</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Outstanding International Education Program -->
-                        <div class="border-l-4 border-green-500 pl-4">
-                            <div class="flex items-center justify-between">
-                                <div class="flex-1">
-                            <h4 class="font-medium text-gray-900">Outstanding International Education Program</h4>
-                            <p class="text-sm text-gray-600">Excellence in international curriculum, research collaborations, and academic partnerships</p>
+                        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200 hover:shadow-md transition-all duration-200">
+                            <div class="p-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 bg-green-500 rounded flex items-center justify-center">
+                                            <span class="text-white text-sm">🎓</span>
                         </div>
-                                <button onclick="toggleAwardDetails('education')" class="ml-4 p-2 rounded-lg bg-green-50 hover:bg-green-100 transition-colors">
-                                    <svg id="education-arrow" class="w-5 h-5 text-green-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-sm">Outstanding International Education Program</h4>
+                                            <p class="text-xs text-gray-600">Excellence in international curriculum</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="toggleAwardDetails('education')" class="p-1 rounded bg-white hover:bg-green-50 transition-colors border border-green-200">
+                                        <svg id="education-arrow" class="w-3 h-3 text-green-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
                                 </button>
                             </div>
-                            <div id="education-details" class="hidden mt-3 p-4 bg-green-50 rounded-lg">
-                                <div class="space-y-2">
-                                    <div class="flex items-center text-sm text-green-800">
-                                        <input type="checkbox" class="mr-3 rounded border-green-300 text-green-600 focus:ring-green-500" 
+                                <div id="education-details" class="hidden space-y-1">
+                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
                                                data-award="education" data-criterion="Expand Access to Global Opportunities"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Expand Access to Global Opportunities</span>
-                                        <span class="text-xs text-green-600 ml-2" id="education-Expand Access to Global Opportunities-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Expand Access to Global Opportunities</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Expand Access to Global Opportunities-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-green-800">
-                                        <input type="checkbox" class="mr-3 rounded border-green-300 text-green-600 focus:ring-green-500" 
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
                                                data-award="education" data-criterion="Foster Collaborative Innovation"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Foster Collaborative Innovation</span>
-                                        <span class="text-xs text-green-600 ml-2" id="education-Foster Collaborative Innovation-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Foster Collaborative Innovation</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Foster Collaborative Innovation-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-green-800">
-                                        <input type="checkbox" class="mr-3 rounded border-green-300 text-green-600 focus:ring-green-500" 
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
                                                data-award="education" data-criterion="Embrace Inclusivity and Beyond"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Embrace Inclusivity and Beyond</span>
-                                        <span class="text-xs text-green-600 ml-2" id="education-Embrace Inclusivity and Beyond-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Embrace Inclusivity and Beyond</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Embrace Inclusivity and Beyond-status">Not Started</span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
+                                                   data-award="education" data-criterion="Drive Academic Excellence"
+                                                   onchange="updateCriterionStatus(this)" disabled>
+                                            <span class="flex-1 text-gray-800">Drive Academic Excellence</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Drive Academic Excellence-status">Not Started</span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
+                                                   data-award="education" data-criterion="Build Sustainable Partnerships"
+                                                   onchange="updateCriterionStatus(this)" disabled>
+                                            <span class="flex-1 text-gray-800">Build Sustainable Partnerships</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Build Sustainable Partnerships-status">Not Started</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Emerging Leadership Award -->
-                        <div class="border-l-4 border-purple-500 pl-4">
-                            <div class="flex items-center justify-between">
-                                <div class="flex-1">
-                            <h4 class="font-medium text-gray-900">Emerging Leadership Award</h4>
-                            <p class="text-sm text-gray-600">Innovative approaches to international education and emerging global opportunities</p>
+                        <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
+                            <div class="p-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 bg-purple-500 rounded flex items-center justify-center">
+                                            <span class="text-white text-sm">🌱</span>
                         </div>
-                                <button onclick="toggleAwardDetails('emerging')" class="ml-4 p-2 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors">
-                                    <svg id="emerging-arrow" class="w-5 h-5 text-purple-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-sm">Emerging Leadership Award</h4>
+                                            <p class="text-xs text-gray-600">Innovative approaches to internationalization</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="toggleAwardDetails('emerging')" class="p-1 rounded bg-white hover:bg-purple-50 transition-colors border border-purple-200">
+                                        <svg id="emerging-arrow" class="w-3 h-3 text-purple-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
                                 </button>
                             </div>
-                            <div id="emerging-details" class="hidden mt-3 p-4 bg-purple-50 rounded-lg">
-                                <div class="space-y-2">
-                                    <div class="flex items-center text-sm text-purple-800">
-                                        <input type="checkbox" class="mr-3 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
-                                               data-award="emerging" data-criterion="Innovation"
+                                <div id="emerging-details" class="hidden space-y-1">
+                                    <div class="bg-white rounded-lg p-1.5 border border-purple-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
+                                                   data-award="emerging" data-criterion="Pioneer New Frontiers"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Innovation</span>
-                                        <span class="text-xs text-purple-600 ml-2" id="emerging-Innovation-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Pioneer New Frontiers</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="emerging-Pioneer New Frontiers-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-purple-800">
-                                        <input type="checkbox" class="mr-3 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
-                                               data-award="emerging" data-criterion="Strategic and Inclusive Growth"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Strategic and Inclusive Growth</span>
-                                        <span class="text-xs text-purple-600 ml-2" id="emerging-Strategic and Inclusive Growth-status">Auto-assigned</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-purple-800">
-                                        <input type="checkbox" class="mr-3 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
-                                               data-award="emerging" data-criterion="Empowerment of Others"
+                                    <div class="bg-white rounded-lg p-1.5 border border-purple-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
+                                                   data-award="emerging" data-criterion="Adapt and Transform"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Empowerment of Others</span>
-                                        <span class="text-xs text-purple-600 ml-2" id="emerging-Empowerment of Others-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Adapt and Transform</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="emerging-Adapt and Transform-status">Not Started</span>
+                                    </div>
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-purple-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
+                                                   data-award="emerging" data-criterion="Build Capacity"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                            <span class="flex-1 text-gray-800">Build Capacity</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="emerging-Build Capacity-status">Not Started</span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-purple-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
+                                                   data-award="emerging" data-criterion="Create Impact"
+                                                   onchange="updateCriterionStatus(this)" disabled>
+                                            <span class="flex-1 text-gray-800">Create Impact</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="emerging-Create Impact-status">Not Started</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Best Regional Office for International -->
-                        <div class="border-l-4 border-orange-500 pl-4">
-                            <div class="flex items-center justify-between">
-                                <div class="flex-1">
-                            <h4 class="font-medium text-gray-900">Best Regional Office for International</h4>
-                            <p class="text-sm text-gray-600">Effective regional coordination and management of international programs</p>
+                        <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200 hover:shadow-md transition-all duration-200">
+                            <div class="p-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 bg-orange-500 rounded flex items-center justify-center">
+                                            <span class="text-white text-sm">🌍</span>
                         </div>
-                                <button onclick="toggleAwardDetails('regional')" class="ml-4 p-2 rounded-lg bg-orange-50 hover:bg-orange-100 transition-colors">
-                                    <svg id="regional-arrow" class="w-5 h-5 text-orange-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-sm">Best Regional Office for International</h4>
+                                            <p class="text-xs text-gray-600">Regional excellence in internationalization</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="toggleAwardDetails('regional')" class="p-1 rounded bg-white hover:bg-orange-50 transition-colors border border-orange-200">
+                                        <svg id="regional-arrow" class="w-3 h-3 text-orange-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
                                 </button>
                             </div>
-                            <div id="regional-details" class="hidden mt-3 p-4 bg-orange-50 rounded-lg">
-                                <div class="space-y-2">
-                                    <div class="flex items-center text-sm text-orange-800">
-                                        <input type="checkbox" class="mr-3 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
+                                <div id="regional-details" class="hidden space-y-1">
+                                    <div class="bg-white rounded-lg p-1.5 border border-orange-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
                                                data-award="regional" data-criterion="Comprehensive Internationalization Efforts"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Comprehensive Internationalization Efforts</span>
-                                        <span class="text-xs text-orange-600 ml-2" id="regional-Comprehensive Internationalization Efforts-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Comprehensive Internationalization Efforts</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="regional-Comprehensive Internationalization Efforts-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-orange-800">
-                                        <input type="checkbox" class="mr-3 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-orange-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
                                                data-award="regional" data-criterion="Cooperation and Collaboration"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Cooperation and Collaboration</span>
-                                        <span class="text-xs text-orange-600 ml-2" id="regional-Cooperation and Collaboration-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Cooperation and Collaboration</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="regional-Cooperation and Collaboration-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-orange-800">
-                                        <input type="checkbox" class="mr-3 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-orange-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
                                                data-award="regional" data-criterion="Measurable Impact"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Measurable Impact</span>
-                                        <span class="text-xs text-orange-600 ml-2" id="regional-Measurable Impact-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Measurable Impact</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="regional-Measurable Impact-status">Not Started</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Global Citizenship Award -->
-                        <div class="border-l-4 border-red-500 pl-4">
-                            <div class="flex items-center justify-between">
-                                <div class="flex-1">
-                            <h4 class="font-medium text-gray-900">Global Citizenship Award</h4>
-                            <p class="text-sm text-gray-600">Promotion of global awareness, cultural exchange, and international community engagement</p>
+                        <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg border border-red-200 hover:shadow-md transition-all duration-200">
+                            <div class="p-2">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 bg-red-500 rounded flex items-center justify-center">
+                                            <span class="text-white text-sm">🤝</span>
                         </div>
-                                <button onclick="toggleAwardDetails('citizenship')" class="ml-4 p-2 rounded-lg bg-red-50 hover:bg-red-100 transition-colors">
-                                    <svg id="citizenship-arrow" class="w-5 h-5 text-red-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 text-sm">Global Citizenship Award</h4>
+                                            <p class="text-xs text-gray-600">Promoting global citizenship</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="toggleAwardDetails('citizenship')" class="p-1 rounded bg-white hover:bg-red-50 transition-colors border border-red-200">
+                                        <svg id="citizenship-arrow" class="w-3 h-3 text-red-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
                                 </button>
                             </div>
-                            <div id="citizenship-details" class="hidden mt-3 p-4 bg-red-50 rounded-lg">
-                                <div class="space-y-2">
-                                    <div class="flex items-center text-sm text-red-800">
-                                        <input type="checkbox" class="mr-3 rounded border-red-300 text-red-600 focus:ring-red-500" 
-                                               data-award="global" data-criterion="Ignite Intercultural Understanding"
+                                <div id="citizenship-details" class="hidden space-y-1">
+                                    <div class="bg-white rounded-lg p-1.5 border border-red-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-red-300 text-red-600 focus:ring-red-500" 
+                                                   data-award="citizenship" data-criterion="Ignite Intercultural Understanding"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Ignite Intercultural Understanding</span>
-                                        <span class="text-xs text-red-600 ml-2" id="global-Ignite Intercultural Understanding-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Ignite Intercultural Understanding</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="citizenship-Ignite Intercultural Understanding-status">Not Started</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-red-800">
-                                        <input type="checkbox" class="mr-3 rounded border-red-300 text-red-600 focus:ring-red-500" 
-                                               data-award="global" data-criterion="Empower Changemakers"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Empower Changemakers</span>
-                                        <span class="text-xs text-red-600 ml-2" id="global-Empower Changemakers-status">Auto-assigned</span>
                                     </div>
-                                    <div class="flex items-center text-sm text-red-800">
-                                        <input type="checkbox" class="mr-3 rounded border-red-300 text-red-600 focus:ring-red-500" 
-                                               data-award="global" data-criterion="Cultivate Active Engagement"
+                                    <div class="bg-white rounded-lg p-1.5 border border-red-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-red-300 text-red-600 focus:ring-red-500" 
+                                                   data-award="citizenship" data-criterion="Empower Changemakers"
                                                onchange="updateCriterionStatus(this)" disabled>
-                                        <span class="flex-1">Cultivate Active Engagement</span>
-                                        <span class="text-xs text-red-600 ml-2" id="global-Cultivate Active Engagement-status">Auto-assigned</span>
+                                            <span class="flex-1 text-gray-800">Empower Changemakers</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="citizenship-Empower Changemakers-status">Not Started</span>
+                                    </div>
+                                    </div>
+                                    <div class="bg-white rounded-lg p-1.5 border border-red-100">
+                                        <div class="flex items-center text-sm">
+                                            <input type="checkbox" class="mr-1.5 rounded border-red-300 text-red-600 focus:ring-red-500" 
+                                                   data-award="citizenship" data-criterion="Cultivate Active Engagement"
+                                               onchange="updateCriterionStatus(this)" disabled>
+                                            <span class="flex-1 text-gray-800">Cultivate Active Engagement</span>
+                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="citizenship-Cultivate Active Engagement-status">Not Started</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -3153,7 +3452,7 @@ LILAC Awards - Keyboard Shortcuts:
 
                 <!-- Description -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-2">Description</label>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Description</label>
                     <div class="bg-gray-50 rounded-lg p-4">
                         <p id="viewAwardDescription" class="text-gray-900"></p>
                     </div>
@@ -3161,7 +3460,7 @@ LILAC Awards - Keyboard Shortcuts:
 
                 <!-- Certificate File -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-2">Certificate File</label>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Certificate File</label>
                     <div id="viewAwardCertificate">
                         <!-- Certificate content will be dynamically inserted here -->
                     </div>
@@ -3188,19 +3487,19 @@ LILAC Awards - Keyboard Shortcuts:
                 </div>
                 <form id="award-modal-form" class="p-6 space-y-4">
                     <div>
-                        <label for="m-award-title" class="block text-sm font-medium text-gray-700 mb-2">Award Title *</label>
+                        <label for="m-award-title" class="block text-sm font-medium text-gray-700 mb-1">Award Title *</label>
                         <input id="m-award-title" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
                     </div>
                     <div>
-                        <label for="m-date-received" class="block text-sm font-medium text-gray-700 mb-2">Date Received *</label>
+                        <label for="m-date-received" class="block text-sm font-medium text-gray-700 mb-1">Date Received *</label>
                         <input id="m-date-received" type="date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
                     </div>
                     <div>
-                        <label for="m-award-description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                        <label for="m-award-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                         <textarea id="m-award-description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"></textarea>
                     </div>
                     <div>
-                        <label for="m-award-file" class="block text-sm font-medium text-gray-700 mb-2">Upload Certificate</label>
+                        <label for="m-award-file" class="block text-sm font-medium text-gray-700 mb-1">Upload Certificate</label>
                         <input id="m-award-file" type="file" accept=".pdf,.jpg,.jpeg,.png" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
                         <p class="mt-2 text-sm text-gray-500">Supported formats: PDF, JPG, PNG (Max 5MB)</p>
                     </div>
@@ -3358,6 +3657,18 @@ LILAC Awards - Keyboard Shortcuts:
             try {
                 console.log('Creating new Chart.js instance...');
                 
+                const canvasEl = document.getElementById('monthlyTrendChart');
+                if (!canvasEl) {
+                    console.error('Monthly trend chart canvas not found');
+                    return;
+                }
+                
+                const ctx = canvasEl.getContext('2d');
+                if (!ctx) {
+                    console.error('Could not get 2D context for monthly trend chart');
+                    return;
+                }
+                
                 const lineShadow = { id: 'lineShadow', beforeDatasetsDraw(chart){ const {ctx}=chart; ctx.save(); ctx.shadowBlur=8; ctx.shadowOffsetX=0; ctx.shadowOffsetY=6; ctx.shadowColor='rgba(244,94,132,0.35)'; }, afterDatasetsDraw(chart){ chart.ctx.restore(); } };
                 if (typeof Chart !== 'undefined') { Chart.register(lineShadow); }
                 
@@ -3368,8 +3679,8 @@ LILAC Awards - Keyboard Shortcuts:
                         datasets: [{
                             label: "Income",
                             data: thisYearData.slice(0, 8), // Use first 8 months of this year data
-                        borderColor: gradientStroke,
-                        backgroundColor: gradientBkgrd,
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         pointBorderColor: 'rgba(255,255,255,0)',
                         pointBackgroundColor: 'rgba(255,255,255,0)',
                         pointBorderWidth: 0,
@@ -3574,53 +3885,80 @@ LILAC Awards - Keyboard Shortcuts:
         }
 
         function generateReportContent(summary) {
-            return '<div class="p-4"><h3 class="text-lg font-semibold">Award Report</h3><p>Report functionality temporarily simplified for stability.</p></div>';
-        }
-    </script>
+            if (!summary || summary.length === 0) {
+                return '<div class="p-4"><h3 class="text-lg font-semibold mb-4">Award Report</h3><p class="text-gray-600">No award data available for report generation.</p></div>';
+            }
 
-    <script>
-    // Simplified chart function for stability
-    function renderAwardsLineChart() {
-        console.log('Chart function called - simplified for stability');
+            let reportHTML = '<div class="p-4">';
+            reportHTML += '<h3 class="text-lg font-semibold mb-4">Award Application Report</h3>';
+            
+            // Generate report for each award type
+            summary.forEach(award => {
+                const readinessPercentage = Math.round((award.satisfied / award.total) * 100);
+                const statusColor = readinessPercentage >= 80 ? 'text-green-600' : readinessPercentage >= 60 ? 'text-yellow-600' : 'text-red-600';
+                
+                reportHTML += `
+                    <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                        <h4 class="font-semibold text-lg mb-1">${award.award_type.charAt(0).toUpperCase() + award.award_type.slice(1)} Award</h4>
+                        <div class="flex items-center mb-1">
+                            <span class="text-sm text-gray-600 mr-2">Readiness:</span>
+                            <span class="${statusColor} font-semibold">${readinessPercentage}%</span>
+                            <span class="text-sm text-gray-500 ml-2">(${award.satisfied}/${award.total} criteria met)</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mb-1">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: ${readinessPercentage}%"></div>
+                        </div>
+                        <p class="text-sm text-gray-600">${award.satisfied} of ${award.total} criteria satisfied</p>
+                    </div>
+                `;
+            });
+            
+            reportHTML += '</div>';
+            return reportHTML;
     }
     </script>
 
-</body>
+    <script>
+    // Function to render the awards line chart
+    function renderAwardsLineChart() {
+        try {
+            if (typeof Chart !== 'undefined') {
+                const lineShadow = {
+                    id: 'lineShadowAwards',
+                    beforeDatasetsDraw(chart) {
+                        const { ctx } = chart;
+                        ctx.save();
+                        ctx.shadowBlur = 8;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 6;
+                        ctx.shadowColor = 'rgba(244,94,132,0.35)';
+                    },
+                    afterDatasetsDraw(chart) {
+                        chart.ctx.restore();
+                    }
+                };
+                Chart.register(lineShadow);
 
-</html>
-            id: 'lineShadowAwards',
-            beforeDatasetsDraw(chart) {
-                const { ctx } = chart;
-                ctx.save();
-                ctx.shadowBlur = 8;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 6;
-                ctx.shadowColor = 'rgba(244,94,132,0.35)';
-            },
-            afterDatasetsDraw(chart) {
-                chart.ctx.restore();
-            }
-        };
-        if (typeof Chart !== 'undefined') Chart.register(lineShadow);
+                const ctx = document.getElementById('awardsLineChartCanvas')?.getContext('2d');
+                if (ctx) {
+                    if (window.awardsLineChart) {
+                        window.awardsLineChart.destroy();
+                    }
 
-        if (window.awardsLineChart) {
-            window.awardsLineChart.destroy();
-        }
-
-        window.awardsLineChart = new Chart(ctx, {
+                    window.awardsLineChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
                 datasets: [{
                     label: 'Income',
                     data: [5500, 2500, 10000, 6000, 14000, 1500, 7000, 20000],
-                    backgroundColor: gradientBkgrd,
-                    borderColor: gradientStroke,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: '#3B82F6',
                     pointBorderColor: 'rgba(255,255,255,0)',
                     pointBackgroundColor: 'rgba(255,255,255,0)',
                     pointBorderWidth: 0,
                     pointHoverRadius: 8,
-                    pointHoverBackgroundColor: gradientStroke,
+                    pointHoverBackgroundColor: '#3B82F6',
                     pointHoverBorderColor: 'rgba(220,220,220,1)',
                     pointHoverBorderWidth: 4,
                     pointRadius: 1,
@@ -3634,7 +3972,9 @@ LILAC Awards - Keyboard Shortcuts:
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false },
+                                legend: {
+                                    display: false
+                                },
                     tooltip: {
                         backgroundColor: '#fff',
                         displayColors: false,
@@ -3643,14 +3983,24 @@ LILAC Awards - Keyboard Shortcuts:
                     }
                 },
                 scales: {
-                    x: { grid: { display: false } },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    }
+                                },
                     y: {
                         display: false
                     }
                 }
             }
         });
+                }
+            }
+        } catch (error) {
+            console.log('Chart.js not available or error creating awards line chart:', error);
+        }
     }
+
 
     // Award Criteria Dropdown and Linking Functions
     function updateCriterionStatus(checkbox) {
@@ -3689,11 +4039,22 @@ LILAC Awards - Keyboard Shortcuts:
 
     // Function to update checklist status automatically based on counters
     function updateChecklistStatusAutomatically() {
-        const awardTypes = ['leadership', 'education', 'emerging', 'regional', 'global'];
+        const awardTypes = ['leadership', 'education', 'emerging', 'regional', 'citizenship'];
         
         awardTypes.forEach(awardType => {
-            fetch(`api/checklist.php?action=get_checklist_status&award_type=${encodeURIComponent(awardType)}`)
-            .then(response => response.json())
+            fetch(`api/checklist_working.php?action=get_checklist_status&award_type=${encodeURIComponent(awardType)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text();
+            })
+            .then(text => {
+                if (!text.trim()) {
+                    throw new Error('Empty response from server');
+                }
+                return JSON.parse(text);
+            })
             .then(data => {
                 if (data.success) {
                     data.status.forEach(criterionStatus => {
@@ -3706,10 +4067,10 @@ LILAC Awards - Keyboard Shortcuts:
         
                         if (statusElement) {
                             if (criterionStatus.satisfied) {
-                                statusElement.textContent = 'Auto-assigned';
+                                statusElement.textContent = 'Satisfied';
                                 statusElement.className = 'text-xs text-green-600 ml-2';
                             } else {
-                                statusElement.textContent = 'Not assigned';
+                                statusElement.textContent = 'Not Started';
                                 statusElement.className = 'text-xs text-gray-500 ml-2';
                             }
                         }
@@ -3740,72 +4101,154 @@ LILAC Awards - Keyboard Shortcuts:
         if (typeof updateChecklistStatusAutomatically === 'function') {
             updateChecklistStatusAutomatically();
         }
+        // Update Award Match Analysis counters
+        updateAwardMatchCounters();
     }
-
-    function generateAwardReport() {
-        // Show loading state
-        const reportButton = event.target;
-        const originalText = reportButton.textContent;
-        reportButton.textContent = 'Generating...';
-        reportButton.disabled = true;
-
-        // Fetch readiness summary for all awards
-        fetch('api/checklist.php?action=get_readiness_summary')
-        .then(response => response.json())
+    
+    // Function to update Award Match Analysis counters with real data
+    function updateAwardMatchCounters() {
+        fetch('api/checklist_working.php?action=get_readiness_summary')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(text => {
+            if (!text.trim()) {
+                throw new Error('Empty response from server');
+            }
+            return JSON.parse(text);
+        })
         .then(data => {
             if (data.success) {
-                displayAwardReport(data.summary);
-            } else {
-                console.error('Failed to generate report:', data.message);
-                alert('Failed to generate report. Please try again.');
+                const totals = data.totals;
+                const summary = data.summary;
+                
+                // Update counters
+                const activitiesCountElement = document.getElementById('activities-count');
+                const overallScoreElement = document.getElementById('overall-score');
+                
+                if (activitiesCountElement) {
+                    activitiesCountElement.textContent = totals.total_content || 0;
+                }
+                if (overallScoreElement) {
+                    overallScoreElement.textContent = totals.total_content || 0;
+                }
+                
+                // Find best match (highest readiness percentage)
+                const bestMatch = summary.reduce((a, b) => 
+                    (b.readiness_percentage || 0) > (a.readiness_percentage || 0) ? b : a
+                );
+                
+                const bestMatchElement = document.getElementById('best-match');
+                if (bestMatchElement) {
+                    if (bestMatch.readiness_percentage > 0) {
+                        const awardNames = {
+                            'leadership': 'Internationalization (IZN) Leadership',
+                            'education': 'Outstanding International Education Program',
+                            'emerging': 'Emerging Internationalization',
+                            'regional': 'Regional Internationalization',
+                            'citizenship': 'Global Citizenship'
+                        };
+                        bestMatchElement.textContent = awardNames[bestMatch.award_key] || bestMatch.award_key;
+                    } else {
+                        bestMatchElement.textContent = 'None';
+                    }
+                }
             }
         })
         .catch(error => {
-            console.error('Error generating report:', error);
-            alert('Error generating report. Please try again.');
-        })
-        .finally(() => {
-            // Restore button state
-            reportButton.textContent = originalText;
-            reportButton.disabled = false;
+            console.error('Error updating award match counters:', error);
         });
     }
 
-    function displayAwardReport(summary) {
-        // Create modal for the report
+    // Function to show detailed compliance report
+    function showDetailedComplianceReport(results) {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        modal.innerHTML = `
-            <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                <div class="p-6 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-2xl font-bold text-gray-900">Award Application Report</h2>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
+        
+        // Group results by award type
+        const groupedResults = {};
+        results.forEach(result => {
+            if (!groupedResults[result.award]) {
+                groupedResults[result.award] = [];
+            }
+            groupedResults[result.award].push(result);
+        });
+        
+        let reportHTML = `
+            <div class="bg-white rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900">CHED Award Criteria Compliance Report</h3>
+                    <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-6">
+        `;
+        
+        const awardNames = {
+            'leadership': 'Internationalization (IZN) Leadership',
+            'education': 'Outstanding International Education Program',
+            'emerging': 'Emerging Internationalization',
+            'regional': 'Regional Internationalization',
+            'citizenship': 'Global Citizenship'
+        };
+        
+        Object.keys(groupedResults).forEach(awardKey => {
+            const awardResults = groupedResults[awardKey];
+            const awardName = awardNames[awardKey] || awardKey;
+            
+            reportHTML += `
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h4 class="text-lg font-medium text-gray-900 mb-3">${awardName}</h4>
+                    <div class="space-y-2">
+            `;
+            
+            awardResults.forEach(result => {
+                const typeIcon = result.type === 'mou_document' ? '🤝' : 
+                                result.type === 'event' ? '📅' : '📄';
+                const typeLabel = result.type === 'mou_document' ? 'MOU' : 
+                                 result.type === 'event' ? 'Event' : 'Document';
+                
+                reportHTML += `
+                    <div class="flex items-start space-x-3 p-2 bg-gray-50 rounded">
+                        <span class="text-lg">${typeIcon}</span>
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${result.name}</div>
+                            <div class="text-sm text-gray-600">${typeLabel}</div>
+                            <div class="text-sm text-green-600 mt-1">
+                                Criteria satisfied: ${result.satisfied_criteria.join(', ')}
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-gray-600 mt-2">Comprehensive overview of award readiness and missing requirements</p>
+                `;
+            });
+            
+            reportHTML += `
+                    </div>
                 </div>
-                <div class="p-6">
-                    ${generateReportContent(summary)}
+            `;
+        });
+        
+        reportHTML += `
                 </div>
-                <div class="p-6 border-t border-gray-200 flex justify-end">
-                    <button onclick="this.closest('.fixed').remove()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors">
-                        Close
+                <div class="mt-6 flex justify-end">
+                    <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Close Report
                     </button>
                 </div>
             </div>
         `;
         
+        modal.innerHTML = reportHTML;
         document.body.appendChild(modal);
     }
 
-    function generateReportContent(summary) {
-    }
-
-    // End of JavaScript - Cache buster: 2024-12-19-4
+    // End of JavaScript - Cache buster: 2024-12-19-10
     </script>
 
 </body>

@@ -1,4 +1,7 @@
 ﻿<?php
+// Suppress any output before JSON
+ob_start();
+
 // Load dashboard data directly from database
 require_once 'config/database.php';
 
@@ -18,8 +21,8 @@ function loadDashboardData() {
         $documentsStmt = $conn->query("SELECT COUNT(*) as count FROM enhanced_documents");
         $documents = $documentsStmt->fetch()['count'];
         
-        // Get awards count
-        $awardsStmt = $conn->query("SELECT COUNT(*) as count FROM awards");
+        // Get awards count (using award_readiness table)
+        $awardsStmt = $conn->query("SELECT COUNT(*) as count FROM award_readiness");
         $awards = $awardsStmt->fetch()['count'];
         
         return [
@@ -46,6 +49,9 @@ function loadDashboardData() {
 }
 
 $dashboardData = loadDashboardData();
+
+// Clean any output buffer
+ob_clean();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -85,19 +91,7 @@ $dashboardData = loadDashboardData();
             // Adjust layout on window resize
             window.addEventListener('resize', adjustLayout);
             
-            // Hamburger menu toggle
-            const hamburgerToggle = document.getElementById('hamburger-toggle');
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('main-content');
-            
-            if (hamburgerToggle && sidebar) {
-                hamburgerToggle.addEventListener('click', function() {
-                    sidebar.classList.toggle('hidden');
-                    if (mainContent) {
-                        mainContent.classList.toggle('ml-64');
-                    }
-                });
-            }
+            // Hamburger menu toggle is now handled globally by LILACSidebar
             
             // Notification bell functionality
             const notificationBell = document.getElementById('notification-bell');
@@ -158,18 +152,18 @@ $dashboardData = loadDashboardData();
                     const notificationList = notificationDropdown.querySelector('#notification-list');
                     if (notificationList) {
                         notificationList.innerHTML = notifications.map(notif => 
-                            <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors">
+                            `<div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors">
                                 <div class="flex items-start space-x-3">
                                     <div class="flex-shrink-0">
-                                        <div class="w-2 h-2 rounded-full "></div>
+                                        <div class="w-2 h-2 rounded-full ${notif.type === 'success' ? 'bg-green-500' : notif.type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'}"></div>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900"></p>
-                                        <p class="text-sm text-gray-500 truncate"></p>
-                                        <p class="text-xs text-gray-400 mt-1"></p>
+                                        <p class="text-sm font-medium text-gray-900">${notif.title}</p>
+                                        <p class="text-sm text-gray-500 truncate">${notif.message}</p>
+                                        <p class="text-xs text-gray-400 mt-1">${notif.time}</p>
                                     </div>
                                 </div>
-                            </div>
+                            </div>`
                         ).join('');
                     }
                 }
@@ -200,7 +194,10 @@ $dashboardData = loadDashboardData();
         
         function loadDashboardData() {
             // Update counters with PHP data
-            const data = <?php echo json_encode($dashboardData['data']); ?>;
+            const data = <?php 
+                $data = $dashboardData['data'] ?? ['upcoming_events' => 0, 'completed_events' => 0, 'documents' => 0, 'awards' => 0];
+                echo json_encode($data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+            ?>;
             
             const upcomingElement = document.getElementById('upcoming-events-count');
             const completedElement = document.getElementById('completed-events-count');

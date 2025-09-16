@@ -24,23 +24,13 @@ class MouMoaManager {
      */
     initializeEventListeners() {
         // Search functionality
-        const searchInput = document.getElementById('mou-search');
+        const searchInput = document.getElementById('search-input');
         if (searchInput) {
             searchInput.addEventListener('input', this.debounce(() => {
                 this.currentFilters.search = searchInput.value;
                 this.currentFilters.page = 1;
                 this.loadDocuments();
             }, 300));
-        }
-        
-        // Type filter
-        const typeFilter = document.getElementById('type-filter');
-        if (typeFilter) {
-            typeFilter.addEventListener('change', () => {
-                this.currentFilters.type = typeFilter.value;
-                this.currentFilters.page = 1;
-                this.loadDocuments();
-            });
         }
         
         // Status filter
@@ -53,6 +43,16 @@ class MouMoaManager {
             });
         }
         
+        // Partner filter
+        const partnerFilter = document.getElementById('partner-filter');
+        if (partnerFilter) {
+            partnerFilter.addEventListener('change', () => {
+                this.currentFilters.partner = partnerFilter.value;
+                this.currentFilters.page = 1;
+                this.loadDocuments();
+            });
+        }
+        
         // Upload button
         const uploadBtn = document.getElementById('upload-mou-btn');
         if (uploadBtn) {
@@ -60,13 +60,13 @@ class MouMoaManager {
         }
         
         // Upload form
-        const uploadForm = document.getElementById('mou-upload-form');
+        const uploadForm = document.getElementById('upload-mou-form');
         if (uploadForm) {
             uploadForm.addEventListener('submit', (e) => this.handleUpload(e));
         }
         
         // File input
-        const fileInput = document.getElementById('mou-file-input');
+        const fileInput = document.getElementById('mou-file');
         if (fileInput) {
             fileInput.addEventListener('change', (e) => this.handleFileSelection(e));
         }
@@ -80,7 +80,7 @@ class MouMoaManager {
             this.showLoading(true);
             
             const params = new URLSearchParams({
-                action: 'list',
+                action: 'get_all',
                 ...this.currentFilters
             });
             
@@ -93,11 +93,11 @@ class MouMoaManager {
             const data = await response.json();
             
             if (data.success) {
-                this.documents = data.documents || [];
+                this.documents = data.mous || data.documents || [];
                 this.renderDocuments();
                 this.updateDocumentCounters();
             } else {
-                throw new Error(data.error || 'Failed to load documents');
+                throw new Error(data.message || 'Failed to load documents');
             }
         } catch (error) {
             console.error('Error loading documents:', error);
@@ -111,7 +111,7 @@ class MouMoaManager {
      * Render documents in the table
      */
     renderDocuments() {
-        const tbody = document.getElementById('mou-table-body');
+        const tbody = document.getElementById('documents-table-body');
         if (!tbody) return;
         
         if (this.documents.length === 0) {
@@ -132,40 +132,32 @@ class MouMoaManager {
      * Create a document table row
      */
     createDocumentRow(doc) {
-        const docType = MouMoaConfig.documentTypes.find(t => t.value === doc.type) || MouMoaConfig.documentTypes[0];
-        const status = this.getDocumentStatus(doc);
-        const statusConfig = MouMoaConfig.statusOptions.find(s => s.value === status) || MouMoaConfig.statusOptions[0];
-        
         return `
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900 dark:text-white">
-                        ${doc.partner_name || 'Unknown Partner'}
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <input type="checkbox" class="rounded border-gray-300" value="${doc.id}">
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">
+                        ${doc.institution || 'Unknown Institution'}
                     </div>
-                    <div class="text-sm text-gray-500">
-                        ${doc.title || 'Untitled Document'}
+                    <div class="text-xs text-gray-500">
+                        ${doc.file_name ? doc.file_name : 'No file attached'}
                     </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${docType.color}">
-                        ${docType.label}
-                    </span>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    ${doc.location || 'Not specified'}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${this.formatDate(doc.start_date)}
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    ${doc.term || 'Not specified'}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${this.formatDate(doc.end_date)}
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    ${doc.end_date ? this.formatDate(doc.end_date) : 'Not specified'}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusConfig.color}">
-                        ${statusConfig.label}
-                    </span>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    ${this.formatDate(doc.upload_date)}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${this.getDaysUntilExpiration(doc.end_date)}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                     <button onclick="mouMoaManager.viewDocument('${doc.id}')" 
                             class="text-indigo-600 hover:text-indigo-900 mr-3">
                         View
@@ -189,17 +181,14 @@ class MouMoaManager {
     updateDocumentCounters() {
         const active = this.documents.filter(d => this.getDocumentStatus(d) === 'active').length;
         const expiring = this.documents.filter(d => this.getDocumentStatus(d) === 'expiring').length;
-        const expired = this.documents.filter(d => this.getDocumentStatus(d) === 'expired').length;
         const total = this.documents.length;
         
-        const activeEl = document.getElementById('active-count');
-        const expiringEl = document.getElementById('expiring-count');
-        const expiredEl = document.getElementById('expired-count');
-        const totalEl = document.getElementById('total-count');
+        const activeEl = document.getElementById('active-mous');
+        const expiringEl = document.getElementById('expiring-mous');
+        const totalEl = document.getElementById('total-mous');
         
         if (activeEl) activeEl.textContent = active;
         if (expiringEl) expiringEl.textContent = expiring;
-        if (expiredEl) expiredEl.textContent = expired;
         if (totalEl) totalEl.textContent = total;
     }
     
@@ -273,11 +262,11 @@ class MouMoaManager {
                 
                 let message = '';
                 if (monthsUntilExpiry > 1) {
-                    message = `⚠️ MOU with ${doc.partner_name} expires in ${monthsUntilExpiry} months (${endDate.toLocaleDateString()})`;
+                    message = `⚠️ MOU with ${doc.institution} expires in ${monthsUntilExpiry} months (${endDate.toLocaleDateString()})`;
                 } else if (daysUntilExpiry > 30) {
-                    message = `⚠️ MOU with ${doc.partner_name} expires in ${Math.ceil(daysUntilExpiry / 30)} month (${endDate.toLocaleDateString()})`;
+                    message = `⚠️ MOU with ${doc.institution} expires in ${Math.ceil(daysUntilExpiry / 30)} month (${endDate.toLocaleDateString()})`;
                 } else {
-                    message = `⚠️ MOU with ${doc.partner_name} expires in ${daysUntilExpiry} days (${endDate.toLocaleDateString()})`;
+                    message = `⚠️ MOU with ${doc.institution} expires in ${daysUntilExpiry} days (${endDate.toLocaleDateString()})`;
                 }
                 
                 this.showNotification(message, 'warning');
@@ -307,7 +296,7 @@ class MouMoaManager {
      * Show upload modal
      */
     showUploadModal() {
-        const modal = document.getElementById('mou-upload-modal');
+        const modal = document.getElementById('upload-modal');
         if (modal) {
             modal.classList.remove('hidden');
             this.resetUploadForm();
@@ -318,7 +307,7 @@ class MouMoaManager {
      * Hide upload modal
      */
     hideUploadModal() {
-        const modal = document.getElementById('mou-upload-modal');
+        const modal = document.getElementById('upload-modal');
         if (modal) {
             modal.classList.add('hidden');
         }
@@ -328,7 +317,7 @@ class MouMoaManager {
      * Reset upload form
      */
     resetUploadForm() {
-        const form = document.getElementById('mou-upload-form');
+        const form = document.getElementById('upload-mou-form');
         if (form) {
             form.reset();
         }
@@ -380,7 +369,7 @@ class MouMoaManager {
         if (!this.validateForm()) return;
         
         const formData = new FormData(event.target);
-        formData.append('action', 'upload');
+        formData.append('action', 'add');
         
         try {
             this.showLoading(true);
@@ -397,16 +386,16 @@ class MouMoaManager {
             const result = await response.json();
             
             if (result.success) {
-                this.showNotification('Document uploaded successfully', 'success');
+                this.showNotification('MOU/MOA uploaded successfully', 'success');
                 this.hideUploadModal();
                 this.loadDocuments();
                 
                 // Check for awards earned after successful MOU creation
                 if (window.checkAwardCriteria) {
-                    window.checkAwardCriteria('mou', result.document_id || result.data?.document_id);
+                    window.checkAwardCriteria('mou', result.mou?.id || result.data?.id);
                 }
             } else {
-                throw new Error(result.error || 'Upload failed');
+                throw new Error(result.message || 'Upload failed');
             }
         } catch (error) {
             console.error('Upload error:', error);
@@ -426,27 +415,34 @@ class MouMoaManager {
         const errors = [];
         
         // Required fields
-        const partnerName = form.querySelector('#partner-name');
-        if (!partnerName || !partnerName.value.trim()) {
-            errors.push(MouMoaConfig.validation.required.partnerName);
+        const institution = form.querySelector('#institution');
+        if (!institution || !institution.value.trim()) {
+            errors.push('Institution is required');
         }
         
-        const documentType = form.querySelector('#document-type');
-        if (!documentType || !documentType.value) {
-            errors.push(MouMoaConfig.validation.required.documentType);
+        const location = form.querySelector('#location');
+        if (!location || !location.value.trim()) {
+            errors.push('Location is required');
         }
         
-        const startDate = form.querySelector('#start-date');
-        if (!startDate || !startDate.value) {
-            errors.push(MouMoaConfig.validation.required.startDate);
+        const contactDetails = form.querySelector('#contact-details');
+        if (!contactDetails || !contactDetails.value.trim()) {
+            errors.push('Contact details are required');
         }
         
-        const endDate = form.querySelector('#end-date');
-        if (!endDate || !endDate.value) {
-            errors.push(MouMoaConfig.validation.required.endDate);
+        const term = form.querySelector('#term');
+        if (!term || !term.value.trim()) {
+            errors.push('Term is required');
+        }
+        
+        const signDate = form.querySelector('#sign-date');
+        if (!signDate || !signDate.value) {
+            errors.push('Sign date is required');
         }
         
         // Date validation
+        const startDate = form.querySelector('#start-date');
+        const endDate = form.querySelector('#end-date');
         if (startDate && endDate && startDate.value && endDate.value) {
             const start = new Date(startDate.value);
             const end = new Date(endDate.value);
@@ -456,22 +452,12 @@ class MouMoaManager {
             }
         }
         
-        // Email validation
-        const contactEmail = form.querySelector('#contact-email');
-        if (contactEmail && contactEmail.value && !MouMoaConfig.validation.patterns.email.test(contactEmail.value)) {
-            errors.push('Please enter a valid email address');
-        }
-        
-        // Phone validation
-        const contactPhone = form.querySelector('#contact-phone');
-        if (contactPhone && contactPhone.value && !MouMoaConfig.validation.patterns.phone.test(contactPhone.value)) {
-            errors.push('Please enter a valid phone number');
-        }
-        
-        // URL validation
-        const website = form.querySelector('#website');
-        if (website && website.value && !MouMoaConfig.validation.patterns.url.test(website.value)) {
-            errors.push('Please enter a valid website URL');
+        // Email validation for contact details
+        if (contactDetails && contactDetails.value) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (emailRegex.test(contactDetails.value)) {
+                // Contact details contains email, validate it
+            }
         }
         
         if (errors.length > 0) {
@@ -489,10 +475,298 @@ class MouMoaManager {
         const doc = this.documents.find(d => d.id === documentId);
         if (!doc) return;
         
-        if (window.documentViewer) {
-            const filePath = doc.file_path || doc.document_path;
-            const fileType = this.getFileType(doc.filename || doc.document_name);
-            window.documentViewer.showDocument(filePath, fileType, doc.title || doc.document_name);
+        // Show MOU details in a modal
+        this.showMouDetailsModal(doc);
+    }
+    
+    /**
+     * Show MOU details modal
+     */
+    showMouDetailsModal(doc) {
+        // Create modal HTML
+        const modalHtml = `
+            <div id="mou-details-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[80] flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold text-gray-900">MOU Details</h3>
+                            <button id="close-mou-details-modal" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Institution</label>
+                                    <p class="mt-1 text-sm text-gray-900">${doc.institution || 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Location</label>
+                                    <p class="mt-1 text-sm text-gray-900">${doc.location || 'Not specified'}</p>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Contact Details</label>
+                                <p class="mt-1 text-sm text-gray-900">${doc.contact_details || 'Not specified'}</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Term</label>
+                                    <p class="mt-1 text-sm text-gray-900">${doc.term || 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Type</label>
+                                    <p class="mt-1 text-sm text-gray-900">${doc.type || 'MOU'}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Sign Date</label>
+                                    <p class="mt-1 text-sm text-gray-900">${doc.sign_date ? this.formatDate(doc.sign_date) : 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">End Date</label>
+                                    <p class="mt-1 text-sm text-gray-900">${doc.end_date ? this.formatDate(doc.end_date) : 'Not specified'}</p>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Status</label>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    doc.status === 'Active' ? 'bg-green-100 text-green-800' : 
+                                    doc.status === 'Expired' ? 'bg-red-100 text-red-800' : 
+                                    'bg-yellow-100 text-yellow-800'
+                                }">
+                                    ${doc.status || 'Active'}
+                                </span>
+                            </div>
+                            
+                            ${doc.file_name ? `
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Attached File</label>
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <span class="text-sm text-gray-900">${doc.file_name}</span>
+                                        <button onclick="mouMoaManager.downloadDocument('${doc.id}')" 
+                                                class="text-blue-600 hover:text-blue-800 text-sm">
+                                            Download
+                                        </button>
+                                    </div>
+                                </div>
+                            ` : `
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Attached File</label>
+                                    <p class="mt-1 text-sm text-gray-500">No file attached</p>
+                                </div>
+                            `}
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Upload Date</label>
+                                <p class="mt-1 text-sm text-gray-900">${this.formatDate(doc.upload_date)}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end gap-3 mt-6">
+                            <button id="edit-mou-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                                Edit MOU
+                            </button>
+                            <button id="close-mou-details-modal-btn" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Add event listeners
+        const modal = document.getElementById('mou-details-modal');
+        const closeBtn = document.getElementById('close-mou-details-modal');
+        const closeBtn2 = document.getElementById('close-mou-details-modal-btn');
+        const editBtn = document.getElementById('edit-mou-btn');
+        
+        const closeModal = () => {
+            modal.remove();
+        };
+        
+        closeBtn.addEventListener('click', closeModal);
+        closeBtn2.addEventListener('click', closeModal);
+        editBtn.addEventListener('click', () => {
+            closeModal();
+            this.editDocument(doc.id);
+        });
+        
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    }
+    
+    /**
+     * Edit document
+     */
+    editDocument(documentId) {
+        const doc = this.documents.find(d => d.id === documentId);
+        if (!doc) return;
+        
+        // Show edit modal with pre-filled data
+        this.showEditMouModal(doc);
+    }
+    
+    /**
+     * Show edit MOU modal
+     */
+    showEditMouModal(doc) {
+        // Create edit modal HTML
+        const modalHtml = `
+            <div id="edit-mou-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[80] flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Edit MOU/MOA</h3>
+                            <button id="close-edit-mou-modal" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <form id="edit-mou-form" enctype="multipart/form-data">
+                            <input type="hidden" name="mou_id" value="${doc.id}">
+                            <div class="space-y-3">
+                                <div>
+                                    <label for="edit-institution" class="block text-sm font-medium text-gray-700 mb-2">Institution</label>
+                                    <input type="text" id="edit-institution" name="institution" value="${doc.institution || ''}"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                </div>
+                                
+                                <div>
+                                    <label for="edit-location" class="block text-sm font-medium text-gray-700 mb-2">Location of Institution</label>
+                                    <input type="text" id="edit-location" name="location" value="${doc.location || ''}"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                </div>
+                                
+                                <div>
+                                    <label for="edit-contact-details" class="block text-sm font-medium text-gray-700 mb-2">Contact Details</label>
+                                    <textarea id="edit-contact-details" name="contact_details" rows="2"
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>${doc.contact_details || ''}</textarea>
+                                </div>
+                                
+                                <div>
+                                    <label for="edit-term" class="block text-sm font-medium text-gray-700 mb-2">Term</label>
+                                    <input type="text" id="edit-term" name="term" value="${doc.term || ''}"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                </div>
+                                
+                                <div>
+                                    <label for="edit-sign-date" class="block text-sm font-medium text-gray-700 mb-2">Date of Sign</label>
+                                    <input type="date" id="edit-sign-date" name="sign_date" value="${doc.sign_date || ''}"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                </div>
+                                
+                                <div>
+                                    <label for="edit-start-date" class="block text-sm font-medium text-gray-700 mb-2">Start Date (Optional)</label>
+                                    <input type="date" id="edit-start-date" name="start_date" value="${doc.start_date || ''}"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+                                
+                                <div>
+                                    <label for="edit-end-date" class="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+                                    <input type="date" id="edit-end-date" name="end_date" value="${doc.end_date || ''}"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                </div>
+                                
+                                <div>
+                                    <label for="edit-mou-file" class="block text-sm font-medium text-gray-700 mb-2">Update File (Optional)</label>
+                                    <input type="file" id="edit-mou-file" name="mou-file" accept=".pdf,.doc,.docx" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <p class="text-xs text-gray-500 mt-1">Leave empty to keep current file</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end gap-3 mt-4">
+                                <button type="button" id="cancel-edit-mou" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                                    Update MOU/MOA
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Add event listeners
+        const modal = document.getElementById('edit-mou-modal');
+        const closeBtn = document.getElementById('close-edit-mou-modal');
+        const cancelBtn = document.getElementById('cancel-edit-mou');
+        const form = document.getElementById('edit-mou-form');
+        
+        const closeModal = () => {
+            modal.remove();
+        };
+        
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+        
+        // Handle form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.updateDocument(doc.id, new FormData(form));
+            closeModal();
+        });
+    }
+    
+    /**
+     * Update document
+     */
+    async updateDocument(documentId, formData) {
+        try {
+            this.showLoading(true);
+            
+            formData.append('action', 'update');
+            formData.append('id', documentId);
+            
+            const response = await fetch(MouMoaConfig.api.update, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showNotification('MOU/MOA updated successfully', 'success');
+                this.loadDocuments();
+            } else {
+                throw new Error(result.message || 'Update failed');
+            }
+        } catch (error) {
+            console.error('Update error:', error);
+            this.showNotification('Failed to update MOU/MOA', 'error');
+        } finally {
+            this.showLoading(false);
         }
     }
     
@@ -503,9 +777,15 @@ class MouMoaManager {
         const doc = this.documents.find(d => d.id === documentId);
         if (!doc) return;
         
+        if (!doc.file_name || !doc.file_path) {
+            this.showNotification('No file attached to this MOU', 'info');
+            return;
+        }
+        
         const link = document.createElement('a');
-        link.href = doc.file_path || doc.document_path;
-        link.download = doc.filename || doc.document_name;
+        const fileUrl = doc.file_path.startsWith('http') ? doc.file_path : `../${doc.file_path}`;
+        link.href = fileUrl;
+        link.download = doc.file_name;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -551,9 +831,9 @@ class MouMoaManager {
      * Show loading state
      */
     showLoading(show) {
-        const loadingEl = document.getElementById('mou-loading');
+        const loadingEl = document.getElementById('loading-indicator');
         if (loadingEl) {
-            loadingEl.style.display = show ? 'block' : 'none';
+            loadingEl.classList.toggle('hidden', !show);
         }
     }
     

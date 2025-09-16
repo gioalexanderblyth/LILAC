@@ -9,7 +9,7 @@
 ?>
 
 <!-- Document Viewer Modal -->
-<div id="document-viewer-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+<div id="document-viewer-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] hidden">
     <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
         <!-- Modal Header -->
         <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600">
@@ -67,7 +67,6 @@
                 
                 <!-- Error Message -->
                 <div id="document-viewer-error" class="hidden text-center py-8">
-                    <div class="text-red-500 text-lg font-semibold mb-2">Error Loading Document</div>
                     <div id="document-viewer-error-message" class="text-gray-600 dark:text-gray-400">
                         Unable to load the document. Please try again.
                     </div>
@@ -181,7 +180,8 @@ class DocumentViewer {
         }
         
         // Load document based on type
-        switch (documentType.toLowerCase()) {
+        const docType = documentType ? documentType.toLowerCase() : 'unknown';
+        switch (docType) {
             case 'pdf':
                 this.loadPDF(documentPath);
                 break;
@@ -196,8 +196,11 @@ class DocumentViewer {
             case 'txt':
                 this.loadText(documentPath);
                 break;
+            case 'unknown':
+                this.showErrorWithDownload('This file type cannot be displayed in the viewer. Please download this file to view it.', documentPath);
+                break;
             default:
-                this.showError('Unsupported document type: ' + documentType);
+                this.showError('Unsupported document type: ' + (documentType || 'unknown'));
         }
     }
     
@@ -239,10 +242,14 @@ class DocumentViewer {
      */
     async loadPDF(pdfPath) {
         try {
-            // Check if PDF.js is available
+            // Load PDF.js lazily if not already loaded
             if (typeof pdfjsLib === 'undefined') {
-                this.showError('PDF.js library is not loaded');
-                return;
+                if (window.lazyLoader && typeof window.lazyLoader.loadPDFJS === 'function') {
+                    await window.lazyLoader.loadPDFJS();
+                } else {
+                    this.showError('PDF.js library is not available');
+                    return;
+                }
             }
             
             // Load PDF document
@@ -424,6 +431,34 @@ class DocumentViewer {
     }
     
     /**
+     * Show error message with download button
+     * 
+     * @param {string} message The error message to display
+     * @param {string} documentPath The path to the document for download
+     */
+    showErrorWithDownload(message, documentPath) {
+        this.hideAllViewers();
+        const errorContainer = document.getElementById('document-viewer-error');
+        const errorMessage = document.getElementById('document-viewer-error-message');
+        
+        if (errorContainer && errorMessage) {
+            errorMessage.innerHTML = `
+                <div class="text-center">
+                    <div class="text-gray-600 dark:text-gray-400 mb-4">${message}</div>
+                    <button onclick="window.documentViewer.downloadDocument()" 
+                            class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
+                        Download File
+                    </button>
+                </div>
+            `;
+            errorContainer.classList.remove('hidden');
+            
+            // Store the document path for download
+            this.currentDocument = documentPath;
+        }
+    }
+    
+    /**
      * Show download button
      */
     showDownloadButton() {
@@ -453,6 +488,43 @@ class DocumentViewer {
     printDocument() {
         if (this.currentDocument) {
             window.open(this.currentDocument, '_blank');
+        }
+    }
+    
+    /**
+     * Open document in new tab (for unsupported types like DOCX)
+     * 
+     * @param {string} documentPath The path to the document
+     */
+    openInNewTab(documentPath) {
+        try {
+            // Show a message that the document will download
+            this.hideAllViewers();
+            const contentEl = document.getElementById('document-viewer-content');
+            if (contentEl) {
+                contentEl.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-blue-500 text-lg font-semibold mb-2">Opening Document</div>
+                        <div class="text-gray-600 dark:text-gray-400 mb-4">
+                            This document type cannot be displayed inline.<br>
+                            It will open in a new tab or download automatically.
+                        </div>
+                        <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    </div>
+                `;
+            }
+            
+            // Open in new tab (will trigger download for DOCX files)
+            window.open(documentPath, '_blank');
+            
+            // Close the modal after a short delay
+            setTimeout(() => {
+                this.close();
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error opening document in new tab:', error);
+            this.showError('Failed to open document: ' + error.message);
         }
     }
     

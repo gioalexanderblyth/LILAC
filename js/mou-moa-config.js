@@ -8,14 +8,15 @@ const MouMoaConfig = {
         upload: 'api/mous.php',
         list: 'api/mous.php',
         delete: 'api/mous.php',
-        search: 'api/mous.php'
+        update: 'api/mous.php',
+        search: 'api/mous.php',
+        sync: 'api/mous.php?action=sync'
     },
     
     // Document types
     documentTypes: [
         { value: 'MOU', label: 'Memorandum of Understanding', color: 'text-blue-600' },
-        { value: 'MOA', label: 'Memorandum of Agreement', color: 'text-green-600' },
-        { value: 'KUMA-MOU', label: 'KUMA-MOU', color: 'text-purple-600' }
+        { value: 'MOA', label: 'Memorandum of Agreement', color: 'text-green-600' }
     ],
     
     // Partner types

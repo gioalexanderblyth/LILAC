@@ -19,7 +19,6 @@ require_once 'classes/DateTimeUtility.php';
     <script src="js/lazy-loader.js"></script>
     <script src="js/modal-handlers.js"></script>
     <link rel="stylesheet" href="modern-design-system.css">
-    <link rel="stylesheet" href="dashboard-theme.css">
     <link rel="stylesheet" href="sidebar-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>

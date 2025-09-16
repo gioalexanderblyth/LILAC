@@ -60,40 +60,58 @@ class UniversalUploadHandler {
                 ];
             }
             
-            // Generate unique ID and filename
-            $fileId = uniqid('file_', true);
-            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $storedFilename = $this->generateStoredFilename($fileId, $extension);
+            // Define category before using it
+            $category = 'docs'; // Default category
             
-            // Extract text content for categorization
-            $extractedText = $this->fileProcessor->extractText($file);
+            // Use FileProcessor to handle the entire upload process
+            $processResult = $this->fileProcessor->processFile($file, ['category' => $category]);
             
-            // Determine category based on content
-            $category = $this->categorizeFile($extractedText, $file['name']);
-            
-            // Create category directory
-            $categoryDir = "uploads/{$category}/";
-            if (!is_dir($categoryDir)) {
-                mkdir($categoryDir, 0755, true);
-            }
-            
-            // Move file to category directory
-            $filePath = $categoryDir . $storedFilename;
-            if (!move_uploaded_file($file['tmp_name'], $filePath)) {
+            if (!$processResult['success']) {
                 return [
                     'success' => false,
-                    'error' => 'Failed to save uploaded file'
+                    'error' => 'Failed to process uploaded file: ' . ($processResult['error'] ?? 'Unknown error')
                 ];
             }
             
+            // Get the results from FileProcessor
+            $fileId = $processResult['document_id'];
+            $filePath = $processResult['file_path'];
+            $extractedText = $processResult['extracted_content'] ?? '';
+            
+            // Determine categories based on content
+            $detectedCategories = $this->categorizeFile($extractedText, $file['name']);
+            
+            // Always include 'docs' if uploaded from docs page, plus detected categories
+            $allCategories = ['docs'];
+            if (is_array($detectedCategories)) {
+                $allCategories = array_unique(array_merge($allCategories, $detectedCategories));
+            } else {
+                $allCategories[] = $detectedCategories;
+            }
+            
+            // Add award categories if any award criteria are detected
+            $awardCategories = array_filter($detectedCategories, function($cat) {
+                return strpos($cat, 'award_') === 0;
+            });
+            if (!empty($awardCategories)) {
+                $allCategories[] = 'awards'; // Add general awards category
+                $allCategories = array_unique($allCategories);
+            }
+            
+            // Use the primary category for database storage (first detected category or docs)
+            $primaryCategory = $detectedCategories[0] ?? 'docs';
+            
+            // Generate stored filename from the file path
+            $storedFilename = basename($filePath);
+            
             // Extract event date if it's an event file
             $eventDate = null;
-            if ($category === 'events') {
+            if (in_array('events', $allCategories)) {
                 $eventDate = $this->extractEventDate($extractedText);
             }
             
-            // Determine linked pages
-            $linkedPages = $this->determineLinkedPages($category, $sourcePage);
+            // Use all detected categories as linked pages
+            $linkedPages = $allCategories;
             
             // Save to database
             $stmt = $this->pdo->prepare("
@@ -110,7 +128,7 @@ class UniversalUploadHandler {
                 $storedFilename,
                 $filePath,
                 $uploadedBy,
-                $category,
+                $primaryCategory,
                 $linkedPagesJson,
                 $file['size'],
                 $file['type'],
@@ -121,7 +139,8 @@ class UniversalUploadHandler {
             return [
                 'success' => true,
                 'file_id' => $fileId,
-                'category' => $category,
+                'category' => $primaryCategory,
+                'all_categories' => $allCategories,
                 'file_path' => $filePath,
                 'linked_pages' => $linkedPages,
                 'event_date' => $eventDate,
@@ -172,16 +191,17 @@ class UniversalUploadHandler {
     private function categorizeFile($text, $filename) {
         $text = strtolower($text . ' ' . $filename);
         
-        // Define category keywords
+        // Define category keywords with enhanced MOU detection and CHED Award Criteria
         $keywords = [
             'events' => [
                 'event', 'program', 'schedule', 'activity', 'forum', 'conference', 
                 'exhibit', 'workshop', 'seminar', 'meeting', 'celebration', 'festival',
                 'competition', 'contest', 'ceremony', 'gathering', 'assembly'
             ],
-            'mou' => [
+            'mous' => [
                 'memorandum', 'understanding', 'agreement', 'partnership', 'collaboration',
-                'mou', 'moa', 'cooperation', 'alliance', 'treaty', 'contract', 'accord'
+                'mou', 'moa', 'cooperation', 'alliance', 'treaty', 'contract', 'accord',
+                'kuma', 'kuma-mou', 'memorandum of understanding', 'memorandum of agreement'
             ],
             'awards' => [
                 'award', 'recognition', 'leadership', 'excellence', 'best', 'global citizenship',
@@ -191,6 +211,36 @@ class UniversalUploadHandler {
             'templates' => [
                 'template', 'form', 'format', 'sample', 'application', 'checklist',
                 'guide', 'instruction', 'manual', 'procedure', 'protocol', 'standard'
+            ],
+            // CHED Award Criteria Categories
+            'award_leadership' => [
+                'champion bold innovation', 'cultivate global citizens', 'nurture lifelong learning',
+                'lead with purpose', 'ethical and inclusive leadership', 'internationalization',
+                'leadership', 'innovation', 'global citizens', 'lifelong learning', 'purpose',
+                'ethical', 'inclusive', 'bold', 'champion', 'cultivate', 'nurture'
+            ],
+            'award_education' => [
+                'expand access to global opportunities', 'foster collaborative innovation',
+                'embrace inclusivity and beyond', 'international education', 'global opportunities',
+                'collaborative innovation', 'inclusivity', 'education program', 'academic',
+                'curriculum', 'international', 'global', 'opportunities', 'collaborative'
+            ],
+            'award_emerging' => [
+                'innovation', 'strategic and inclusive growth', 'empowerment of others',
+                'emerging leadership', 'strategic growth', 'inclusive growth', 'empowerment',
+                'emerging', 'strategic', 'inclusive', 'growth', 'empower', 'mentoring'
+            ],
+            'award_regional' => [
+                'comprehensive internationalization efforts', 'cooperation and collaboration',
+                'measurable impact', 'regional office', 'internationalization efforts',
+                'cooperation', 'collaboration', 'measurable impact', 'regional', 'office',
+                'comprehensive', 'efforts', 'measurable', 'impact'
+            ],
+            'award_global' => [
+                'ignite intercultural understanding', 'empower changemakers',
+                'cultivate active engagement', 'global citizenship', 'intercultural understanding',
+                'changemakers', 'active engagement', 'citizenship', 'intercultural',
+                'understanding', 'changemakers', 'engagement', 'ignite', 'empower', 'cultivate'
             ]
         ];
         
@@ -204,13 +254,16 @@ class UniversalUploadHandler {
             $scores[$category] = $score;
         }
         
-        // Return category with highest score, default to 'events' if no clear match
-        $maxScore = max($scores);
-        if ($maxScore > 0) {
-            return array_search($maxScore, $scores);
+        // Return all categories with scores > 0, sorted by score
+        $detectedCategories = [];
+        foreach ($scores as $category => $score) {
+            if ($score > 0) {
+                $detectedCategories[] = $category;
+            }
         }
         
-        return 'events'; // Default category
+        // If no categories detected, return empty array (will default to docs only)
+        return $detectedCategories;
     }
     
     /**

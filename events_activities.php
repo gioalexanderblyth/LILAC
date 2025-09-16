@@ -34,7 +34,6 @@ require_once 'classes/DateTimeUtility.php';
     <title>LILAC Events & Activities</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
-    <link rel="stylesheet" href="dashboard-theme.css">
     <link rel="stylesheet" href="sidebar-enhanced.css">
     <link rel="stylesheet" href="events-enhanced.css">
     <script src="connection-status.js"></script>

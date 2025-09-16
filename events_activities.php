@@ -106,12 +106,8 @@ $trashEventsData = loadTrashEventsData();
     <link rel="stylesheet" href="events-enhanced.css">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
-    <!-- Tesseract.js for OCR functionality -->
-    <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
     <!-- PDF.js for document viewing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- Enhanced OCR Processing -->
-    <script src="events-ocr-enhanced.js"></script>
     <script src="js/document-analyzer.js"></script>
 </head>
 
@@ -219,17 +215,6 @@ $trashEventsData = loadTrashEventsData();
                     </div>
                 </div>
                 
-                <!-- OCR Progress -->
-                <div id="ocr-progress" class="mt-4 hidden">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-medium text-gray-900">Scanning content...</span>
-                        <span id="ocr-status" class="text-sm text-gray-500">Processing</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div id="ocr-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                    </div>
-                </div>
-
                 <!-- Upload Progress -->
                 <div id="upload-progress" class="mt-4 hidden">
                     <div class="flex items-center justify-between mb-2">
@@ -238,14 +223,6 @@ $trashEventsData = loadTrashEventsData();
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2">
                         <div id="progress-bar" class="bg-purple-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <!-- OCR Results -->
-                <div id="ocr-results" class="mt-4 hidden">
-                    <h4 class="text-sm font-medium text-gray-900 mb-2">Content Analysis:</h4>
-                    <div id="detected-content" class="bg-gray-50 rounded p-3 text-sm">
-                        <!-- OCR results will be displayed here -->
                     </div>
                 </div>
             </div>
@@ -609,13 +586,10 @@ $trashEventsData = loadTrashEventsData();
                                     <svg class="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                     </svg>
-                                    <input type="text" id="events-search-input" placeholder="Search your events here..." class="w-48 pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <input type="text" id="events-search-input" placeholder="Search your events here..." class="w-80 pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                                 </div>
                                 <!-- Action Buttons -->
                                 <div class="flex gap-2">
-                                    <button id="create-event-btn-header" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm">
-                                        Create Event
-                                    </button>
                                     <button id="events-upload-btn" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
                                         Upload
                                     </button>
@@ -748,64 +722,26 @@ $trashEventsData = loadTrashEventsData();
             const fileArray = Array.from(files);
             console.log('Processing files:', fileArray.map(f => f.name));
             
-            // Show selected files in the modal
-            const fileList = document.getElementById('file-list');
-            const selectedFilesContainer = document.getElementById('selected-files');
-            
-            if (fileList && selectedFilesContainer) {
-                fileList.classList.remove('hidden');
-                selectedFilesContainer.innerHTML = '';
-                
-                fileArray.forEach(file => {
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded text-sm';
-                    fileItem.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            <span class="text-gray-900">${file.name}</span>
-                        </div>
-                        <span class="text-gray-500 text-xs">${(file.size / 1024).toFixed(1)} KB</span>
-                    `;
-                    selectedFilesContainer.appendChild(fileItem);
-                });
+            // Show upload progress
+            const uploadProgress = document.getElementById('upload-progress');
+            if (uploadProgress) {
+                uploadProgress.classList.remove('hidden');
             }
             
-            // Start OCR processing
+            // Process files after a short delay
             setTimeout(() => {
-                console.log('Checking OCR function availability...');
-                console.log('window.processFilesWithOCR exists:', typeof window.processFilesWithOCR);
-                console.log('Tesseract available:', typeof window.Tesseract);
+                console.log('Files uploaded successfully');
                 
-                if (window.processFilesWithOCR) {
-                    console.log('Starting enhanced OCR processing with', fileArray.length, 'files...');
-                    processFilesWithOCR(fileArray);
-                } else {
-                    console.error('Enhanced OCR function not found - falling back to basic processing');
-                    // Fallback: create basic cards without OCR
-                    fileArray.forEach(file => {
-                        if (file.type.startsWith('image/')) {
-                            const basicEventData = {
-                                name: file.name.replace(/\.[^/.]+$/, ''),
-                                organizer: 'File Upload',
-                                place: 'Not specified',
-                                date: new Date().toISOString().split('T')[0],
-                                status: 'upcoming',
-                                type: 'activities'
-                            };
-                            
-                            // Create a basic OCR-style card
-                            createImageCard(file, basicEventData);
-                            addEventToTable(basicEventData);
-                        }
-                    });
+                // Hide progress after processing
+                if (uploadProgress) {
+                    uploadProgress.classList.add('hidden');
                 }
                 
-                setTimeout(() => {
-                    isProcessingFiles = false;
-                }, 2000);
-            }, 500);
+                // Show success message
+                alert('Files uploaded successfully!');
+                
+                isProcessingFiles = false;
+            }, 2000);
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -1704,25 +1640,36 @@ $trashEventsData = loadTrashEventsData();
         async function saveEventToAPI(eventData) {
             try {
                 const formData = new FormData();
-                formData.append('action', 'add');
                 formData.append('name', eventData.name);
                 formData.append('organizer', eventData.organizer);
                 formData.append('place', eventData.place);
                 formData.append('date', eventData.date);
                 formData.append('status', eventData.status);
                 formData.append('type', eventData.type);
-                formData.append('description', eventData.description || '');
-                formData.append('image_file', eventData.image_file || '');
-                formData.append('ocr_text', eventData.ocr_text || '');
-                formData.append('confidence', eventData.confidence || 0);
+                formData.append('file_path', eventData.file_path || '');
 
-                const response = await fetch('api/events.php', {
+                console.log('Sending event data:', eventData);
+
+                const response = await fetch('api/addEvent.php', {
                     method: 'POST',
                     body: formData
                 });
 
-                const result = await response.json();
-                console.log('Save event result:', result);
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+
+                if (!responseText) {
+                    throw new Error('Empty response from server');
+                }
+
+                const result = JSON.parse(responseText);
+                console.log('Parsed result:', result);
                 
                 if (result.success) {
                     console.log('Event saved successfully:', result.event);

@@ -394,7 +394,7 @@
                     'image/png', 
                     'image/jpg'
                 ];
-                
+
                 if (!allowedTypes.includes(fileInput.files[0].type)) {
                     showNotification('Only PDF, JPG, JPEG, and PNG files are allowed for certificates', 'error');
                     return;
@@ -464,7 +464,7 @@
                 if (data.success) {
                     // Clear form
                     document.getElementById('award-form').reset();
-                    
+    
                     // Refresh display
                     loadDocuments();
                     loadStats();
@@ -702,7 +702,7 @@
                 const date = new Date(award.upload_date);
                 const timeAgo = getTimeAgo(date);
                 const amount = `+ ${Math.floor(Math.random() * 500) + 100}`; // Simulate points
-                
+
                 return `
                     <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                         <div class="flex-shrink-0">
@@ -869,7 +869,7 @@
                         month: 'short', 
                         day: 'numeric'
                     });
-                    
+    
                     return `<tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
@@ -963,7 +963,7 @@
                 });
                 document.getElementById('viewAwardDateAdded').textContent = getTimeAgo(new Date(award.upload_date));
                 document.getElementById('viewAwardDescription').textContent = award.description || 'No description provided.';
-                
+
                 // Handle certificate file
                 const certificateSection = document.getElementById('viewAwardCertificate');
                 if (award.filename) {
@@ -991,7 +991,7 @@
                         </div>
                     `;
                 }
-                
+
                 // Show modal
                 document.getElementById('viewAwardModal').classList.remove('hidden');
             }
@@ -1192,14 +1192,14 @@
                 // Get all documents
                 const documentsResponse = await fetch('api/documents.php?action=get_all');
                 const documentsData = await documentsResponse.json();
-                
+
                 // Get all events from central system
                 const eventsResponse = await fetch('api/central_events_api.php?action=get_events_for_awards');
                 const eventsData = await eventsResponse.json();
-                
+
                 const contentList = document.getElementById('available-content-list');
                 contentList.innerHTML = '';
-                
+
                 if (documentsData.success && documentsData.documents.length > 0) {
                     documentsData.documents.forEach(doc => {
                         if (doc.status === 'Active') {
@@ -1228,7 +1228,7 @@
                         }
                     });
                 }
-                
+
                 if (eventsData.success && eventsData.events.length > 0) {
                     eventsData.events.forEach(event => {
                         if (event.status === 'Active') {
@@ -1257,7 +1257,7 @@
                         }
                     });
                 }
-                
+
                 if (contentList.children.length === 0) {
                     contentList.innerHTML = `
                         <div class="text-center text-gray-500 py-8">
@@ -1268,7 +1268,7 @@
                         </div>
                     `;
                 }
-                
+
             } catch (error) {
                 console.error('Error loading content:', error);
                 document.getElementById('available-content-list').innerHTML = `
@@ -1291,7 +1291,7 @@
 
             try {
                 showNotification(`Analyzing ${contentType}: ${contentTitle}`, 'info');
-                
+
                 // Perform analysis via API
                 const response = await fetch('api/checklist.php', {
                     method: 'POST',
@@ -1300,13 +1300,13 @@
                     },
                     body: `action=analyze_single_content&content_type=${encodeURIComponent(contentType)}&content_id=${encodeURIComponent(contentId)}`
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     displaySingleAnalysisResults(result.analysis, contentType, contentTitle);
                     showNotification('Analysis completed successfully!', 'success');
-                    
+    
                     // Refresh the page data
                     if (typeof loadAwardDocumentCounts === 'function') {
                         loadAwardDocumentCounts();
@@ -1355,7 +1355,7 @@
             try {
                 const response = await fetch('api/documents.php?action=get_award_counters');
                 const result = await response.json();
-                
+
                 if (result.success && result.counters) {
                     updateAwardCounters(result.counters);
                 }
@@ -1376,7 +1376,7 @@
                     if (scoreElement) {
                         scoreElement.textContent = counter.total_content || 0;
                     }
-                    
+    
                     // Update readiness status
                     updateAwardReadiness(awardType, counter);
                 }
@@ -1450,7 +1450,7 @@
 
             try {
                 showNotification('Starting comprehensive analysis of all documents and events...', 'info');
-                
+
                 // Perform batch analysis via API
                 const response = await fetch('api/checklist.php', {
                     method: 'POST',
@@ -1459,13 +1459,13 @@
                     },
                     body: 'action=analyze_all_content'
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     displayBatchAnalysisResults(result.analysis);
                     showNotification('Comprehensive analysis completed successfully!', 'success');
-                    
+    
                     // Refresh the page data
                     if (typeof loadAwardDocumentCounts === 'function') {
                         loadAwardDocumentCounts();
@@ -1479,7 +1479,7 @@
                 } else {
                     throw new Error(result.message || 'Batch analysis failed');
                 }
-                
+
             } catch (error) {
                 console.error('Error analyzing all documents and events:', error);
                 showNotification(`Error in batch analysis: ${error.message}`, 'error');
@@ -1553,7 +1553,7 @@
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Supported Awards</h4>
                         <div class="space-y-2">
                 `;
-                
+
                 analysis.supported_awards.forEach(award => {
                     content += `
                         <div class="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -1572,7 +1572,7 @@
                         </div>
                     `;
                 });
-                
+
                 content += `
                         </div>
                     </div>
@@ -1585,7 +1585,7 @@
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Satisfied Criteria</h4>
                         <div class="space-y-2">
                 `;
-                
+
                 analysis.satisfied_criteria.forEach(criterion => {
                     content += `
                         <div class="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1604,7 +1604,7 @@
                         </div>
                     `;
                 });
-                
+
                 content += `
                         </div>
                     </div>
@@ -1617,7 +1617,7 @@
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Keywords Found</h4>
                         <div class="flex flex-wrap gap-2">
                 `;
-                
+
                 analysis.keywords_found.forEach(keyword => {
                     content += `
                         <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
@@ -1625,7 +1625,7 @@
                         </span>
                     `;
                 });
-                
+
                 content += `
                         </div>
                     </div>
@@ -1638,7 +1638,7 @@
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Recommendations</h4>
                         <div class="space-y-2">
                 `;
-                
+
                 analysis.recommendations.forEach(rec => {
                     content += `
                         <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1647,7 +1647,7 @@
                         </div>
                     `;
                 });
-                
+
                 content += `
                         </div>
                     </div>
@@ -1725,13 +1725,13 @@
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Award Breakdown</h4>
                         <div class="space-y-4">
                 `;
-                
+
                 analysis.award_breakdown.forEach(award => {
                     const readinessColor = award.readiness === 'Ready to Apply' ? 'green' : 
                                          award.readiness === 'Nearly Ready' ? 'yellow' : 'red';
                     const readinessIcon = award.readiness === 'Ready to Apply' ? '✅' : 
                                         award.readiness === 'Nearly Ready' ? '⚠️' : '❌';
-                    
+    
                     content += `
                         <div class="border border-gray-200 rounded-lg p-4">
                             <div class="flex items-center justify-between mb-3">
@@ -1760,7 +1760,7 @@
                         </div>
                     `;
                 });
-                
+
                 content += `
                         </div>
                     </div>
@@ -1773,7 +1773,7 @@
                         <h4 class="text-md font-semibold text-gray-900 mb-3">Missing Criteria</h4>
                         <div class="space-y-2">
                 `;
-                
+
                 analysis.missing_criteria.forEach(missing => {
                     content += `
                         <div class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -1792,7 +1792,7 @@
                         </div>
                     `;
                 });
-                
+
                 content += `
                         </div>
                     </div>
@@ -1822,7 +1822,7 @@
                             ${results.map(result => `
                                 <div class="border border-gray-200 rounded-lg p-4">
                                     <h4 class="text-lg font-semibold text-gray-900 mb-3">${result.awardType}</h4>
-                                    
+                    
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                         <div class="bg-blue-50 p-3 rounded-lg">
                                             <div class="text-sm text-blue-600 font-medium">Documents</div>
@@ -1921,10 +1921,10 @@
         async function showAwardChecklists() {
             try {
                 showNotification('Loading award checklists...', 'info');
-                
+
                 const response = await fetch('api/checklist.php?action=get_all_checklists');
                 const result = await response.json();
-                
+
                 if (result.success) {
                     displayAwardChecklists(result.checklists);
                     showNotification('Award checklists loaded!', 'success');
@@ -1969,7 +1969,7 @@
                                             </span>
                                         </div>
                                     </div>
-                                    
+                    
                                     <div class="grid grid-cols-3 gap-4 mb-4">
                                         <div class="text-center">
                                             <div class="text-2xl font-bold text-blue-600">${checklist.document_count}</div>
@@ -2039,7 +2039,7 @@
                 });
 
                 const result = await response.json();
-                
+
                 if (result.success) {
                     showNotification('Criterion status updated!', 'success');
                     // Refresh the checklist display
@@ -2056,20 +2056,20 @@
         // Load readiness summary
         async function loadReadinessSummary() {
             try {
-                showNotification('Loading readiness summary...', 'info');
-                
+
+
                 const response = await fetch('api/checklist.php?action=get_readiness_summary');
                 const result = await response.json();
-                
+
                 if (result.success) {
                     displayReadinessSummary(result.summary);
-                    showNotification('Readiness summary loaded!', 'success');
+    
                 } else {
-                    showNotification('Failed to load readiness summary', 'error');
+    
                 }
             } catch (error) {
                 console.error('Error loading readiness summary:', error);
-                showNotification('Error loading readiness summary', 'error');
+
             }
         }
 
@@ -2097,7 +2097,7 @@
                             </span>
                         </div>
                     </div>
-                    
+    
                     <div class="space-y-2">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Documents:</span>
@@ -2112,7 +2112,7 @@
                             <span class="font-medium text-green-600">${item.satisfied_count}/${item.total_count}</span>
                         </div>
                     </div>
-                    
+    
                     <div class="mt-3">
                         <div class="w-full bg-gray-200 rounded-full h-2">
                             <div class="h-2 rounded-full ${
@@ -2125,7 +2125,7 @@
                             ${Math.round(item.readiness.satisfaction_rate * 100)}% Complete
                         </div>
                     </div>
-                    
+    
                     <button onclick="showDetailedChecklist('${item.award_type}')" class="w-full mt-3 px-3 py-2 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
                         View Details
                     </button>
@@ -2137,10 +2137,10 @@
         async function showDetailedChecklist(awardType) {
             try {
                 showNotification('Loading detailed checklist...', 'info');
-                
+
                 const response = await fetch(`api/checklist.php?action=get_award_checklist&award_type=${encodeURIComponent(awardType)}`);
                 const result = await response.json();
-                
+
                 if (result.success) {
                     displayDetailedChecklist(result);
                     showNotification('Detailed checklist loaded!', 'success');
@@ -2233,7 +2233,7 @@
                                                     item.satisfied ? 'text-green-800' : 'text-red-800'
                                                 }">${item.criterion}</h6>
                                             </div>
-                                            
+                            
                                             ${item.supporting_content.length > 0 ? `
                                                 <div class="ml-8 mb-3">
                                                     <p class="text-sm text-gray-600 mb-2">Supporting Content:</p>
@@ -2249,7 +2249,7 @@
                                                     </div>
                                                 </div>
                                             ` : ''}
-                                            
+                            
                                             ${!item.satisfied && item.suggestions.length > 0 ? `
                                                 <div class="ml-8">
                                                     <p class="text-sm text-gray-600 mb-2">💡 Suggestions:</p>
@@ -2261,7 +2261,7 @@
                                                 </div>
                                             ` : ''}
                                         </div>
-                                        
+                        
                                         <button onclick="toggleCriterionStatus('${checklist.award_type}', '${item.criterion}', ${!item.satisfied})" 
                                                 class="ml-4 px-3 py-1 text-xs rounded ${
                                                     item.satisfied ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -2345,7 +2345,7 @@
             const recommendationsHTML = recommendations.map(rec => {
                 const colorClass = rec.type === 'critical' ? 'red' : rec.type === 'improvement' ? 'yellow' : 'blue';
                 const priorityColor = rec.priority === 'High' ? 'text-red-600' : rec.priority === 'Medium' ? 'text-yellow-600' : 'text-blue-600';
-                
+
                 return `
                     <div class="border-l-4 border-${colorClass}-500 pl-4 py-3 bg-${colorClass}-50 rounded-lg">
                         <div class="flex items-start justify-between">
@@ -3142,7 +3142,7 @@ LILAC Awards - Keyboard Shortcuts:
                             Refresh Status
                         </button>
                     </div>
-                    
+    
                     <div id="readiness-summary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <!-- Readiness cards will be loaded here -->
                         <div class="col-span-full text-center py-8 text-gray-500">
@@ -3645,7 +3645,7 @@ LILAC Awards - Keyboard Shortcuts:
                     e.preventDefault();
                     refreshMonthlyTrendChart();
                 }
-                
+
                 // Ctrl/Cmd + B to toggle sidebar
                 if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
                     e.preventDefault();
@@ -3699,7 +3699,7 @@ LILAC Awards - Keyboard Shortcuts:
             
             if (detailsElement && arrowElement) {
                 const isHidden = detailsElement.classList.contains('hidden');
-                
+
                 if (isHidden) {
                     // Show details
                     detailsElement.classList.remove('hidden');
@@ -3847,11 +3847,11 @@ LILAC Awards - Keyboard Shortcuts:
                     data.status.forEach(criterionStatus => {
                         const checkbox = document.querySelector(`input[data-award="${awardType}"][data-criterion="${criterionStatus.criterion}"]`);
                         const statusElement = document.getElementById(`${awardType}-${criterionStatus.criterion}-status`);
-                        
+        
                         if (checkbox) {
                             checkbox.checked = criterionStatus.satisfied;
                         }
-                        
+        
                         if (statusElement) {
                             if (criterionStatus.satisfied) {
                                 statusElement.textContent = 'Auto-assigned';
@@ -3975,7 +3975,7 @@ LILAC Awards - Keyboard Shortcuts:
                             ${readinessIcon} ${award.readiness}
                         </span>
                     </div>
-                    
+    
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div class="bg-blue-50 p-4 rounded-lg">
                             <div class="text-2xl font-bold text-blue-600">${award.satisfied_count}/${award.total_count}</div>
@@ -3990,7 +3990,7 @@ LILAC Awards - Keyboard Shortcuts:
                             <div class="text-sm text-purple-800">Events Created</div>
                         </div>
                     </div>
-                    
+    
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <h4 class="font-medium text-gray-900 mb-2">Progress</h4>
                         <div class="w-full bg-gray-200 rounded-full h-2">

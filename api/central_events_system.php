@@ -10,7 +10,14 @@
  * 5. Sync: All modules connected to same events table, no manual duplication
  */
 
-require_once '../config/database.php';
+// Try both possible paths for database config
+if (file_exists('../config/database.php')) {
+    require_once '../config/database.php';
+} elseif (file_exists('config/database.php')) {
+    require_once 'config/database.php';
+} else {
+    throw new Exception('Database configuration file not found');
+}
 require_once 'universal_upload_handler.php';
 
 class CentralEventsSystem {

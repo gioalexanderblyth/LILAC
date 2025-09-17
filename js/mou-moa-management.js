@@ -158,15 +158,15 @@ class MouMoaManager {
                     ${this.formatDate(doc.upload_date)}
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                    <button onclick="mouMoaManager.viewDocument('${doc.id}')" 
+                    <button onclick="window.mouMoaManager.viewDocument('${doc.id}')" 
                             class="text-indigo-600 hover:text-indigo-900 mr-3">
                         View
                     </button>
-                    <button onclick="mouMoaManager.downloadDocument('${doc.id}')" 
+                    <button onclick="window.mouMoaManager.downloadDocument('${doc.id}')" 
                             class="text-green-600 hover:text-green-900 mr-3">
                         Download
                     </button>
-                    <button onclick="mouMoaManager.deleteDocument('${doc.id}')" 
+                    <button onclick="window.mouMoaManager.deleteDocument('${doc.id}')" 
                             class="text-red-600 hover:text-red-900">
                         Delete
                     </button>
@@ -472,13 +472,92 @@ class MouMoaManager {
      * View document
      */
     viewDocument(documentId) {
-        const doc = this.documents.find(d => d.id === documentId);
-        if (!doc) return;
+        console.log('viewDocument called with ID:', documentId);
+        console.log('Available documents:', this.documents);
         
-        // Show MOU details in a modal
-        this.showMouDetailsModal(doc);
+        // Try both string and number comparison
+        const doc = this.documents.find(d => d.id == documentId || d.id === documentId);
+        if (!doc) {
+            console.log('Document not found in local array, trying to reload documents...');
+            this.showNotification('Document not found, reloading...', 'warning');
+            this.loadDocuments();
+            return;
+        }
+        
+        console.log('viewDocument called for:', doc);
+        
+        // If document has an attached file, use the shared document viewer
+        if (doc.file_name && doc.file_path) {
+            console.log('Document has attached file, using document viewer');
+            
+            if (window.documentViewer) {
+                let filePath = doc.file_path;
+                
+                // Ensure file path includes uploads directory if not already present
+                if (filePath && !filePath.startsWith('uploads/') && !filePath.startsWith('/uploads/')) {
+                    filePath = `uploads/${filePath}`;
+                }
+                
+                const fileExtension = this.getFileExtension(filePath);
+                const documentType = this.getDocumentTypeFromExtension(fileExtension);
+                
+                // Try to extract original filename from description
+                let originalFilename = doc.file_name;
+                if (doc.description && doc.description.includes('Original Filename:')) {
+                    const match = doc.description.match(/Original Filename:\s*([^\n]+)/);
+                    if (match && match[1]) {
+                        originalFilename = match[1].trim();
+                    }
+                }
+                
+                const title = `${doc.institution || doc.partner_name || 'MOU/MOA Document'} - ${originalFilename}`;
+                
+                console.log('Opening document viewer with:', {
+                    filePath: filePath,
+                    fileExtension: fileExtension,
+                    documentType: documentType,
+                    title: title
+                });
+                
+                window.documentViewer.showDocument(filePath, documentType, title);
+            } else {
+                this.showNotification('Document viewer not available', 'error');
+            }
+        } else {
+            console.log('Document has no attached file, showing details modal');
+            // Show MOU details in a modal if no file attached
+            this.showMouDetailsModal(doc);
+        }
     }
     
+    /**
+     * Get file extension from file path
+     */
+    getFileExtension(filePath) {
+        if (!filePath) return '';
+        const parts = filePath.split('.');
+        return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+    }
+    
+    /**
+     * Get document type from file extension
+     */
+    getDocumentTypeFromExtension(extension) {
+        const typeMap = {
+            'pdf': 'pdf',
+            'doc': 'word',
+            'docx': 'word',
+            'txt': 'text',
+            'jpg': 'image',
+            'jpeg': 'image',
+            'png': 'image',
+            'gif': 'image',
+            'bmp': 'image',
+            'webp': 'image'
+        };
+        return typeMap[extension] || 'unknown';
+    }
+
     /**
      * Show MOU details modal
      */
@@ -552,7 +631,7 @@ class MouMoaManager {
                                     <label class="block text-sm font-medium text-gray-700">Attached File</label>
                                     <div class="mt-1 flex items-center gap-2">
                                         <span class="text-sm text-gray-900">${doc.file_name}</span>
-                                        <button onclick="mouMoaManager.downloadDocument('${doc.id}')" 
+                                        <button onclick="window.mouMoaManager.downloadDocument('${doc.id}')" 
                                                 class="text-blue-600 hover:text-blue-800 text-sm">
                                             Download
                                         </button>
@@ -794,9 +873,108 @@ class MouMoaManager {
     /**
      * Delete document
      */
-    async deleteDocument(documentId) {
-        if (!confirm('Are you sure you want to delete this document?')) return;
+    deleteDocument(documentId) {
+        console.log('deleteDocument called with ID:', documentId);
+        console.log('Current documents:', this.documents);
         
+        // Try both string and number comparison
+        const doc = this.documents.find(d => d.id == documentId || d.id === documentId);
+        if (!doc) {
+            console.log('Document not found in local array, trying to reload documents...');
+            this.showNotification('Document not found, reloading...', 'warning');
+            this.loadDocuments();
+            return;
+        }
+
+        console.log('Found document:', doc);
+
+        // Store the document ID and data for confirmation
+        this.documentToDelete = documentId;
+        this.documentToDeleteData = doc;
+        
+        // Show the delete confirmation modal
+        const modal = document.getElementById('delete-mou-modal');
+        console.log('Modal element:', modal);
+        
+        if (modal) {
+            console.log('Modal found, showing custom modal');
+            // Show/hide file info based on whether file is attached
+            const fileInfo = document.getElementById('delete-modal-file-info');
+            const filename = document.getElementById('delete-modal-filename');
+            
+            if (doc.file_name && doc.file_path) {
+                console.log('File attached, showing file info');
+                // Show file info and view button
+                fileInfo.classList.remove('hidden');
+                filename.textContent = doc.file_name;
+            } else {
+                console.log('No file attached, hiding file info');
+                // Hide file info if no file attached
+                fileInfo.classList.add('hidden');
+            }
+            
+            modal.classList.remove('hidden');
+        } else {
+            console.log('Modal not found, using browser confirm');
+            // Fallback to browser confirm if modal not found
+            if (confirm('Are you sure you want to delete this MOU/MOA?')) {
+                this.confirmDeleteMou();
+            }
+        }
+    }
+
+    /**
+     * Confirm delete MOU
+     */
+    confirmDeleteMou() {
+        if (!this.documentToDelete) return;
+
+        const docId = this.documentToDelete;
+        this.documentToDelete = null;
+
+        // Close modal
+        this.closeDeleteModal();
+
+        // Perform delete via API
+        this.performDelete(docId);
+    }
+
+    /**
+     * Close delete modal
+     */
+    closeDeleteModal() {
+        const modal = document.getElementById('delete-mou-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        this.documentToDelete = null;
+        this.documentToDeleteData = null;
+    }
+
+    /**
+     * View document from delete modal
+     */
+    viewDocumentFromDeleteModal() {
+        if (!this.documentToDeleteData) {
+            this.showNotification('Document data not available', 'error');
+            return;
+        }
+
+        const doc = this.documentToDeleteData;
+        
+        console.log('viewDocumentFromDeleteModal called for:', doc);
+        
+        // Close the delete modal first
+        this.closeDeleteModal();
+        
+        // View the document using the existing viewDocument method
+        this.viewDocument(doc.id);
+    }
+
+    /**
+     * Perform delete operation
+     */
+    async performDelete(docId) {
         try {
             this.showLoading(true);
             
@@ -807,7 +985,7 @@ class MouMoaManager {
                 },
                 body: JSON.stringify({
                     action: 'delete',
-                    id: documentId
+                    id: docId
                 })
             });
             
@@ -901,7 +1079,32 @@ class MouMoaManager {
     }
 }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    window.mouMoaManager = new MouMoaManager();
-});
+// Manager initialization is handled by the MOU page
+
+// Global functions for modal interactions
+function confirmDeleteMou() {
+    console.log('confirmDeleteMou called');
+    if (window.mouMoaManager) {
+        window.mouMoaManager.confirmDeleteMou();
+    } else {
+        console.log('window.mouMoaManager not found');
+    }
+}
+
+function closeDeleteModal() {
+    console.log('closeDeleteModal called');
+    if (window.mouMoaManager) {
+        window.mouMoaManager.closeDeleteModal();
+    } else {
+        console.log('window.mouMoaManager not found');
+    }
+}
+
+function viewDocumentFromDeleteModal() {
+    console.log('viewDocumentFromDeleteModal called');
+    if (window.mouMoaManager) {
+        window.mouMoaManager.viewDocumentFromDeleteModal();
+    } else {
+        console.log('window.mouMoaManager not found');
+    }
+}

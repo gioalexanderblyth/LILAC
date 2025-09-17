@@ -512,12 +512,26 @@ class MouMoaManager {
             return;
         }
 
-        // Store the document ID for confirmation
+        // Store the document ID and data for confirmation
         this.documentToDelete = id;
+        this.documentToDeleteData = doc;
         
         // Show the delete confirmation modal
         const modal = document.getElementById('delete-mou-modal');
         if (modal) {
+            // Show/hide file info based on whether file is attached
+            const fileInfo = document.getElementById('delete-modal-file-info');
+            const filename = document.getElementById('delete-modal-filename');
+            
+            if (doc.file_name && doc.file_path) {
+                // Show file info and view button
+                fileInfo.classList.remove('hidden');
+                filename.textContent = doc.file_name;
+            } else {
+                // Hide file info if no file attached
+                fileInfo.classList.add('hidden');
+            }
+            
             modal.classList.remove('hidden');
         } else {
             // Fallback to browser confirm if modal not found
@@ -546,6 +560,22 @@ class MouMoaManager {
             modal.classList.add('hidden');
         }
         this.documentToDelete = null;
+        this.documentToDeleteData = null;
+    }
+
+    viewDocumentFromDeleteModal() {
+        if (!this.documentToDeleteData) {
+            this.showNotification('Document data not available', 'error');
+            return;
+        }
+
+        const doc = this.documentToDeleteData;
+        
+        // Close the delete modal first
+        this.closeDeleteModal();
+        
+        // View the document using the existing viewDocument method
+        this.viewDocument(doc.id);
     }
 
     async performDelete(docId) {
@@ -692,5 +722,11 @@ function confirmDeleteMou() {
 function closeDeleteModal() {
     if (mouMoaManager) {
         mouMoaManager.closeDeleteModal();
+    }
+}
+
+function viewDocumentFromDeleteModal() {
+    if (mouMoaManager) {
+        mouMoaManager.viewDocumentFromDeleteModal();
     }
 }

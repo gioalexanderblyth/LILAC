@@ -44,9 +44,76 @@ function respond($success, $data = []) {
     exit;
 }
 
-// Function will be defined inside actions that need it
+// Function to analyze content against CHED criteria
+function analyzeContentAgainstCHEDCriteria($content, $awardType, $pdo) {
+    $content = strtolower($content);
+    
+    // CHED Award Criteria (20 criteria total: 5+5+4+3+3)
+    $criteria = [
+        'leadership' => [
+            'Champion Bold Innovation',
+            'Cultivate Global Citizens', 
+            'Nurture Lifelong Learning',
+            'Lead with Purpose',
+            'Ethical and Inclusive Leadership'
+        ],
+        'education' => [
+            'Expand Access to Global Opportunities',
+            'Foster Collaborative Innovation',
+            'Embrace Inclusivity and Beyond',
+            'Drive Academic Excellence',
+            'Build Sustainable Partnerships'
+        ],
+        'emerging' => [
+            'Pioneer New Frontiers',
+            'Adapt and Transform',
+            'Build Capacity',
+            'Create Impact'
+        ],
+        'regional' => [
+            'Comprehensive Internationalization Efforts',
+            'Cooperation and Collaboration',
+            'Measurable Impact'
+        ],
+        'citizenship' => [
+            'Ignite Intercultural Understanding',
+            'Empower Changemakers',
+            'Cultivate Active Engagement'
+        ]
+    ];
+    
+    if (!isset($criteria[$awardType])) {
+        return ['satisfied' => [], 'unsatisfied' => []];
+    }
+    
+    $satisfied = [];
+    $unsatisfied = [];
+    
+    foreach ($criteria[$awardType] as $keyword) {
+        if (strpos($content, strtolower($keyword)) !== false) {
+            $satisfied[] = $keyword;
+        } else {
+            $unsatisfied[] = $keyword;
+        }
+    }
+    
+    return [
+        'satisfied' => $satisfied,
+        'unsatisfied' => $unsatisfied
+    ];
+}
 
 if ($action === 'analyze_all_content') {
+    // Load database connection
+    require_once __DIR__ . '/../config/database.php';
+    
+    try {
+        $database = new Database();
+        $pdo = $database->getConnection();
+    } catch (Exception $e) {
+        respond(false, ['message' => 'Database connection failed: ' . $e->getMessage()]);
+    }
+    
     // Reset all counters
     $pdo->exec("UPDATE award_readiness SET 
         total_documents = 0, 
@@ -58,12 +125,12 @@ if ($action === 'analyze_all_content') {
     
     $analysisResults = [];
     
-    // Analyze documents (including MOU documents)
-    $stmt = $pdo->query("SELECT id, document_name, filename, category, description FROM documents");
+    // Analyze documents from enhanced_documents table (where content extraction happens)
+    $stmt = $pdo->query("SELECT id, document_name, filename, category, extracted_content FROM enhanced_documents");
     $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     foreach ($docs as $doc) {
-        $content = $doc['document_name'] . ' ' . $doc['filename'] . ' ' . $doc['category'] . ' ' . $doc['description'];
+        $content = $doc['document_name'] . ' ' . $doc['filename'] . ' ' . $doc['category'] . ' ' . ($doc['extracted_content'] ?? '');
         
         // Special handling for MOU documents - they should match multiple award criteria
         if ($doc['category'] === 'MOUs & MOAs') {

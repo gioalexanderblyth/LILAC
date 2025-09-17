@@ -59,7 +59,7 @@ class EventsManager {
         }
         
         // Event form submission
-        const eventForm = document.getElementById('event-form');
+        const eventForm = document.getElementById('event-creation-form');
         if (eventForm) {
             eventForm.addEventListener('submit', (e) => this.handleEventSubmit(e));
         }
@@ -193,7 +193,7 @@ class EventsManager {
      * Show create event modal
      */
     showCreateEventModal() {
-        const modal = document.getElementById('create-event-modal');
+        const modal = document.getElementById('event-creation-modal');
         if (modal) {
             modal.classList.remove('hidden');
             this.resetEventForm();
@@ -204,7 +204,7 @@ class EventsManager {
      * Hide create event modal
      */
     hideCreateEventModal() {
-        const modal = document.getElementById('create-event-modal');
+        const modal = document.getElementById('event-creation-modal');
         if (modal) {
             modal.classList.add('hidden');
         }
@@ -214,7 +214,7 @@ class EventsManager {
      * Reset event form
      */
     resetEventForm() {
-        const form = document.getElementById('event-form');
+        const form = document.getElementById('event-creation-form');
         if (form) {
             form.reset();
         }
@@ -316,13 +316,13 @@ class EventsManager {
      * Populate event form with data
      */
     populateEventForm(event) {
-        const form = document.getElementById('event-form');
+        const form = document.getElementById('event-creation-form');
         if (!form) return;
         
         form.querySelector('#event-title').value = event.title || '';
         form.querySelector('#event-description').value = event.description || '';
-        form.querySelector('#event-start').value = event.start || '';
-        form.querySelector('#event-end').value = event.end || '';
+        form.querySelector('#event-date').value = event.event_date || '';
+        form.querySelector('#event-time').value = event.event_time || '';
         form.querySelector('#event-location').value = event.location || '';
         form.querySelector('#event-status').value = event.status || 'upcoming';
     }

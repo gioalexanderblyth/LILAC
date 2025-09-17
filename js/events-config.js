@@ -6,7 +6,7 @@ const EventsConfig = {
     // API endpoints
     api: {
         events: 'api/central_events_api.php',
-        upload: 'create_event.php'
+        upload: 'api/central_events_api.php'
     },
     
     // Event status options

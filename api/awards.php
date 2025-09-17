@@ -36,64 +36,69 @@ function awards_respond($ok, $payload = []) {
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
-// CHED Award Criteria Definitions
+// CHED Award Criteria Definitions (20 criteria total: 5+5+4+3+3)
 $AWARD_CRITERIA = [
     'leadership' => [
         'name' => 'Internationalization (IZN) Leadership Award',
-        'keywords' => [
-            'champion bold innovation', 'cultivate global citizens', 'nurture lifelong learning',
-            'lead with purpose', 'ethical and inclusive leadership', 'internationalization',
-            'leadership', 'innovation', 'global citizens', 'lifelong learning', 'purpose',
-            'ethical', 'inclusive', 'bold', 'champion', 'cultivate', 'nurture'
+        'criteria' => [
+            'Champion Bold Innovation',
+            'Cultivate Global Citizens', 
+            'Nurture Lifelong Learning',
+            'Lead with Purpose',
+            'Ethical and Inclusive Leadership'
         ]
     ],
     'education' => [
         'name' => 'Outstanding International Education Program Award',
-        'keywords' => [
-            'expand access to global opportunities', 'foster collaborative innovation',
-            'embrace inclusivity and beyond', 'international education', 'global opportunities',
-            'collaborative innovation', 'inclusivity', 'education program', 'academic',
-            'curriculum', 'international', 'global', 'opportunities', 'collaborative'
+        'criteria' => [
+            'Expand Access to Global Opportunities',
+            'Foster Collaborative Innovation',
+            'Embrace Inclusivity and Beyond',
+            'Drive Academic Excellence',
+            'Build Sustainable Partnerships'
         ]
     ],
     'emerging' => [
         'name' => 'Emerging Leadership Award',
-        'keywords' => [
-            'innovation', 'strategic and inclusive growth', 'empowerment of others',
-            'emerging leadership', 'strategic growth', 'inclusive growth', 'empowerment',
-            'emerging', 'strategic', 'inclusive', 'growth', 'empower', 'mentoring'
+        'criteria' => [
+            'Pioneer New Frontiers',
+            'Adapt and Transform',
+            'Build Capacity',
+            'Create Impact'
         ]
     ],
     'regional' => [
         'name' => 'Best Regional Office for Internationalization Award',
-        'keywords' => [
-            'comprehensive internationalization efforts', 'cooperation and collaboration',
-            'measurable impact', 'regional office', 'internationalization efforts',
-            'cooperation', 'collaboration', 'measurable impact', 'regional', 'office',
-            'comprehensive', 'efforts', 'measurable', 'impact'
+        'criteria' => [
+            'Comprehensive Internationalization Efforts',
+            'Cooperation and Collaboration',
+            'Measurable Impact'
         ]
     ],
     'global' => [
         'name' => 'Global Citizenship Award',
-        'keywords' => [
-            'ignite intercultural understanding', 'empower changemakers',
-            'cultivate active engagement', 'global citizenship', 'intercultural understanding',
-            'changemakers', 'active engagement', 'citizenship', 'intercultural',
-            'understanding', 'changemakers', 'engagement', 'ignite', 'empower', 'cultivate'
+        'criteria' => [
+            'Ignite Intercultural Understanding',
+            'Empower Changemakers',
+            'Cultivate Active Engagement'
         ]
     ]
 ];
 
 if ($action === 'get_awards' || $action === 'get_all' || $action === 'list') {
     try {
-        // Get all documents from MySQL database
-        $sql = "SELECT * FROM documents ORDER BY upload_date DESC";
+        // Get all documents from enhanced_documents table (where content extraction happens)
+        $sql = "SELECT * FROM enhanced_documents ORDER BY upload_date DESC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute();
         $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Transform data and categorize by award criteria
         $awardFiles = [];
+        // Get actual awards received from award_readiness table
+        $stmt = $pdo->query("SELECT award_key, total_documents FROM award_readiness");
+        $readinessData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
         $awardCounts = [
             'leadership' => 0,
             'education' => 0,
@@ -103,8 +108,35 @@ if ($action === 'get_awards' || $action === 'get_all' || $action === 'list') {
             'total' => 0
         ];
         
+        // Map readiness data to award counts
+        foreach ($readinessData as $row) {
+            $awardKey = $row['award_key'];
+            if (isset($awardCounts[$awardKey])) {
+                $awardCounts[$awardKey] = $row['total_documents'];
+            }
+        }
+        
+        // Compute total as sum of all award counters
+        $awardCounts['total'] = array_sum([
+            $awardCounts['leadership'],
+            $awardCounts['education'], 
+            $awardCounts['emerging'],
+            $awardCounts['regional'],
+            $awardCounts['global']
+        ]);
+        
+        $documentCounts = [
+            'leadership' => 0,
+            'education' => 0,
+            'emerging' => 0,
+            'regional' => 0,
+            'global' => 0,
+            'total' => 0
+        ];
+        
         foreach ($files as $file) {
-            $extractedText = strtolower($file['description'] ?? '');
+            // Use extracted_content from enhanced_documents table
+            $extractedText = strtolower($file['extracted_content'] ?? '');
             $filename = strtolower($file['document_name'] ?? '');
             $content = $extractedText . ' ' . $filename;
             
@@ -112,12 +144,12 @@ if ($action === 'get_awards' || $action === 'get_all' || $action === 'list') {
             $matchedAwards = [];
             foreach ($AWARD_CRITERIA as $awardKey => $awardData) {
                 $score = 0;
-                foreach ($awardData['keywords'] as $keyword) {
-                    $score += substr_count($content, strtolower($keyword));
+                foreach ($awardData['criteria'] as $criterion) {
+                    $score += substr_count($content, strtolower($criterion));
                 }
                 if ($score > 0) {
                     $matchedAwards[] = $awardKey;
-                    $awardCounts[$awardKey]++;
+                    $documentCounts[$awardKey]++;
                 }
             }
             
@@ -129,9 +161,9 @@ if ($action === 'get_awards' || $action === 'get_all' || $action === 'list') {
                     'upload_date' => $file['upload_date'],
                     'matched_awards' => $matchedAwards,
                     'linked_pages' => [],
-                    'extracted_text' => $file['description']
+                    'extracted_text' => $file['extracted_content']
                 ];
-                $awardCounts['total']++;
+                $documentCounts['total']++;
             }
         }
         
@@ -146,12 +178,21 @@ if ($action === 'get_awards' || $action === 'get_all' || $action === 'list') {
                 'global' => 0,
                 'total' => 0
             ];
+            $documentCounts = [
+                'leadership' => 0,
+                'education' => 0,
+                'emerging' => 0,
+                'regional' => 0,
+                'global' => 0,
+                'total' => 0
+            ];
         }
         
         awards_respond(true, [
             'awards' => $awardFiles,
             'files' => $awardFiles,
             'counts' => $awardCounts,
+            'document_counts' => $documentCounts,
             'criteria' => $AWARD_CRITERIA
         ]);
         
@@ -223,22 +264,22 @@ if ($action === 'get_counts') {
         $counts = [];
         
         foreach ($AWARD_CRITERIA as $awardKey => $awardData) {
-            $keywords = $awardData['keywords'];
+            $criteria = $awardData['criteria'];
             
-            $sql = "SELECT * FROM documents";
+            $sql = "SELECT * FROM enhanced_documents";
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             $count = 0;
             foreach ($files as $file) {
-                $extractedText = strtolower($file['extracted_text'] ?? '');
-                $filename = strtolower($file['original_filename'] ?? '');
+                $extractedText = strtolower($file['extracted_content'] ?? '');
+                $filename = strtolower($file['document_name'] ?? '');
                 $content = $extractedText . ' ' . $filename;
                 
                 $score = 0;
-                foreach ($keywords as $keyword) {
-                    $score += substr_count($content, strtolower($keyword));
+                foreach ($criteria as $criterion) {
+                    $score += substr_count($content, strtolower($criterion));
                 }
                 
                 if ($score > 0) {

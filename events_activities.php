@@ -1,5 +1,7 @@
 <?php
 // Server-side authentication and authorization
+error_reporting(0); // Suppress PHP errors that could break JavaScript
+ini_set('display_errors', 0);
 session_start();
 
 // Check if user is logged in (more permissive for demo)
@@ -19,6 +21,33 @@ if (!in_array($_SESSION['user_role'], $allowed_roles)) {
 // Validate session token for security
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Load events data from database for fallback
+$eventsData = [];
+try {
+    require_once 'config/database.php';
+    require_once 'api/central_events_system.php';
+    
+    $centralEvents = new CentralEventsSystem();
+    $result = $centralEvents->getEventsByStatus();
+    
+    if ($result['success'] && isset($result['events'])) {
+        // Flatten the events from grouped structure
+        $allEvents = [];
+        if (isset($result['events']['upcoming'])) {
+            $allEvents = array_merge($allEvents, $result['events']['upcoming']);
+        }
+        if (isset($result['events']['completed'])) {
+            $allEvents = array_merge($allEvents, $result['events']['completed']);
+        }
+        $eventsData = $allEvents;
+    }
+} catch (Exception $e) {
+    // If database fails, use empty array
+    $eventsData = [];
+    // Log error for debugging but don't output anything
+    error_log("Events data loading failed: " . $e->getMessage());
 }
 
 // Events data is now loaded via API calls for better performance
@@ -45,7 +74,7 @@ require_once 'classes/DateTimeUtility.php';
 
     <!-- Navigation Bar -->
     <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
-        <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
+        <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[80] px-3 py-2 rounded" title="Toggle sidebar" style="pointer-events: auto; cursor: pointer;">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
@@ -358,7 +387,7 @@ require_once 'classes/DateTimeUtility.php';
                         <input type="text" id="event-location" name="location"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                placeholder="Enter event location (auto-detected from title/description)">
-                        <p class="text-xs text-gray-500 mt-1">💡 Location will be automatically suggested based on your event title and description</p>
+                        <p class="text-xs text-gray-500 mt-1">ðŸ’¡ Location will be automatically suggested based on your event title and description</p>
                     </div>
 
                     <!-- Event Description -->
@@ -375,7 +404,7 @@ require_once 'classes/DateTimeUtility.php';
                         <input type="url" id="event-original-link" name="original_link"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                placeholder="https://example.com/original-event-post">
-                        <p class="text-xs text-gray-500 mt-1">💡 Link to the original event post or source</p>
+                        <p class="text-xs text-gray-500 mt-1">ðŸ’¡ Link to the original event post or source</p>
                     </div>
 
                     <!-- Image Upload -->
@@ -700,15 +729,15 @@ require_once 'classes/DateTimeUtility.php';
                         }
                         
                         if (result.success) {
-                            console.log(`✅ File ${file.name} uploaded and event created successfully`);
+                            console.log(`âœ… File ${file.name} uploaded and event created successfully`);
                             successCount++;
                 } else {
-                            console.error(`❌ Failed to create event from ${file.name}:`, result.data?.message || result.message);
+                            console.error(`âŒ Failed to create event from ${file.name}:`, result.data?.message || result.message);
                             errorCount++;
                         }
                         
                     } catch (fileError) {
-                        console.error(`❌ Error processing file ${file.name}:`, fileError);
+                        console.error(`âŒ Error processing file ${file.name}:`, fileError);
                         errorCount++;
                     }
                 }
@@ -747,11 +776,122 @@ require_once 'classes/DateTimeUtility.php';
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize sidebar first
-            if (window.LILACSidebar) {
-                window.LILACSidebar.init();
-            }
-
+            // Initialize hamburger button with LILACSidebar system
+            // Add a small delay to ensure LILACSidebar is fully loaded
+            setTimeout(function() {
+                const hamburgerToggle = document.getElementById('hamburger-toggle');
+                console.log('🔍 Looking for hamburger button:', hamburgerToggle);
+                console.log('🔍 LILACSidebar available:', !!window.LILACSidebar);
+                console.log('🔍 LILACSidebar initialized:', window.LILACSidebar?.initialized);
+                
+                // Try to initialize LILACSidebar if it exists but isn't initialized
+                if (window.LILACSidebar && !window.LILACSidebar.initialized) {
+                    console.log('🔄 Initializing LILACSidebar...');
+                    window.LILACSidebar.init();
+                }
+                
+                if (hamburgerToggle) {
+                    console.log('✅ Connecting hamburger button with direct DOM manipulation (bypassing LILACSidebar)');
+                    hamburgerToggle.addEventListener('click', function() {
+                        console.log('🍔 Hamburger clicked, using direct DOM manipulation');
+                        const sidebar = document.getElementById('sidebar');
+                        if (sidebar) {
+                            const isHidden = sidebar.classList.contains('-translate-x-full');
+                            console.log('🔍 Sidebar is hidden:', isHidden);
+                            
+                            if (isHidden) {
+                                sidebar.classList.remove('-translate-x-full');
+                                sidebar.classList.add('translate-x-0');
+                                console.log('✅ Opening sidebar with direct manipulation');
+                                
+                                // Update LILACSidebar state if available
+                                if (window.LILACSidebar) {
+                                    window.LILACSidebar.isOpen = true;
+                                    console.log('🔄 Updated LILACSidebar state to true');
+                                }
+                            } else {
+                                sidebar.classList.remove('translate-x-0');
+                                sidebar.classList.add('-translate-x-full');
+                                console.log('✅ Closing sidebar with direct manipulation');
+                                
+                                // Update LILACSidebar state if available
+                                if (window.LILACSidebar) {
+                                    window.LILACSidebar.isOpen = false;
+                                    console.log('🔄 Updated LILACSidebar state to false');
+                                }
+                            }
+                            
+                            // Visual feedback
+                            hamburgerToggle.style.backgroundColor = '#10b981';
+                            setTimeout(() => {
+                                hamburgerToggle.style.backgroundColor = '';
+                            }, 200);
+                            
+                            // Check final state
+                            setTimeout(() => {
+                                console.log('🔍 Final sidebar classes:', sidebar.className);
+                                console.log('🔍 Final LILACSidebar state:', window.LILACSidebar?.isOpen);
+                            }, 100);
+                        }
+                    });
+                } else if (hamburgerToggle && !window.LILACSidebar) {
+                    console.log('⚠️ Hamburger found but LILACSidebar not available, using fallback');
+                    hamburgerToggle.addEventListener('click', function() {
+                        console.log('🍔 Hamburger clicked, using fallback toggle');
+                        // Visual feedback
+                        hamburgerToggle.style.backgroundColor = '#f59e0b';
+                        setTimeout(() => {
+                            hamburgerToggle.style.backgroundColor = '';
+                        }, 200);
+                        const sidebar = document.getElementById('sidebar');
+                        if (sidebar) {
+                            const isHidden = sidebar.classList.contains('-translate-x-full');
+                            if (isHidden) {
+                                sidebar.classList.remove('-translate-x-full');
+                                sidebar.classList.add('translate-x-0');
+                            } else {
+                                sidebar.classList.remove('translate-x-0');
+                                sidebar.classList.add('-translate-x-full');
+                            }
+                        }
+                    });
+                } else {
+                    console.error('❌ Hamburger button not found or LILACSidebar not properly initialized');
+                    console.log('Hamburger button:', hamburgerToggle);
+                    console.log('LILACSidebar:', window.LILACSidebar);
+                    
+                    // Final fallback - direct DOM manipulation
+                    if (hamburgerToggle) {
+                        console.log('🔄 Using final fallback - direct DOM manipulation');
+                        hamburgerToggle.addEventListener('click', function() {
+                            console.log('🍔 Hamburger clicked, using direct DOM manipulation');
+                            const sidebar = document.getElementById('sidebar');
+                            if (sidebar) {
+                                const isHidden = sidebar.classList.contains('-translate-x-full');
+                                console.log('🔍 Sidebar is hidden:', isHidden);
+                                
+                                if (isHidden) {
+                                    sidebar.classList.remove('-translate-x-full');
+                                    sidebar.classList.add('translate-x-0');
+                                    console.log('✅ Opening sidebar with direct manipulation');
+                                } else {
+                                    sidebar.classList.remove('translate-x-0');
+                                    sidebar.classList.add('-translate-x-full');
+                                    console.log('✅ Closing sidebar with direct manipulation');
+                                }
+                                
+                                // Visual feedback
+                                hamburgerToggle.style.backgroundColor = '#ef4444';
+                                setTimeout(() => {
+                                    hamburgerToggle.style.backgroundColor = '';
+                                }, 200);
+                            }
+                        });
+                    }
+                }
+                
+            }, 500); // Increased delay to 500ms
+            
             // Check for success/error messages from URL parameters
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('created') === '1') {
@@ -1043,7 +1183,7 @@ require_once 'classes/DateTimeUtility.php';
                             // Only suggest if confidence is high enough and location field is empty
                             if (confidence > 0.5 && !eventLocation.value) {
                                 eventLocation.value = suggestedLocation;
-                                showNotification(`📍 Location suggested: ${suggestedLocation} (${Math.round(confidence * 100)}% confidence)`, 'info');
+                                showNotification(`ðŸ“ Location suggested: ${suggestedLocation} (${Math.round(confidence * 100)}% confidence)`, 'info');
                             }
                         }
                     }
@@ -1765,7 +1905,7 @@ require_once 'classes/DateTimeUtility.php';
         // Refresh events from API (for after creating new events)
         async function refreshEventsFromAPI() {
             try {
-                console.log('🔄 Refreshing events from API...');
+                console.log('ðŸ”„ Refreshing events from API...');
                 
                 // Try the main API first, then fallback to simple API
                 let response;
@@ -1778,7 +1918,7 @@ require_once 'classes/DateTimeUtility.php';
                 const result = await response.json();
                 
                 if (result.success && result.data.events) {
-                    console.log('✅ Refreshed events from API');
+                    console.log('âœ… Refreshed events from API');
                     
                     // Clear existing table rows (keep empty message)
                     const tableBody = document.getElementById('events-table-body');
@@ -1793,7 +1933,7 @@ require_once 'classes/DateTimeUtility.php';
                     
                     // Combine upcoming and completed events
                     const allEvents = [...result.data.events.upcoming, ...result.data.events.completed];
-                    console.log('📊 Total refreshed events:', allEvents.length);
+                    console.log('ðŸ“Š Total refreshed events:', allEvents.length);
                     
                     // Recreate table entries for all events
                     allEvents.forEach(eventData => {
@@ -1821,19 +1961,19 @@ require_once 'classes/DateTimeUtility.php';
                         emptyMessage.style.display = '';
                     }
                     
-                    console.log('✅ Events refreshed successfully');
+                    console.log('âœ… Events refreshed successfully');
                 } else {
-                    console.error('❌ Failed to refresh events:', result.message);
+                    console.error('âŒ Failed to refresh events:', result.message);
                 }
             } catch (error) {
-                console.error('❌ Error refreshing events from API:', error);
+                console.error('âŒ Error refreshing events from API:', error);
             }
         }
 
         // Load events from API
         async function loadEventsFromAPI() {
             try {
-                console.log('🔄 Loading events from API...');
+                console.log('ðŸ”„ Loading events from API...');
                 
                 // Try the main API first, then fallback to simple API
                 let response;
@@ -1862,7 +2002,7 @@ require_once 'classes/DateTimeUtility.php';
                     // Use fallback response
                     const fallbackResult = JSON.parse(fallbackText);
                     if (fallbackResult.success && fallbackResult.data && fallbackResult.data.events) {
-                        console.log('✅ Loaded events from fallback API');
+                        console.log('âœ… Loaded events from fallback API');
                         
                         // Extract events from the grouped structure
                         const allEvents = [];
@@ -1911,7 +2051,7 @@ require_once 'classes/DateTimeUtility.php';
                 }
                 
                 if (result.success && result.data && result.data.events) {
-                    console.log('✅ Loaded events from API');
+                    console.log('âœ… Loaded events from API');
                     
                     // Extract events from the grouped structure
                     const allEvents = [];
@@ -1948,7 +2088,7 @@ require_once 'classes/DateTimeUtility.php';
                 } else {
                     console.log('No events found or API error, using fallback data');
                     // Use fallback data from PHP
-                    const pageEventsData = <?php echo json_encode($eventsData ?? []); ?>;
+                    const pageEventsData = <?php echo json_encode($eventsData ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES); ?>;
                     if (pageEventsData && pageEventsData.length > 0) {
                         pageEventsData.forEach(event => {
                             addEventToTable(event);
@@ -1963,10 +2103,10 @@ require_once 'classes/DateTimeUtility.php';
                 }
                 
             } catch (error) {
-                console.error('❌ Error loading events from API:', error);
+                console.error('âŒ Error loading events from API:', error);
                 console.log('Using fallback data from PHP');
                 // Use fallback data from PHP
-                const pageEventsData = <?php echo json_encode($eventsData ?? []); ?>;
+                const pageEventsData = <?php echo json_encode($eventsData ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES); ?>;
                 if (pageEventsData && pageEventsData.length > 0) {
                     pageEventsData.forEach(event => {
                         addEventToTable(event);
@@ -1984,13 +2124,13 @@ require_once 'classes/DateTimeUtility.php';
         // Load existing events from PHP data directly
         function loadExistingEvents() {
             try {
-                console.log('🔄 Loading all events from API...');
+                console.log('ðŸ”„ Loading all events from API...');
                 
                 // Load events from API since PHP data loading was removed for performance
                 loadEventsFromAPI();
                 
             } catch (error) {
-                console.error('❌ Error loading existing events:', error);
+                console.error('âŒ Error loading existing events:', error);
                 console.error('Error details:', {
                     name: error.name,
                     message: error.message,
@@ -2021,7 +2161,7 @@ require_once 'classes/DateTimeUtility.php';
                 upcomingCountElement.textContent = upcomingCount;
                 completedCountElement.textContent = completedCount;
                 
-                console.log(`📊 Updated counters - Upcoming: ${upcomingCount}, Completed: ${completedCount}`);
+                console.log(`ðŸ“Š Updated counters - Upcoming: ${upcomingCount}, Completed: ${completedCount}`);
             } catch (error) {
                 console.error('Error updating event counters:', error);
             }
@@ -2106,7 +2246,7 @@ require_once 'classes/DateTimeUtility.php';
         function attachTableDeleteListeners() {
             // Note: Delete buttons now use onclick handlers directly, so this function is disabled
             // to prevent conflicts with the new delete modal system
-            console.log('🔍 Delete buttons now use onclick handlers with delete modal - no event listeners needed');
+            console.log('ðŸ” Delete buttons now use onclick handlers with delete modal - no event listeners needed');
             
             const allDeleteButtons = document.querySelectorAll('.delete-row-btn');
             console.log(`- Total delete buttons found: ${allDeleteButtons.length}`);
@@ -2127,7 +2267,7 @@ require_once 'classes/DateTimeUtility.php';
         function handleDisabledButtonClick(event) {
             event.preventDefault();
             event.stopPropagation();
-            console.log('🚫 Disabled delete button clicked');
+            console.log('ðŸš« Disabled delete button clicked');
             alert('This is a sample event and cannot be deleted. Add your own events to see the delete functionality.');
         }
 
@@ -2163,11 +2303,11 @@ require_once 'classes/DateTimeUtility.php';
 
         // Debug function to test delete functionality
         function testDeleteFunctionality() {
-            console.log('🧪 Testing delete functionality...');
+            console.log('ðŸ§ª Testing delete functionality...');
             const allButtons = document.querySelectorAll('.delete-row-btn');
             const enabledButtons = document.querySelectorAll('.delete-row-btn:not([disabled])');
             
-            console.log('📊 Delete button summary:');
+            console.log('ðŸ“Š Delete button summary:');
             console.log('- Total buttons found:', allButtons.length);
             console.log('- Enabled buttons found:', enabledButtons.length);
             console.log('- Disabled buttons found:', allButtons.length - enabledButtons.length);
@@ -2182,55 +2322,55 @@ require_once 'classes/DateTimeUtility.php';
             });
             
             if (enabledButtons.length > 0) {
-                console.log('✅ Found enabled buttons - delete functionality should work');
-                console.log('🔍 Try clicking the red delete button next to TEST event');
+                console.log('âœ… Found enabled buttons - delete functionality should work');
+                console.log('ðŸ” Try clicking the red delete button next to TEST event');
             } else {
-                console.log('❌ No enabled buttons found - add new events to test delete');
+                console.log('âŒ No enabled buttons found - add new events to test delete');
             }
         }
         
         // Quick fix function to manually delete the TEST event
         function deleteTestEvent() {
-            console.log('🗑️ Manually deleting TEST event...');
+            console.log('ðŸ—‘ï¸ Manually deleting TEST event...');
             
             if (typeof deleteEventFromAPI === 'function') {
                 deleteEventFromAPI(2).then(result => {
                     if (result && result.success) {
-                        console.log('✅ TEST event deleted successfully!');
+                        console.log('âœ… TEST event deleted successfully!');
                         // Force reload to clear any cached data
                         setTimeout(() => {
                             window.location.reload(true); // Force reload from server
                         }, 500);
                     } else {
-                        console.error('❌ Failed to delete TEST event:', result);
+                        console.error('âŒ Failed to delete TEST event:', result);
                     }
                 }).catch(error => {
-                    console.error('❌ Error deleting TEST event:', error);
+                    console.error('âŒ Error deleting TEST event:', error);
                 });
             } else {
-                console.error('❌ deleteEventFromAPI function not found');
+                console.error('âŒ deleteEventFromAPI function not found');
             }
         }
 
         // Function to force refresh events from server
         function forceRefreshEvents() {
-            console.log('🔄 Force refreshing events from server...');
+            console.log('ðŸ”„ Force refreshing events from server...');
             // Clear any cached data
             if (typeof loadExistingEvents === 'function') {
                 loadExistingEvents().then(() => {
-                    console.log('✅ Events refreshed from server');
+                    console.log('âœ… Events refreshed from server');
                 }).catch(error => {
-                    console.error('❌ Error refreshing events:', error);
+                    console.error('âŒ Error refreshing events:', error);
                 });
             } else {
-                console.log('🔄 Reloading page to refresh events...');
+                console.log('ðŸ”„ Reloading page to refresh events...');
                 window.location.reload(true);
             }
         }
         
         // Force update all delete button states
         function fixAllDeleteButtons() {
-            console.log('🔧 Fixing all delete button states...');
+            console.log('ðŸ”§ Fixing all delete button states...');
             const allRows = document.querySelectorAll('tbody tr');
             
             allRows.forEach((row, index) => {
@@ -2245,20 +2385,20 @@ require_once 'classes/DateTimeUtility.php';
                         button.disabled = true;
                         button.className = 'delete-row-btn text-gray-400 cursor-not-allowed p-1';
                         button.title = 'Sample event - cannot be deleted';
-                        console.log(`🔒 Disabled: "${eventName}" (Sample: ${isSample}, No ID: ${!eventId})`);
+                        console.log(`ðŸ”’ Disabled: "${eventName}" (Sample: ${isSample}, No ID: ${!eventId})`);
                     } else {
                         // This is a real event - make it enabled
                         button.disabled = false;
                         button.className = 'delete-row-btn text-red-500 hover:text-red-700 transition-colors p-1';
                         button.title = 'Delete event';
-                        console.log(`🗑️ Enabled: "${eventName}" (ID: ${eventId})`);
+                        console.log(`ðŸ—‘ï¸ Enabled: "${eventName}" (ID: ${eventId})`);
                     }
                 }
             });
             
             // Reattach listeners
             attachTableDeleteListeners();
-            console.log('✅ All delete buttons updated!');
+            console.log('âœ… All delete buttons updated!');
         }
 
         // Delete confirmation modal functionality
@@ -2289,7 +2429,7 @@ require_once 'classes/DateTimeUtility.php';
             }
             
             // First try to get event data from the page data (faster and more reliable)
-            const pageEventsData = <?php echo json_encode($eventsData); ?>;
+            const pageEventsData = <?php echo json_encode($eventsData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES); ?>;
             let event = null;
             
             if (pageEventsData.success && pageEventsData.data && pageEventsData.data.events) {
@@ -2298,7 +2438,7 @@ require_once 'classes/DateTimeUtility.php';
             }
             
             if (event) {
-                console.log('📄 Found event in page data for delete:', event);
+                console.log('ðŸ“„ Found event in page data for delete:', event);
                 currentDeleteEventData = event;
                 if (eventInfo) {
                     eventInfo.innerHTML = `
@@ -2314,7 +2454,7 @@ require_once 'classes/DateTimeUtility.php';
             }
             
             // Fallback to API call if not found in page data
-            console.log('🔄 Event not found in page data, trying API for delete...');
+            console.log('ðŸ”„ Event not found in page data, trying API for delete...');
             
             try {
                 // Fetch event data from API
@@ -2325,7 +2465,7 @@ require_once 'classes/DateTimeUtility.php';
                 }
                 
                 const responseText = await response.text();
-                console.log('📥 Raw API response:', responseText);
+                console.log('ðŸ“¥ Raw API response:', responseText);
                 
                 if (!responseText.trim()) {
                     throw new Error('Empty response from API');
@@ -2358,7 +2498,7 @@ require_once 'classes/DateTimeUtility.php';
                     }
                 }
             } catch (error) {
-                console.error('❌ Error fetching event data for delete:', error);
+                console.error('âŒ Error fetching event data for delete:', error);
                 if (eventInfo) {
                     eventInfo.innerHTML = `
                         <div class="text-sm text-red-600">
@@ -2542,11 +2682,11 @@ require_once 'classes/DateTimeUtility.php';
                 console.log('Loading trash events from PHP data...');
                 
                 // Use PHP data directly instead of HTTP requests
-                const result = <?php echo json_encode($trashEventsData); ?>;
+                const result = <?php echo json_encode($trashEventsData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
                 console.log('PHP Trash Events Data:', result);
                 
                 if (result.success && result.trash_events) {
-                    console.log('✅ Loaded trash events from PHP data');
+                    console.log('âœ… Loaded trash events from PHP data');
                     console.log('Trash events count:', result.trash_events.length);
                     renderTrashEvents(result.trash_events);
                 } else {
@@ -2554,7 +2694,7 @@ require_once 'classes/DateTimeUtility.php';
                     renderTrashEvents([]);
                 }
             } catch (error) {
-                console.error('❌ Error loading trash events:', error);
+                console.error('âŒ Error loading trash events:', error);
                 renderTrashEvents([]);
             }
         }
@@ -2706,29 +2846,29 @@ require_once 'classes/DateTimeUtility.php';
         
         // Test function for action buttons
         window.testActionButtons = function() {
-            console.log('🔧 Testing action buttons...');
+            console.log('ðŸ”§ Testing action buttons...');
             
             // Check if buttons exist
             const viewButtons = document.querySelectorAll('.view-file-btn');
             const deleteButtons = document.querySelectorAll('.delete-row-btn');
             
-            console.log(`📊 Found ${viewButtons.length} view buttons and ${deleteButtons.length} delete buttons`);
+            console.log(`ðŸ“Š Found ${viewButtons.length} view buttons and ${deleteButtons.length} delete buttons`);
             
             // Test each button
             viewButtons.forEach((btn, index) => {
                 const eventId = btn.getAttribute('data-event-id');
                 const onclick = btn.getAttribute('onclick');
-                console.log(`👁️ View button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
+                console.log(`ðŸ‘ï¸ View button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
             });
             
             deleteButtons.forEach((btn, index) => {
                 const eventId = btn.getAttribute('data-event-id');
                 const onclick = btn.getAttribute('onclick');
-                console.log(`🗑️ Delete button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
+                console.log(`ðŸ—‘ï¸ Delete button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
             });
             
             // Test functions exist
-            console.log('🔍 Function availability:');
+            console.log('ðŸ” Function availability:');
             console.log(`  - viewEventFile: ${typeof window.viewEventFile}`);
             console.log(`  - showDeleteModal: ${typeof window.showDeleteModal}`);
             console.log(`  - hideDeleteModal: ${typeof window.hideDeleteModal}`);
@@ -2975,10 +3115,10 @@ require_once 'classes/DateTimeUtility.php';
         }
 
         function viewEventFile(eventId) {
-            console.log('🔍 Viewing event:', eventId);
+            console.log('ðŸ” Viewing event:', eventId);
             
             // First try to get event data from the page data (faster and more reliable)
-            const pageEventsData = <?php echo json_encode($eventsData); ?>;
+            const pageEventsData = <?php echo json_encode($eventsData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES); ?>;
             let event = null;
             
             if (pageEventsData.success && pageEventsData.data && pageEventsData.data.events) {
@@ -2987,28 +3127,28 @@ require_once 'classes/DateTimeUtility.php';
             }
             
             if (event) {
-                console.log('📄 Found event in page data:', event);
+                console.log('ðŸ“„ Found event in page data:', event);
                 showEventDetails(event);
                 return;
             }
             
             // Fallback to API call if not found in page data
-            console.log('🔄 Event not found in page data, trying API...');
+            console.log('ðŸ”„ Event not found in page data, trying API...');
             
             // Get event data from the central events API
             fetch(`api/central_events_api.php?action=get_event&event_id=${eventId}`)
                 .then(response => {
-                    console.log('📡 API Response status:', response.status);
+                    console.log('ðŸ“¡ API Response status:', response.status);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                     return response.json();
                 })
                 .then(result => {
-                    console.log('📥 API Result:', result);
+                    console.log('ðŸ“¥ API Result:', result);
                     if (result.success && result.data && result.data.event) {
                         const event = result.data.event;
-                        console.log('📄 Event data:', event);
+                        console.log('ðŸ“„ Event data:', event);
                         
                         // Create a document object for the viewer
                         const doc = {
@@ -3030,12 +3170,12 @@ require_once 'classes/DateTimeUtility.php';
                             showEventDetails(event);
                         }
                     } else {
-                        console.error('❌ Event not found or API error:', result);
+                        console.error('âŒ Event not found or API error:', result);
                         showNotification('Event not found or API error: ' + (result.message || 'Unknown error'), 'error');
                     }
                 })
                 .catch(error => {
-                    console.error('❌ Error fetching event:', error);
+                    console.error('âŒ Error fetching event:', error);
                     showNotification('Error loading event: ' + error.message, 'error');
                 });
         }
@@ -3046,8 +3186,8 @@ require_once 'classes/DateTimeUtility.php';
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4';
             
             // Debug: Log event data to see what's available
-            console.log('🔍 Event data for view:', event);
-            console.log('🖼️ Image paths:', {
+            console.log('ðŸ” Event data for view:', event);
+            console.log('ðŸ–¼ï¸ Image paths:', {
                 image_path: event.image_path,
                 file_path: event.file_path,
                 hasImage: !!(event.image_path || event.file_path)
@@ -3058,7 +3198,7 @@ require_once 'classes/DateTimeUtility.php';
                 <div class="mb-4">
                     <img src="${event.image_path || event.file_path}" alt="${event.title || 'Event Image'}" 
                          class="w-full h-64 object-cover rounded-lg shadow-md"
-                         onerror="console.error('❌ Image failed to load:', this.src); this.style.display='none';">
+                         onerror="console.error('âŒ Image failed to load:', this.src); this.style.display='none';">
                             </div>
             ` : '<div class="mb-4 text-center text-gray-500 text-sm">No image available</div>';
             
@@ -3191,7 +3331,7 @@ require_once 'classes/DateTimeUtility.php';
 
             if (eventsOnDate.length > 0) {
                 // Use title field from database
-                const eventList = eventsOnDate.map(event => `• ${event.title}`).join('\n');
+                const eventList = eventsOnDate.map(event => `â€¢ ${event.title}`).join('\n');
                 showNotification(`Events on ${dateString}:\n${eventList}`, 'info');
             } else {
                 showNotification(`No events on ${dateString}`, 'info');

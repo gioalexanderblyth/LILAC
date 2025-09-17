@@ -141,35 +141,56 @@ class MouMoaManager {
                     <div class="text-sm font-medium text-gray-900">
                         ${doc.institution || 'Unknown Institution'}
                     </div>
-                    <div class="text-xs text-gray-500">
-                        ${doc.file_name ? doc.file_name : 'No file attached'}
+                    <div class="text-xs text-gray-500 mt-1">
+                        ${doc.file_name ? 
+                            '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">' +
+                                '<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>' +
+                                '</svg>' +
+                                (doc.original_filename || doc.file_name) +
+                            '</span>' : 
+                            '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-500 italic">' +
+                                '<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>' +
+                                '</svg>' +
+                                'No file attached' +
+                            '</span>'
+                        }
                     </div>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    ${doc.location || 'Not specified'}
+                    ${doc.location || '<span class="text-gray-400 italic">Not specified</span>'}
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    ${doc.term || 'Not specified'}
+                    ${doc.term || '<span class="text-gray-400 italic">Not specified</span>'}
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    ${doc.end_date ? this.formatDate(doc.end_date) : 'Not specified'}
+                    ${doc.end_date ? this.formatDate(doc.end_date) : '<span class="text-gray-400 italic">Not specified</span>'}
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    ${this.formatDate(doc.upload_date)}
+                    <div class="flex flex-col">
+                        <span>${this.formatDate(doc.upload_date)}</span>
+                        <span class="text-xs text-gray-400">${this.getRelativeTime(doc.upload_date)}</span>
+                    </div>
                 </td>
-                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                    <button onclick="window.mouMoaManager.viewDocument('${doc.id}')" 
-                            class="text-indigo-600 hover:text-indigo-900 mr-3">
-                        View
-                    </button>
-                    <button onclick="window.mouMoaManager.downloadDocument('${doc.id}')" 
-                            class="text-green-600 hover:text-green-900 mr-3">
-                        Download
-                    </button>
-                    <button onclick="window.mouMoaManager.deleteDocument('${doc.id}')" 
-                            class="text-red-600 hover:text-red-900">
-                        Delete
-                    </button>
+                <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
+                    <div class="flex justify-center gap-2">
+                        <button onclick="window.mouMoaManager.viewDocument('${doc.id}')" 
+                                class="p-2 text-blue-600 hover:text-blue-800 transition-colors" 
+                                title="View">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="window.mouMoaManager.deleteDocument('${doc.id}')" 
+                                class="p-2 text-red-600 hover:text-red-800 transition-colors" 
+                                title="Delete">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -501,14 +522,8 @@ class MouMoaManager {
                 const fileExtension = this.getFileExtension(filePath);
                 const documentType = this.getDocumentTypeFromExtension(fileExtension);
                 
-                // Try to extract original filename from description
-                let originalFilename = doc.file_name;
-                if (doc.description && doc.description.includes('Original Filename:')) {
-                    const match = doc.description.match(/Original Filename:\s*([^\n]+)/);
-                    if (match && match[1]) {
-                        originalFilename = match[1].trim();
-                    }
-                }
+                // Use original_filename if available, otherwise fall back to file_name
+                let originalFilename = doc.original_filename || doc.file_name;
                 
                 const title = `${doc.institution || doc.partner_name || 'MOU/MOA Document'} - ${originalFilename}`;
                 
@@ -516,10 +531,11 @@ class MouMoaManager {
                     filePath: filePath,
                     fileExtension: fileExtension,
                     documentType: documentType,
-                    title: title
+                    title: title,
+                    originalFilename: originalFilename
                 });
                 
-                window.documentViewer.showDocument(filePath, documentType, title);
+                window.documentViewer.showDocument(filePath, documentType, title, originalFilename);
             } else {
                 this.showNotification('Document viewer not available', 'error');
             }
@@ -569,10 +585,8 @@ class MouMoaManager {
                     <div class="p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-xl font-semibold text-gray-900">MOU Details</h3>
-                            <button id="close-mou-details-modal" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
+                            <button id="close-mou-details-modal" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                                Close
                             </button>
                         </div>
                         
@@ -713,10 +727,8 @@ class MouMoaManager {
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold text-gray-900">Edit MOU/MOA</h3>
-                            <button id="close-edit-mou-modal" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
+                            <button id="close-edit-mou-modal" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                                Close
                             </button>
                         </div>
                         
@@ -861,10 +873,18 @@ class MouMoaManager {
             return;
         }
         
+        // Debug logging
+        console.log('Download Debug:', {
+            id: doc.id,
+            file_name: doc.file_name,
+            original_filename: doc.original_filename,
+            download_name: doc.original_filename || doc.file_name
+        });
+        
         const link = document.createElement('a');
         const fileUrl = doc.file_path.startsWith('http') ? doc.file_path : `../${doc.file_path}`;
         link.href = fileUrl;
-        link.download = doc.file_name;
+        link.download = doc.original_filename || doc.file_name;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -1064,6 +1084,21 @@ class MouMoaManager {
             month: 'short',
             day: 'numeric'
         });
+    }
+
+    getRelativeTime(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInMs = now - date;
+        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+        
+        if (diffInDays === 0) return 'Today';
+        if (diffInDays === 1) return 'Yesterday';
+        if (diffInDays < 7) return `${diffInDays} days ago`;
+        if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+        if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
+        return `${Math.floor(diffInDays / 365)} years ago`;
     }
     
     debounce(func, wait) {

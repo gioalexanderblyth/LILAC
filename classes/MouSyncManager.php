@@ -22,6 +22,15 @@ class MouSyncManager {
                 return ['success' => true, 'message' => 'Not a MOU category, skipping sync'];
             }
             
+            // Get original filename from enhanced_documents table
+            $originalFilename = '';
+            $stmt = $this->pdo->prepare("SELECT original_filename FROM enhanced_documents WHERE id = ?");
+            $stmt->execute([$documentId]);
+            $doc = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($doc) {
+                $originalFilename = $doc['original_filename'];
+            }
+            
             // Check if already exists in mous table
             $checkStmt = $this->pdo->prepare("SELECT id FROM mous WHERE file_name = ? OR partner_name = ?");
             $checkStmt->execute([$filename, $documentName]);
@@ -34,7 +43,7 @@ class MouSyncManager {
             // Create description for MOU table
             $mouDescription = "Auto-synced from enhanced_documents table\n";
             $mouDescription .= "Original Name: " . $documentName . "\n";
-            $mouDescription .= "Original Filename: " . $filename . "\n";
+            $mouDescription .= "Original Filename: " . $originalFilename . "\n";
             $mouDescription .= "Category: " . $category . "\n";
             $mouDescription .= "File Type: " . $fileType . "\n";
             if ($description) {
@@ -46,8 +55,8 @@ class MouSyncManager {
             
             // Insert into mous table
             $insertStmt = $this->pdo->prepare("INSERT INTO mous 
-                (partner_name, status, date_signed, end_date, description, type, file_name, file_size, file_path, created_at, updated_at) 
-                VALUES (?, 'active', ?, NULL, ?, 'MOU', ?, ?, ?, NOW(), NOW())");
+                (partner_name, status, date_signed, end_date, description, type, file_name, original_filename, file_size, file_path, created_at, updated_at) 
+                VALUES (?, 'active', ?, NULL, ?, 'MOU', ?, ?, ?, ?, NOW(), NOW())");
             
             // Use current date as signed date
             $signedDate = date('Y-m-d');
@@ -57,6 +66,7 @@ class MouSyncManager {
                 $signedDate,
                 $mouDescription,
                 $filename,
+                $originalFilename,
                 $fileSize,
                 $filePath
             ]);

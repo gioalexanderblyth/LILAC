@@ -33,6 +33,9 @@ if (!is_dir($uploadsDir)) { @mkdir($uploadsDir, 0777, true); }
 try {
     $database = new Database();
     $pdo = $database->getConnection();
+    
+    // Ensure mous table has original_filename column
+    $pdo->exec("ALTER TABLE mous ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255) DEFAULT '' AFTER file_name");
 } catch (Exception $e) {
     mous_respond(false, ['message' => 'Database connection failed: ' . $e->getMessage()]);
 }
@@ -57,6 +60,7 @@ if ($action === 'add') {
     
     // Handle file upload if present
     $fileName = '';
+    $originalFileName = '';
     $fileSize = 0;
     $filePath = '';
     
@@ -66,11 +70,15 @@ if ($action === 'add') {
             mkdir($uploadDir, 0777, true);
         }
         
-        $fileName = $_FILES['mou-file']['name'];
+        $originalFileName = $_FILES['mou-file']['name'];
         $fileSize = $_FILES['mou-file']['size'];
+        
+        // Generate unique filename while preserving original
+        $extension = pathinfo($originalFileName, PATHINFO_EXTENSION);
+        $fileName = 'doc_' . uniqid() . '.' . $extension;
         $filePath = 'uploads/' . $fileName;
         
-        // Move uploaded file
+        // Move uploaded file with unique name
         if (!move_uploaded_file($_FILES['mou-file']['tmp_name'], $uploadDir . $fileName)) {
             mous_respond(false, ['message' => 'Failed to upload file']);
         }
@@ -78,8 +86,8 @@ if ($action === 'add') {
     
     // Insert into mous table
     try {
-        $insertSql = "INSERT INTO mous (partner_name, status, date_signed, end_date, description, type, file_name, file_size, file_path, created_at, updated_at) 
-                      VALUES (:partner_name, 'active', :date_signed, :end_date, :description, :type, :file_name, :file_size, :file_path, NOW(), NOW())";
+        $insertSql = "INSERT INTO mous (partner_name, status, date_signed, end_date, description, type, file_name, original_filename, file_size, file_path, created_at, updated_at) 
+                      VALUES (:partner_name, 'active', :date_signed, :end_date, :description, :type, :file_name, :original_filename, :file_size, :file_path, NOW(), NOW())";
         
         $description = "Institution: " . htmlspecialchars($institution, ENT_QUOTES, 'UTF-8') . 
                       "\nLocation: " . htmlspecialchars($location, ENT_QUOTES, 'UTF-8') . 
@@ -95,8 +103,10 @@ if ($action === 'add') {
         $insertStmt->bindValue(':description', $description);
         $insertStmt->bindValue(':type', $type);
         $insertStmt->bindValue(':file_name', $fileName);
+        $insertStmt->bindValue(':original_filename', $originalFileName);
         $insertStmt->bindValue(':file_size', $fileSize);
         $insertStmt->bindValue(':file_path', $filePath);
+        
         $insertStmt->execute();
         
         $mouId = $pdo->lastInsertId();
@@ -164,6 +174,7 @@ if ($action === 'get_all' || $action === 'list') {
                 'status' => ucfirst($mou['status']),
                 'upload_date' => $mou['created_at'],
                 'file_name' => $mou['file_name'],
+                'original_filename' => $mou['original_filename'] ?? $mou['file_name'],
                 'file_path' => $mou['file_path'],
                 'description' => $description
             ];

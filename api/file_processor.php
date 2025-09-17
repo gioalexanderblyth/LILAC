@@ -326,13 +326,14 @@ class FileProcessor {
     private function storeDocument($file, $filePath, $extractedContent, $additionalData) {
         $stmt = $this->pdo->prepare("
             INSERT INTO enhanced_documents 
-            (document_name, filename, file_path, file_size, file_type, category, description, extracted_content) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (document_name, filename, original_filename, file_path, file_size, file_type, category, description, extracted_content) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
         $stmt->execute([
             $additionalData['document_name'] ?? $file['name'],
-            $file['name'],
+            basename($filePath), // Use the generated filename
+            $file['name'], // Store original filename
             $filePath,
             $file['size'],
             mime_content_type($filePath),

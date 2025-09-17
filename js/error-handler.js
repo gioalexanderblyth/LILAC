@@ -145,10 +145,8 @@ class ErrorHandler {
                 <div class="flex-1">
                     <p class="text-sm font-medium">${message}</p>
                 </div>
-                <button class="ml-3 text-gray-400 hover:text-gray-600" onclick="errorHandler.removeNotification(this.parentElement.parentElement)">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
+                <button class="ml-3 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors" onclick="errorHandler.removeNotification(this.parentElement.parentElement)">
+                    Close
                 </button>
             </div>
         `;

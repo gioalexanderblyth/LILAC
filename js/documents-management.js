@@ -309,6 +309,9 @@ class DocumentsManager {
             this.loadDocuments();
             this.closeUploadModal();
             
+            // Signal other pages that a document was uploaded
+            localStorage.setItem('documentUploaded', 'true');
+            
             // Check for awards earned after successful document upload
             if (window.checkAwardCriteria) {
                 window.checkAwardCriteria('document', 'batch_upload');

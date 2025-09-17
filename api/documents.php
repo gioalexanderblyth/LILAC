@@ -7,7 +7,7 @@ ini_set('display_errors', 1);
 
 // Include universal upload handler and database config
 require_once 'universal_upload_handler.php';
-require_once '../config/database.php';
+require_once __DIR__ . '/../config/database.php';
 
 // Paths
 $rootDir = dirname(__DIR__);
@@ -25,6 +25,115 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 function docs_respond($ok, $payload = []) {
     echo json_encode(array_merge(['success' => $ok], $payload));
     exit;
+}
+
+function updateAwardReadinessCounters($pdo) {
+    // Ensure award_readiness table exists
+    $pdo->exec("CREATE TABLE IF NOT EXISTS award_readiness (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        award_key VARCHAR(50) UNIQUE NOT NULL,
+        total_documents INT DEFAULT 0,
+        total_events INT DEFAULT 0,
+        total_items INT DEFAULT 0,
+        satisfied_criteria TEXT,
+        unsatisfied_criteria TEXT,
+        readiness_percentage DECIMAL(5,2) DEFAULT 0,
+        is_ready BOOLEAN DEFAULT FALSE,
+        last_calculated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+    
+    // Insert default award types if not exist
+    $defaultAwards = ['leadership', 'education', 'emerging', 'regional', 'citizenship'];
+    foreach ($defaultAwards as $award) {
+        $stmt = $pdo->prepare("INSERT IGNORE INTO award_readiness (award_key) VALUES (?)");
+        $stmt->execute([$award]);
+    }
+    
+    // Reset all counters
+    $pdo->exec("UPDATE award_readiness SET 
+        total_documents = 0, 
+        total_events = 0, 
+        total_items = 0,
+        readiness_percentage = 0,
+        is_ready = 0");
+    
+    // Get all documents from enhanced_documents table
+    $stmt = $pdo->query("SELECT id, document_name, filename, category, extracted_content FROM enhanced_documents");
+    $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // CHED Award Criteria (20 criteria total: 5+5+4+3+3)
+    $criteria = [
+        'leadership' => [
+            'Champion Bold Innovation',
+            'Cultivate Global Citizens', 
+            'Nurture Lifelong Learning',
+            'Lead with Purpose',
+            'Ethical and Inclusive Leadership'
+        ],
+        'education' => [
+            'Expand Access to Global Opportunities',
+            'Foster Collaborative Innovation',
+            'Embrace Inclusivity and Beyond',
+            'Drive Academic Excellence',
+            'Build Sustainable Partnerships'
+        ],
+        'emerging' => [
+            'Pioneer New Frontiers',
+            'Adapt and Transform',
+            'Build Capacity',
+            'Create Impact'
+        ],
+        'regional' => [
+            'Comprehensive Internationalization Efforts',
+            'Cooperation and Collaboration',
+            'Measurable Impact'
+        ],
+        'citizenship' => [
+            'Ignite Intercultural Understanding',
+            'Empower Changemakers',
+            'Cultivate Active Engagement'
+        ]
+    ];
+    
+    foreach ($docs as $doc) {
+        $content = strtolower($doc['document_name'] . ' ' . $doc['filename'] . ' ' . $doc['category'] . ' ' . ($doc['extracted_content'] ?? ''));
+        
+        // Check each award type
+        foreach ($criteria as $awardType => $awardCriteria) {
+            $satisfied = [];
+            foreach ($awardCriteria as $criterion) {
+                if (strpos($content, strtolower($criterion)) !== false) {
+                    $satisfied[] = $criterion;
+                }
+            }
+            
+            if (!empty($satisfied)) {
+                // Update document counters only (not total awards)
+                $stmt = $pdo->prepare("UPDATE award_readiness SET 
+                    total_documents = total_documents + 1,
+                    total_items = total_items + 1,
+                    last_calculated = NOW()
+                    WHERE award_key = ?");
+                $stmt->execute([$awardType]);
+            }
+        }
+    }
+    
+    // Update readiness percentages
+    $stmt = $pdo->query("SELECT award_key, total_items FROM award_readiness");
+    $awards = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    foreach ($awards as $award) {
+        $threshold = 5; // Default threshold
+        $readinessPercentage = min(100, ($award['total_items'] / $threshold) * 100);
+        $isReady = $award['total_items'] >= $threshold;
+        
+        $stmt = $pdo->prepare("UPDATE award_readiness SET 
+            readiness_percentage = ?,
+            is_ready = ?
+            WHERE award_key = ?");
+        $stmt->execute([$readinessPercentage, $isReady ? 1 : 0, $award['award_key']]);
+    }
 }
 
 // Ensure uploads directory exists
@@ -141,19 +250,30 @@ try {
             $category = 'Templates';
         }
         
-        // Insert into database
-        $stmt = $pdo->prepare("INSERT INTO enhanced_documents (document_name, filename, file_path, file_size, file_type, category, description) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        // Extract content from the uploaded file
+        $extractedContent = '';
+        $filePath = 'uploads/' . $uniqueFilename;
+        if (file_exists($filePath)) {
+            $extractedContent = file_get_contents($filePath);
+        }
+        
+        // Insert into database with extracted content
+        $stmt = $pdo->prepare("INSERT INTO enhanced_documents (document_name, filename, file_path, file_size, file_type, category, description, extracted_content) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $documentName,
             $uniqueFilename,
-            'uploads/' . $uniqueFilename,
+            $filePath,
             $fileSize,
             $fileType,
             $category,
-            $description
+            $description,
+            $extractedContent
         ]);
         
         $documentId = $pdo->lastInsertId();
+        
+        // Update award_readiness counters after successful upload
+        updateAwardReadinessCounters($pdo);
         
         // Return success response
         $record = [

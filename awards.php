@@ -207,6 +207,9 @@ require_once 'classes/DateTimeUtility.php';
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Signal other pages that a document was uploaded
+                    localStorage.setItem('documentUploaded', 'true');
+                    
                     // Check for awards earned after successful upload
                     if (window.checkAwardCriteria) {
                         window.checkAwardCriteria('award', data.newAwardId || data.document_id);
@@ -248,11 +251,11 @@ require_once 'classes/DateTimeUtility.php';
         }
 
         function loadStats() {
-            fetch(`api/documents.php?action=get_stats_by_category&category=${encodeURIComponent(CATEGORY)}`)
+            fetch(`api/awards.php?action=get_all`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        updateStats(data.stats);
+                        updateStats(data.counts);
                     }
                 })
                 .catch(error => console.error('Error loading stats:', error));
@@ -971,6 +974,12 @@ require_once 'classes/DateTimeUtility.php';
                 selectedButton.classList.remove('border-transparent', 'text-gray-500');
             }
 
+            // Update counters when switching to Awards Match Analysis tab
+            if (tabName === 'awardmatch') {
+                console.log('Switching to Awards Match Analysis tab, refreshing counters...');
+                updateAwardMatchCounters();
+            }
+            
             // Resize charts if switching to overview tab
             if (tabName === 'overview') {
                 setTimeout(() => {
@@ -2861,6 +2870,16 @@ LILAC Awards - Keyboard Shortcuts:
 
         <!-- AwardMatch Tab Content -->
         <div id="tab-awardmatch-content" class="tab-content hidden">
+            <!-- Header with refresh button -->
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Awards Match Analysis</h3>
+                <button onclick="updateAwardMatchCounters()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Refresh Analysis
+                </button>
+            </div>
             <!-- CHED Awards Progress -->
             <div class="grid grid-cols-5 gap-4 mb-8">
                 <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
@@ -4103,11 +4122,53 @@ LILAC Awards - Keyboard Shortcuts:
         }
         // Update Award Match Analysis counters
         updateAwardMatchCounters();
+        
+        // Auto-refresh counters every 5 seconds when Awards Match Analysis tab is active
+        setInterval(() => {
+            if (document.getElementById('tab-awardmatch').classList.contains('active')) {
+                updateAwardMatchCounters();
+            }
+        }, 5000);
+        
+        // Listen for document uploads from other pages via localStorage
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'documentUploaded' && e.newValue === 'true') {
+                console.log('Document upload detected from another page, refreshing counters...');
+                // Add a small delay to ensure the database is updated
+                setTimeout(() => {
+                    updateAwardMatchCounters();
+                }, 1000);
+                // Clear the flag
+                localStorage.removeItem('documentUploaded');
+            }
+        });
+        
+        // Check for upload flag on page load
+        if (localStorage.getItem('documentUploaded') === 'true') {
+            console.log('Document upload detected on page load, refreshing counters...');
+            // Add a small delay to ensure the database is updated
+            setTimeout(() => {
+                updateAwardMatchCounters();
+            }, 1000);
+            localStorage.removeItem('documentUploaded');
+        }
+        
+        // Also listen for focus events to refresh when user returns to the page
+        window.addEventListener('focus', function() {
+            if (localStorage.getItem('documentUploaded') === 'true') {
+                console.log('Document upload detected on window focus, refreshing counters...');
+                setTimeout(() => {
+                    updateAwardMatchCounters();
+                }, 500);
+                localStorage.removeItem('documentUploaded');
+            }
+        });
     }
     
     // Function to update Award Match Analysis counters with real data
     function updateAwardMatchCounters() {
-        fetch('api/checklist_working.php?action=get_readiness_summary')
+        // Get all documents from the database
+        fetch('api/documents.php?action=get_all')
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -4122,39 +4183,156 @@ LILAC Awards - Keyboard Shortcuts:
         })
         .then(data => {
             if (data.success) {
-                const totals = data.totals;
-                const summary = data.summary;
+                const documents = data.documents || [];
                 
-                // Update counters
+                console.log('Documents from database:', documents);
+                
+                // CHED Award Criteria (20 criteria total: 5+5+4+3+3)
+                const criteria = {
+                    'leadership': [
+                        'Champion Bold Innovation',
+                        'Cultivate Global Citizens', 
+                        'Nurture Lifelong Learning',
+                        'Lead with Purpose',
+                        'Ethical and Inclusive Leadership'
+                    ],
+                    'education': [
+                        'Expand Access to Global Opportunities',
+                        'Foster Collaborative Innovation',
+                        'Embrace Inclusivity and Beyond',
+                        'Drive Academic Excellence',
+                        'Build Sustainable Partnerships'
+                    ],
+                    'emerging': [
+                        'Pioneer New Frontiers',
+                        'Adapt and Transform',
+                        'Build Capacity',
+                        'Create Impact'
+                    ],
+                    'regional': [
+                        'Comprehensive Internationalization Efforts',
+                        'Cooperation and Collaboration',
+                        'Measurable Impact'
+                    ],
+                    'global': [
+                        'Ignite Intercultural Understanding',
+                        'Empower Changemakers',
+                        'Cultivate Active Engagement'
+                    ]
+                };
+                
+                // Initialize counters
+                const documentCounts = {
+                    'leadership': 0,
+                    'education': 0,
+                    'emerging': 0,
+                    'regional': 0,
+                    'global': 0,
+                    'total': 0
+                };
+                
+                // Analyze each document
+                documents.forEach(doc => {
+                    const content = (doc.extracted_content || '').toLowerCase();
+                    const docName = (doc.document_name || '').toLowerCase();
+                    const fullContent = content + ' ' + docName;
+                    
+                    console.log('Analyzing document:', doc.document_name, 'Content length:', content.length);
+                    
+                    // Check each award type - count documents that match each award type
+                    Object.keys(criteria).forEach(awardType => {
+                        let matches = 0;
+                        criteria[awardType].forEach(criterion => {
+                            if (fullContent.includes(criterion.toLowerCase())) {
+                                matches++;
+                            }
+                        });
+                        
+                        // Only count the document once per award type if it matches any criteria
+                        if (matches > 0) {
+                            documentCounts[awardType]++;
+                            console.log(`Document ${doc.document_name} matches ${awardType} (${matches} criteria)`);
+                        }
+                    });
+                });
+                
+                // Calculate total
+                documentCounts.total = documentCounts.leadership + documentCounts.education + 
+                                     documentCounts.emerging + documentCounts.regional + documentCounts.global;
+                
+                console.log('Calculated document counts:', documentCounts);
+                
+                // Update counters using document counts (files matching criteria)
                 const activitiesCountElement = document.getElementById('activities-count');
                 const overallScoreElement = document.getElementById('overall-score');
                 
                 if (activitiesCountElement) {
-                    activitiesCountElement.textContent = totals.total_content || 0;
+                    activitiesCountElement.textContent = documentCounts.total || 0;
                 }
                 if (overallScoreElement) {
-                    overallScoreElement.textContent = totals.total_content || 0;
+                    overallScoreElement.textContent = documentCounts.total || 0;
                 }
                 
-                // Find best match (highest readiness percentage)
-                const bestMatch = summary.reduce((a, b) => 
-                    (b.readiness_percentage || 0) > (a.readiness_percentage || 0) ? b : a
-                );
+                // Find best match (highest document count)
+                const awardTypes = ['leadership', 'education', 'emerging', 'regional', 'global'];
+                let bestMatch = { award_key: 'leadership', count: 0 };
+                
+                awardTypes.forEach(awardType => {
+                    if (documentCounts[awardType] > bestMatch.count) {
+                        bestMatch = { award_key: awardType, count: documentCounts[awardType] };
+                    }
+                });
                 
                 const bestMatchElement = document.getElementById('best-match');
                 if (bestMatchElement) {
-                    if (bestMatch.readiness_percentage > 0) {
+                    if (bestMatch.count > 0) {
                         const awardNames = {
                             'leadership': 'Internationalization (IZN) Leadership',
                             'education': 'Outstanding International Education Program',
                             'emerging': 'Emerging Internationalization',
                             'regional': 'Regional Internationalization',
-                            'citizenship': 'Global Citizenship'
+                            'global': 'Global Citizenship'
                         };
                         bestMatchElement.textContent = awardNames[bestMatch.award_key] || bestMatch.award_key;
                     } else {
                         bestMatchElement.textContent = 'None';
                     }
+                }
+                
+                // Update individual award card counters
+                const leadershipCountEl = document.getElementById('leadership-count');
+                const educationCountEl = document.getElementById('education-count');
+                const emergingCountEl = document.getElementById('emerging-count');
+                const regionalCountEl = document.getElementById('regional-count');
+                const globalCountEl = document.getElementById('global-count');
+                
+                console.log('Updating counters:', {
+                    leadership: documentCounts.leadership || 0,
+                    education: documentCounts.education || 0,
+                    emerging: documentCounts.emerging || 0,
+                    regional: documentCounts.regional || 0,
+                    global: documentCounts.global || 0
+                });
+                
+                if (leadershipCountEl) {
+                    leadershipCountEl.textContent = documentCounts.leadership || 0;
+                    console.log('Updated leadership counter to:', documentCounts.leadership || 0);
+                }
+                if (educationCountEl) {
+                    educationCountEl.textContent = documentCounts.education || 0;
+                    console.log('Updated education counter to:', documentCounts.education || 0);
+                }
+                if (emergingCountEl) {
+                    emergingCountEl.textContent = documentCounts.emerging || 0;
+                    console.log('Updated emerging counter to:', documentCounts.emerging || 0);
+                }
+                if (regionalCountEl) {
+                    regionalCountEl.textContent = documentCounts.regional || 0;
+                    console.log('Updated regional counter to:', documentCounts.regional || 0);
+                }
+                if (globalCountEl) {
+                    globalCountEl.textContent = documentCounts.global || 0;
+                    console.log('Updated global counter to:', documentCounts.global || 0);
                 }
             }
         })

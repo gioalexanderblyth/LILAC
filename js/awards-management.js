@@ -89,6 +89,7 @@ class AwardsManager {
             
             if (data.success) {
                 this.awardsData = data.awards || [];
+                this.statsData = data; // Store the full API response including counts
                 this.renderAwards();
                 this.updateAwardCounters();
             } else {
@@ -379,10 +380,11 @@ class AwardsManager {
      * Update award counters
      */
     updateAwardCounters() {
-        const total = this.awardsData.length;
-        const academic = this.awardsData.filter(a => a.category === 'academic').length;
-        const research = this.awardsData.filter(a => a.category === 'research').length;
-        const leadership = this.awardsData.filter(a => a.category === 'leadership').length;
+        // Use actual awards received from API, not document counts
+        const total = this.statsData.counts?.total || 0;
+        const academic = this.statsData.counts?.education || 0;
+        const research = this.statsData.counts?.emerging || 0;
+        const leadership = this.statsData.counts?.leadership || 0;
         
         const totalEl = document.getElementById('total-awards');
         const academicEl = document.getElementById('academic-count');

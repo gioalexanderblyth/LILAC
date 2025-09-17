@@ -10,7 +10,8 @@
  * 5. Sync: All modules connected to same events table, no manual duplication
  */
 
-require_once 'config/database.php';
+require_once '../config/database.php';
+require_once 'universal_upload_handler.php';
 
 class CentralEventsSystem {
     private $pdo;

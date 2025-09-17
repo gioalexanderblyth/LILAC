@@ -263,8 +263,6 @@ require_once 'classes/DateTimeUtility.php';
                             </svg>
                             Upload MOU/MOA
                         </button>
-                        <input type="checkbox" id="select-all" class="rounded border-gray-300">
-                        <label for="select-all" class="text-sm text-gray-600">Select All</label>
                         <button id="bulk-delete" class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
                             Delete Selected
                         </button>

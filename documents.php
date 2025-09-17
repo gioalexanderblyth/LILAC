@@ -616,30 +616,45 @@ require_once 'classes/DateTimeUtility.php';
         }
 
         function loadStats() {
+            console.log('🔄 Loading stats...');
             fetch('api/documents.php?action=get_stats')
                 .then(response => {
+                    console.log('📊 Stats API response status:', response.status);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     return response.text();
                 })
                 .then(responseText => {
+                    console.log('📊 Stats API response text:', responseText);
                     if (!responseText || responseText.trim() === '') {
                         console.log('⚠️ Empty response from stats API');
                         return;
                     }
                     
                     const data = JSON.parse(responseText);
-                    if (data.success) {
+                    console.log('📊 Parsed stats data:', data);
+                    
+                    if (data.success && data.stats) {
                         const totalElement = document.getElementById('total-documents');
                         const recentElement = document.getElementById('recent-documents');
                         const typesElement = document.getElementById('document-types');
                         
+                        console.log('📊 Updating counters:', {
+                            total: data.stats.total,
+                            recent: data.stats.recent,
+                            totalElement: totalElement,
+                            recentElement: recentElement,
+                            typesElement: typesElement
+                        });
+                        
                         if (totalElement) {
                             totalElement.textContent = data.stats.total;
+                            console.log('✅ Updated total documents to:', data.stats.total);
                         }
                         if (recentElement) {
                             recentElement.textContent = data.stats.recent;
+                            console.log('✅ Updated recent documents to:', data.stats.recent);
                         }
                         if (typesElement) {
                             // Get categories count from API
@@ -648,10 +663,13 @@ require_once 'classes/DateTimeUtility.php';
                                 .then(catData => {
                                     if (catData.success) {
                                         typesElement.textContent = catData.categories.length;
+                                        console.log('✅ Updated categories to:', catData.categories.length);
                                     }
                                 })
                                 .catch(error => console.error('Error loading categories:', error));
                         }
+                    } else {
+                        console.error('❌ Stats API returned error or no stats data:', data);
                     }
                 })
                 .catch(error => {
@@ -663,6 +681,18 @@ require_once 'classes/DateTimeUtility.php';
                     });
                 });
         }
+        
+        // Make loadStats globally available
+        window.loadStats = loadStats;
+        
+        // Add a test function to manually refresh stats
+        function testStatsRefresh() {
+            console.log(' Testing stats refresh...');
+            loadStats();
+        }
+        
+        // Make it available globally for testing
+        window.testStatsRefresh = testStatsRefresh;
 
         function displayDocumentsByTime(documents) {
             console.log('📋 Displaying documents:', documents.length, 'documents');
@@ -3707,6 +3737,171 @@ require_once 'classes/DateTimeUtility.php';
                 .then(function(r){ return r.json(); })
                 .then(function(d){ loadDocuments(); if (d && d.message) { showNotification(d.message,'success'); } })
                 .catch(function(){});
+        }
+
+        // Add a simple test function to check if stats are working
+        function testStatsAPI() {
+            console.log(' Testing stats API...');
+            fetch('api/documents.php?action=get_stats')
+                .then(response => response.text())
+                .then(text => {
+                    console.log('Raw API response:', text);
+                    try {
+                        const data = JSON.parse(text);
+                        console.log('Parsed data:', data);
+                        if (data.success && data.stats) {
+                            console.log('Stats data:', data.stats);
+                            console.log('Total documents:', data.stats.total);
+                            console.log('Recent documents:', data.stats.recent);
+                        } else {
+                            console.error('API returned error:', data);
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse JSON:', e);
+                    }
+                })
+                .catch(error => {
+                    console.error('API call failed:', error);
+                });
+        }
+        
+        // Make it available globally
+        window.testStatsAPI = testStatsAPI;
+
+        // FIXED: Real file selection handler that actually processes files
+        async function handleFileSelection(files) {
+            console.log('handleFileSelection called with', files.length, 'files');
+            
+            if (isProcessingFiles) {
+                console.log('Already processing files, ignoring duplicate call');
+                return;
+            }
+            
+            isProcessingFiles = true;
+            
+            if (!files || files.length === 0) {
+                console.log('No files selected');
+                isProcessingFiles = false;
+                return;
+            }
+            
+            const fileArray = Array.from(files);
+            console.log('Processing files:', fileArray.map(f => f.name));
+            
+            // Show upload progress
+            const uploadProgress = document.getElementById('upload-progress');
+            if (uploadProgress) {
+                uploadProgress.classList.remove('hidden');
+            }
+            
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+                
+                // Process each file
+                for (let i = 0; i < fileArray.length; i++) {
+                    const file = fileArray[i];
+                    console.log(`Processing file ${i + 1}/${fileArray.length}: ${file.name}`);
+                    
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('action', 'create_event');
+                    formData.append('title', file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' '));
+                    formData.append('description', 'Event created from uploaded file');
+                    formData.append('event_date', new Date().toISOString().split('T')[0]);
+                    formData.append('location', 'To be determined');
+                    
+                    // Upload to central events API
+                    const response = await fetch('api/central_events_api.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        console.log(`✅ File ${file.name} uploaded and event created successfully`);
+                        successCount++;
+                    } else {
+                        console.error(`❌ Failed to create event from ${file.name}:`, result.data?.message || result.message);
+                        errorCount++;
+                    }
+                }
+                
+                // Hide progress after processing
+                if (uploadProgress) {
+                    uploadProgress.classList.add('hidden');
+                }
+                
+                // Show appropriate success/error message
+                if (successCount > 0 && errorCount === 0) {
+                    showNotification(`Successfully uploaded ${successCount} file(s) and created events!`, 'success');
+                } else if (successCount > 0 && errorCount > 0) {
+                    showNotification(`Uploaded ${successCount} file(s) successfully, ${errorCount} failed.`, 'warning');
+                } else {
+                    showNotification(`Failed to upload files. Please try again.`, 'error');
+                }
+                
+                // Refresh events list to show new events
+                setTimeout(() => {
+                    refreshEventsFromAPI();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error processing files:', error);
+                
+                // Hide progress on error
+                if (uploadProgress) {
+                    uploadProgress.classList.add('hidden');
+                }
+                
+                showNotification('Error uploading files: ' + error.message, 'error');
+            } finally {
+                isProcessingFiles = false;
+            }
+        }
+
+        // FIXED: Update event counters based on calendar dates, not just status field
+        function updateEventCounters(events) {
+            try {
+                const upcomingCountElement = document.getElementById('upcoming-count');
+                const completedCountElement = document.getElementById('completed-count');
+                
+                if (!upcomingCountElement || !completedCountElement) {
+                    console.warn('Counter elements not found');
+                    return;
+                }
+                
+                const now = new Date();
+                now.setHours(0, 0, 0, 0); // Set to start of today for accurate comparison
+                
+                // Count events by actual calendar dates, not just status field
+                let upcomingCount = 0;
+                let completedCount = 0;
+                
+                events.forEach(event => {
+                    const eventDate = new Date(event.start || event.event_date || event.date);
+                    eventDate.setHours(0, 0, 0, 0); // Set to start of day for comparison
+                    
+                    if (eventDate >= now) {
+                        upcomingCount++;
+                    } else {
+                        completedCount++;
+                    }
+                });
+                
+                // Update the counter displays
+                upcomingCountElement.textContent = upcomingCount;
+                completedCountElement.textContent = completedCount;
+                
+                console.log(`📊 Updated counters based on calendar dates - Upcoming: ${upcomingCount}, Completed: ${completedCount}`);
+                
+                // Update statuses in database to match calendar dates
+                updateEventStatusesInDatabase();
+                
+            } catch (error) {
+                console.error('Error updating event counters:', error);
+            }
         }
 
     </script>

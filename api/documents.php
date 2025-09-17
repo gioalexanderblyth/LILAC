@@ -34,6 +34,26 @@ if (!is_dir($uploadsDir)) { @mkdir($uploadsDir, 0777, true); }
 try {
     $database = new Database();
     $pdo = $database->getConnection();
+    
+    // Ensure enhanced_documents table exists
+    $pdo->exec("CREATE TABLE IF NOT EXISTS enhanced_documents (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        document_name VARCHAR(255) NOT NULL,
+        filename VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_size INT NOT NULL,
+        file_type VARCHAR(100) NOT NULL,
+        category VARCHAR(100) DEFAULT 'Awards',
+        description TEXT,
+        extracted_content LONGTEXT,
+        award_assignments JSON,
+        analysis_data JSON,
+        upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+    
+    // REMOVED: Auto-population code that was causing files to reappear
+    
 } catch (Exception $e) {
     docs_respond(false, ['message' => 'Database connection failed: ' . $e->getMessage()]);
 }
@@ -75,72 +95,86 @@ try {
     }
 
     if ($action === 'add') {
-        // Use universal upload handler
-        $uploadHandler = new UniversalUploadHandler();
-        $uploadResult = $uploadHandler->handleUpload($_FILES['file'], 'system', 'docs');
+        // Direct file upload
+        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+            docs_respond(false, ['message' => 'No file uploaded or upload error']);
+        }
         
-        if (!$uploadResult['success']) {
-            docs_respond(false, ['message' => $uploadResult['error']]);
+        $file = $_FILES['file'];
+        $originalFilename = $file['name'];
+        $fileSize = $file['size'];
+        $fileType = $file['type'];
+        
+        // Generate unique filename
+        $extension = pathinfo($originalFilename, PATHINFO_EXTENSION);
+        $uniqueFilename = 'doc_' . uniqid() . '.' . $extension;
+        $uploadPath = $uploadsDir . '/' . $uniqueFilename;
+        
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
+            docs_respond(false, ['message' => 'Failed to save file']);
         }
         
         // Get additional data from POST
-        $documentName = $_POST['document_name'] ?? ($_POST['title'] ?? pathinfo($_FILES['file']['name'], PATHINFO_FILENAME));
+        $documentName = $_POST['document_name'] ?? pathinfo($originalFilename, PATHINFO_FILENAME);
         $description = $_POST['description'] ?? '';
         $awardType = trim((string)($_POST['award_type'] ?? ''));
         
-        // Use the category determined by universal upload handler
-        $category = $uploadResult['category'];
-        $categoryConfidence = 0.8; // High confidence for universal handler categorization
-
-        // Auto-analyze for award classification if not provided
-        if (empty($awardType)) {
-            $awardType = performAutoAwardAnalysis($documentName, $description, $uploadResult['extracted_text']);
+        // Check if this file already exists in the database (by filename)
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM enhanced_documents WHERE filename = ?");
+        $stmt->execute([$uniqueFilename]);
+        $exists = $stmt->fetchColumn();
+        
+        if ($exists > 0) {
+            // Delete the uploaded file since it's a duplicate
+            unlink($uploadPath);
+            docs_respond(false, ['message' => 'File already exists in the database']);
         }
-
-        // The UniversalUploadHandler already saves to MySQL database
-        // We just need to return the result
+        
+        // Determine category
+        $category = 'Awards'; // Default category
+        if (preg_match('/\b(MOU|MOA|MEMORANDUM OF UNDERSTANDING|AGREEMENT|KUMA-MOU)\b/i', $documentName)) {
+            $category = 'MOUs & MOAs';
+        } elseif (preg_match('/\b(REGISTRAR|TRANSCRIPT|TOR|CERTIFICATE|COR|GWA|GRADES|ENROLLMENT|STUDENT\s*RECORD)\b/i', $documentName)) {
+            $category = 'Registrar Files';
+        } elseif (preg_match('/\b(TEMPLATE|FORM|ADMISSION|APPLICATION|REGISTRATION|CHECKLIST|REQUEST)\b/i', $documentName)) {
+            $category = 'Templates';
+        }
+        
+        // Insert into database
+        $stmt = $pdo->prepare("INSERT INTO enhanced_documents (document_name, filename, file_path, file_size, file_type, category, description) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([
+            $documentName,
+            $uniqueFilename,
+            'uploads/' . $uniqueFilename,
+            $fileSize,
+            $fileType,
+            $category,
+            $description
+        ]);
+        
+        $documentId = $pdo->lastInsertId();
+        
+        // Return success response
         $record = [
-            'id' => $uploadResult['file_id'],
-            'document_name' => htmlspecialchars($documentName, ENT_QUOTES, 'UTF-8'),
-            'filename' => basename($uploadResult['file_path']), // Extract filename from path
-            'original_filename' => $_FILES['file']['name'], // Use original uploaded filename
-            'file_path' => $uploadResult['file_path'],
-            'file_size' => intval($_FILES['file']['size']),
-            'category' => htmlspecialchars($category, ENT_QUOTES, 'UTF-8'),
-            'category_confidence' => $categoryConfidence,
-            'description' => htmlspecialchars($description, ENT_QUOTES, 'UTF-8'),
+            'id' => $documentId,
+            'document_name' => $documentName,
+            'filename' => $uniqueFilename,
+            'original_filename' => $originalFilename,
+            'file_path' => 'uploads/' . $uniqueFilename,
+            'file_size' => $fileSize,
+            'category' => $category,
+            'description' => $description,
             'upload_date' => date('Y-m-d H:i:s'),
             'status' => 'Active',
-            'ocr_text' => $uploadResult['extracted_text'] ?? '',
-            'award_type' => htmlspecialchars($awardType, ENT_QUOTES, 'UTF-8'),
-            'universal_file_id' => $uploadResult['file_id'],
-            'linked_pages' => $uploadResult['linked_pages'] ?? []
+            'ocr_text' => '',
+            'award_type' => $awardType,
+            'universal_file_id' => $documentId
         ];
-        
-        // Auto-analyze the uploaded document for award criteria
-        $content = $documentName . ' ' . $filename . ' ' . $category . ' ' . ($description ?? '');
-        $contentType = ($category === 'MOUs & MOAs') ? 'mou' : 'document';
-        
-        // Call auto-analysis API
-        $analysisData = [
-            'action' => 'auto_analyze_upload',
-            'content' => $content,
-            'content_type' => $contentType
-        ];
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost/LILAC/api/checklist.php');
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($analysisData));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 second timeout
-        $analysisResponse = curl_exec($ch);
-        curl_close($ch);
         
         docs_respond(true, [
-            'message' => 'Document added', 
-            'document' => $record,
-            'auto_analysis' => $analysisResponse ? json_decode($analysisResponse, true) : null
+            'message' => 'Document uploaded successfully', 
+            'document' => $record
         ]);
     }
 
@@ -154,108 +188,76 @@ try {
         docs_respond(true, ['message' => 'Counters recalculated', 'counters' => $counters]);
     }
 
+    // Delete document
     if ($action === 'delete') {
-        $id = $_POST['id'] ?? '';
-        if (empty($id)) { docs_respond(false, ['message' => 'Invalid id']); }
+        $id = $_POST['id'] ?? $_GET['id'] ?? null;
+        if (!$id) {
+            docs_respond(false, ['message' => 'Document ID required']);
+        }
         
-        try {
-            // Delete from documents table
-            $sql = "DELETE FROM unified_documents WHERE id = :id";
-            $stmt = $pdo->prepare($sql);
-            $stmt->bindValue(':id', $id);
-            $result = $stmt->execute();
-            
-            if ($stmt->rowCount() > 0) {
-                docs_respond(true, ['message' => 'Document deleted']);
-            } else {
-                docs_respond(false, ['message' => 'Document not found']);
-            }
-        } catch (PDOException $e) {
-            error_log("Database error in delete: " . $e->getMessage());
-            docs_respond(false, ['message' => 'Database error: ' . $e->getMessage()]);
+        // First, get the file information before deleting
+        $stmt = $pdo->prepare("SELECT filename, file_path FROM enhanced_documents WHERE id = ?");
+        $stmt->execute([$id]);
+        $fileInfo = $stmt->fetch();
+        
+        if (!$fileInfo) {
+            docs_respond(false, ['message' => 'Document not found']);
         }
+        
+        // Delete from database
+        $stmt = $pdo->prepare("DELETE FROM enhanced_documents WHERE id = ?");
+        $stmt->execute([$id]);
+        
+        // Delete the actual file from the file system
+        $filePath = dirname(__DIR__) . '/' . $fileInfo['file_path'];
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+        
+        docs_respond(true, ['message' => 'Document permanently deleted']);
     }
 
+    // Get categories
     if ($action === 'get_categories') {
-        try {
-            $sql = "SELECT DISTINCT category FROM unified_documents";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute();
-            $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            docs_respond(true, ['categories' => $categories]);
-        } catch (Exception $e) {
-            error_log("Error in get_categories action: " . $e->getMessage());
-            docs_respond(false, ['message' => 'Error loading categories: ' . $e->getMessage()]);
-        }
+        $sql = "SELECT DISTINCT category FROM enhanced_documents";
+        $stmt = $pdo->query($sql);
+        $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        docs_respond(true, ['categories' => $categories]);
     }
 
-    if ($action === 'get_stats' || $action === 'get_stats_by_category') {
-        try {
-            $category = $_GET['category'] ?? '';
-            $sql = "SELECT COUNT(*) as total, SUM(file_size) as total_size FROM unified_documents";
-            $params = [];
-            
-            if ($action === 'get_stats_by_category' && $category !== '') {
-                $sql .= " WHERE category = :category";
-                $params[':category'] = $category;
-            }
-            
-            $stmt = $pdo->prepare($sql);
-            foreach ($params as $key => $value) {
-                $stmt->bindValue($key, $value);
-            }
-            $stmt->execute();
-            $stats = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            // Get recent counts
-            $recentSql = "SELECT COUNT(*) FROM unified_documents WHERE upload_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
-            $monthSql = "SELECT COUNT(*) FROM unified_documents WHERE upload_date >= DATE_FORMAT(NOW(), '%Y-%m-01')";
-            
-            if ($action === 'get_stats_by_category' && $category !== '') {
-                $recentSql .= " AND category = :category";
-                $monthSql .= " AND category = :category";
-            }
-            
-            $recentStmt = $pdo->prepare($recentSql);
-            $monthStmt = $pdo->prepare($monthSql);
-            
-            foreach ($params as $key => $value) {
-                $recentStmt->bindValue($key, $value);
-                $monthStmt->bindValue($key, $value);
-            }
-            
-            $recentStmt->execute();
-            $monthStmt->execute();
-            
-            $recentCount = $recentStmt->fetchColumn();
-            $monthCount = $monthStmt->fetchColumn();
-            
-            docs_respond(true, ['stats' => [
-                'total_documents' => intval($stats['total']),
+    // Get stats
+    if ($action === 'get_stats') {
+        $sql = "SELECT COUNT(*) as total, SUM(file_size) as total_size FROM enhanced_documents";
+        $stmt = $pdo->query($sql);
+        $stats = $stmt->fetch();
+        
+        // Get recent uploads (last 30 days)
+        $recentSql = "SELECT COUNT(*) FROM enhanced_documents WHERE upload_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+        $recentStmt = $pdo->query($recentSql);
+        $recentCount = $recentStmt->fetchColumn();
+        
+        // Get this month's uploads
+        $monthSql = "SELECT COUNT(*) FROM enhanced_documents WHERE upload_date >= DATE_FORMAT(NOW(), '%Y-%m-01')";
+        $monthStmt = $pdo->query($monthSql);
+        $monthCount = $monthStmt->fetchColumn();
+        
+        docs_respond(true, [
+            'stats' => [
                 'total' => intval($stats['total']),
                 'recent' => intval($recentCount),
-                'month' => intval($monthCount),
-                'total_size' => intval($stats['total_size'] ?? 0),
-            ]]);
-        } catch (Exception $e) {
-            error_log("Error in get_stats action: " . $e->getMessage());
-            docs_respond(false, ['message' => 'Error loading stats: ' . $e->getMessage()]);
-        }
-    }
-
-    if ($action === 'send_email_share') {
-        // Minimal stub: log to email_log.txt
-        $logFile = $rootDir . DIRECTORY_SEPARATOR . 'email_log.txt';
-        $to = $_POST['email'] ?? '';
-        $docs = $_POST['documents'] ?? '[]';
-        $entry = date('c') . " | To: {$to} | Docs: {$docs}\n";
-        file_put_contents($logFile, $entry, FILE_APPEND);
-        docs_respond(true, ['message' => 'Share logged']);
+                'total_size' => intval($stats['total_size']),
+                'month_uploads' => intval($monthCount)
+            ]
+        ]);
     }
 
     // get_all with pagination, search, category, sorting
     if ($action === 'get_all' || $action === 'get_by_category') {
         error_log("Processing get_all action");
+        
+        // Add debugging
+        error_log("Database connection successful");
+        
         $page = max(1, intval($_GET['page'] ?? 1));
         $limit = max(1, min(100, intval($_GET['limit'] ?? 10)));
         $search = trim((string)($_GET['search'] ?? ''));
@@ -263,11 +265,11 @@ try {
         $sortBy = $_GET['sort_by'] ?? 'upload_date';
         $sortOrder = strtoupper($_GET['sort_order'] ?? 'DESC');
 
-        // Build SQL query - use documents table from lilac_system database
-        $sql = "SELECT * FROM unified_documents WHERE 1=1";
+        // Build SQL query - use enhanced_documents table from lilac_system database
+        $sql = "SELECT * FROM enhanced_documents WHERE 1=1";
         $params = [];
         
-        // Add category filter - use category field from documents table
+        // Add category filter - use category field from enhanced_documents table
         if ($category !== '') {
             $sql .= " AND category = :category";
             $params[':category'] = $category;
@@ -294,20 +296,27 @@ try {
         $params[':offset'] = $offset;
 
         try {
+            error_log("Executing SQL: " . $sql);
+            error_log("Parameters: " . json_encode($params));
+            
             $stmt = $pdo->prepare($sql);
             foreach ($params as $key => $value) {
-                $stmt->bindValue($key, $value);
+                $stmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
             }
             $stmt->execute();
             $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
+            error_log("Found " . count($docs) . " documents");
+
             // Get total count for pagination
-            $countSql = "SELECT COUNT(*) FROM unified_documents WHERE 1=1";
+            $countSql = "SELECT COUNT(*) FROM enhanced_documents WHERE 1=1";
             $countParams = [];
+            
             if ($category !== '') {
                 $countSql .= " AND category = :category";
                 $countParams[':category'] = $category;
             }
+            
             if ($search !== '') {
                 $countSql .= " AND (filename LIKE :search OR document_name LIKE :search OR description LIKE :search)";
                 $countParams[':search'] = '%' . $search . '%';
@@ -315,7 +324,7 @@ try {
             
             $countStmt = $pdo->prepare($countSql);
             foreach ($countParams as $key => $value) {
-                $countStmt->bindValue($key, $value);
+                $countStmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
             }
             $countStmt->execute();
             $total = $countStmt->fetchColumn();
@@ -328,13 +337,13 @@ try {
                     'document_name' => $doc['document_name'],
                     'filename' => $doc['filename'],
                     'original_filename' => $doc['filename'], // Use filename as original_filename
-                    'file_path' => 'uploads/' . $doc['filename'], // Construct file path
+                    'file_path' => $doc['file_path'], // Use the stored file_path
                     'file_size' => intval($doc['file_size'] ?? 0),
                     'category' => $doc['category'],
                     'description' => $doc['description'] ?? '',
                     'upload_date' => $doc['upload_date'],
                     'status' => 'Active',
-                    'ocr_text' => '',
+                    'ocr_text' => $doc['extracted_content'] ?? '',
                     'award_type' => '',
                     'universal_file_id' => $doc['id']
                 ];

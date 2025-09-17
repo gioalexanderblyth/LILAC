@@ -4,12 +4,21 @@
  * Handles all event operations for the centralized system
  */
 
-require_once 'central_events_system.php';
-require_once 'config/database.php';
-require_once 'universal_upload_handler.php';
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Set JSON header
 header('Content-Type: application/json');
+
+// Handle any PHP errors
+set_error_handler(function($severity, $message, $file, $line) {
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+require_once 'central_events_system.php';
+require_once '../config/database.php';
+require_once 'universal_upload_handler.php';
 
 // Get action from request
 $action = $_GET['action'] ?? $_POST['action'] ?? '';

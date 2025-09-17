@@ -407,6 +407,7 @@ class DocumentsManager {
             if (result.success) {
                 this.showNotification('Document deleted successfully', 'success');
                 this.loadDocuments();
+                this.loadStats(); // Add this line to refresh stats after deletion
             } else {
                 throw new Error(result.error || 'Delete failed');
             }
@@ -516,6 +517,61 @@ class DocumentsManager {
         } catch (error) {
             console.error('Failed to load recent uploads:', error);
             this.recentUploads = [];
+        }
+    }
+
+    /**
+     * Load stats from API
+     */
+    async loadStats() {
+        try {
+            const response = await fetch('api/documents.php?action=get_stats');
+            const data = await response.json();
+            
+            if (data.success && data.stats) {
+                this.updateStats(data.stats);
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+    
+    /**
+     * Update stats display
+     */
+    updateStats(stats) {
+        const totalElement = document.getElementById('total-documents');
+        const recentElement = document.getElementById('recent-documents');
+        const typesElement = document.getElementById('document-types');
+        
+        if (totalElement) {
+            totalElement.textContent = stats.total || 0;
+        }
+        if (recentElement) {
+            recentElement.textContent = stats.recent || 0;
+        }
+        if (typesElement) {
+            // Load categories count
+            this.loadCategoriesCount();
+        }
+    }
+    
+    /**
+     * Load categories count
+     */
+    async loadCategoriesCount() {
+        try {
+            const response = await fetch('api/documents.php?action=get_categories');
+            const data = await response.json();
+            
+            if (data.success) {
+                const typesElement = document.getElementById('document-types');
+                if (typesElement) {
+                    typesElement.textContent = data.categories.length;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading categories:', error);
         }
     }
 }

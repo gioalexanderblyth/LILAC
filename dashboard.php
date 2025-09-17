@@ -173,6 +173,8 @@ ob_clean();
             function handleLogout() {
                 if (confirm('Are you sure you want to logout?')) {
                     window.lilacNotifications.success('Logged out successfully');
+                    // Redirect to index.html immediately
+                    window.location.href = 'http://localhost/LILAC/index.html';
                 }
             }
             

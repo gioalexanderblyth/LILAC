@@ -16,6 +16,31 @@ class FileProcessor {
         if (!is_dir($this->uploadsDir)) {
             mkdir($this->uploadsDir, 0755, true);
         }
+        
+        // Create file_processing_log table if it doesn't exist
+        $this->createFileProcessingLogTable();
+    }
+    
+    /**
+     * Create file_processing_log table if it doesn't exist
+     */
+    private function createFileProcessingLogTable() {
+        $sql = "CREATE TABLE IF NOT EXISTS file_processing_log (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            file_id INT NULL,
+            file_type VARCHAR(50) NOT NULL,
+            processing_status ENUM('processing', 'completed', 'failed') DEFAULT 'processing',
+            extracted_content_length INT NULL,
+            processing_time_ms INT NULL,
+            error_message TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP NULL,
+            INDEX idx_status (processing_status),
+            INDEX idx_file_type (file_type),
+            INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+        
+        $this->pdo->exec($sql);
     }
     
     /**
@@ -301,8 +326,8 @@ class FileProcessor {
     private function storeDocument($file, $filePath, $extractedContent, $additionalData) {
         $stmt = $this->pdo->prepare("
             INSERT INTO enhanced_documents 
-            (document_name, filename, file_path, file_size, file_type, description, extracted_content) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (document_name, filename, file_path, file_size, file_type, category, description, extracted_content) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
         $stmt->execute([
@@ -311,6 +336,7 @@ class FileProcessor {
             $filePath,
             $file['size'],
             mime_content_type($filePath),
+            $additionalData['category'] ?? 'Awards', // Add category field
             $additionalData['description'] ?? '',
             $extractedContent
         ]);

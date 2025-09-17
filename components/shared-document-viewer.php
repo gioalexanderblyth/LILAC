@@ -16,13 +16,6 @@
             <h3 id="document-viewer-title" class="text-lg font-semibold text-gray-900 dark:text-white">
                 Document Viewer
             </h3>
-            <button 
-                data-modal-close="document-viewer-overlay"
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold"
-                aria-label="Close document viewer"
-            >
-                ×
-            </button>
         </div>
         
         <!-- Modal Body -->
@@ -97,7 +90,7 @@
                 </button>
             </div>
             <button 
-                data-modal-close="document-viewer-overlay"
+                onclick="closeModal('document-viewer-overlay')"
                 class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
             >
                 Close
@@ -160,9 +153,11 @@ class DocumentViewer {
      * @param {string} documentPath The path to the document
      * @param {string} documentType The type of document (pdf, image, text)
      * @param {string} documentTitle The title of the document
+     * @param {string} originalFilename The original filename for downloads
      */
-    showDocument(documentPath, documentType, documentTitle = 'Document') {
+    showDocument(documentPath, documentType, documentTitle = 'Document', originalFilename = null) {
         this.currentDocument = documentPath;
+        this.currentDocumentOriginalName = originalFilename;
         
         // Update modal title
         const titleElement = document.getElementById('document-viewer-title');
@@ -475,7 +470,9 @@ class DocumentViewer {
         if (this.currentDocument) {
             const link = document.createElement('a');
             link.href = this.currentDocument;
-            link.download = this.currentDocument.split('/').pop();
+            // Use original filename if available, otherwise use the stored filename
+            const fileName = this.currentDocumentOriginalName || this.currentDocument.split('/').pop();
+            link.download = fileName;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -551,9 +548,9 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Global function to show document (for backward compatibility)
-function showDocumentViewer(documentPath, documentType, documentTitle) {
+function showDocumentViewer(documentPath, documentType, documentTitle, originalFilename) {
     if (window.documentViewer) {
-        window.documentViewer.showDocument(documentPath, documentType, documentTitle);
+        window.documentViewer.showDocument(documentPath, documentType, documentTitle, originalFilename);
     }
 }
 </script>

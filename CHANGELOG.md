@@ -1,5 +1,113 @@
 # LILAC System - Changelog
 
+## Version 1.1.22 - Complete File Naming and MOU Sync System Overhaul (2024-12-19)
+
+### 🔧 Complete File Naming System Overhaul
+
+#### Problem Resolved
+- **Issue**: Files uploaded through Documents page were renamed to generic format (e.g., `doc_68ca97cfd21da.pdf`) and this generic name was retained during downloads
+- **Root Cause**: MOU sync system was not preserving original filenames when syncing from Documents to MOU table
+- **Impact**: Users lost original filenames when downloading files, making file management difficult
+
+#### Technical Solution
+- **Enhanced MOU Sync Manager**: Updated `MouSyncManager` to preserve original filenames during sync process
+- **Database Schema Updates**: Added `original_filename` column to `mous` table
+- **API Response Updates**: Modified MOU API to include `original_filename` in responses
+- **Frontend Integration**: Updated JavaScript to use original filenames for display and downloads
+
+#### Technical Implementation
+- **Database Schema**: Added `ALTER TABLE mous ADD COLUMN original_filename VARCHAR(255) DEFAULT ''`
+- **MOU Sync Manager**: Updated `syncUpload()` method to retrieve and store original filenames
+- **API Updates**: Modified `api/mous.php` to include `original_filename` in data transformation
+- **JavaScript Updates**: Updated `viewDocument()` function to pass original filenames to document viewer
+- **Document Viewer**: Enhanced to use original filenames for download naming
+
+#### Files Modified
+- `classes/MouSyncManager.php` - Enhanced sync process to preserve original filenames
+- `api/mous.php` - Added original_filename column and updated data responses
+- `js/mou-moa-management.js` - Updated viewDocument and download functions
+- `components/shared-document-viewer.php` - Enhanced to handle original filenames
+
+#### Result
+File naming system now provides:
+- ✅ **Original Filename Preservation** → Files maintain their original names throughout the system
+- ✅ **Proper Download Names** → Downloads use original filenames instead of generic format
+- ✅ **Seamless Sync Process** → Documents uploaded through Documents page properly sync to MOU table
+- ✅ **Consistent User Experience** → Original filenames displayed and used across all interfaces
+
+---
+
+## Version 1.1.21 - MOU Action Buttons Enhancement and Modal Close Button Improvements (2024-12-19)
+
+### 🔧 MOU Action Buttons Enhancement
+
+#### Problem Resolved
+- **Issue**: MOU action buttons displayed as simple text links instead of proper styled buttons
+- **Root Cause**: Buttons lacked proper styling and clear text labels
+- **Impact**: Poor user experience with unclear action buttons
+
+#### Technical Solution
+- **Enhanced Button Styling**: Converted text links to proper styled buttons with backgrounds
+- **Improved Text Labels**: Changed "View" to "View Details" for better clarity
+- **Better Visual Design**: Added proper padding, rounded corners, and shadow effects
+- **Consistent Styling**: Applied uniform styling across all action buttons
+
+#### Technical Implementation
+- **Button Styling**: Added `px-4 py-2` padding, `font-medium` weight, and `shadow-sm` effects
+- **Color Scheme**: Blue background for View Details, red background for Delete
+- **Hover Effects**: Enhanced hover states with darker background colors
+- **Responsive Design**: Maintained proper alignment and spacing
+
+#### Files Modified
+- `js/mou-moa-management.js` - Enhanced action button styling and text labels
+
+#### Result
+MOU action buttons now provide:
+- ✅ **Clear Text Labels** → "View Details" and "Delete" with proper styling
+- ✅ **Professional Appearance** → Styled buttons with backgrounds and shadows
+- ✅ **Better User Experience** → Clear visual distinction between actions
+- ✅ **Consistent Design** → Uniform styling across all buttons
+
+---
+
+### 🔧 Modal Close Button Improvements
+
+#### Problem Resolved
+- **Issue**: Modal close buttons used × symbol and had inconsistent positioning
+- **Root Cause**: Multiple close buttons in different locations causing confusion
+- **Impact**: Inconsistent user experience across different modals
+
+#### Technical Solution
+- **Unified Close Button Text**: Changed all × symbols to "Close" text
+- **Consistent Positioning**: Moved close buttons to bottom of modals for consistency
+- **Improved Styling**: Applied consistent button styling across all modals
+- **Removed Duplicates**: Eliminated duplicate close buttons in document viewer
+
+#### Technical Implementation
+- **Shared Document Viewer**: Updated `components/shared-document-viewer.php` with bottom close button
+- **Page-Specific Modals**: Updated `documents.php`, `events_activities.php`, `templates.php`, `mou-moa.php`
+- **JavaScript Modals**: Updated `js/mou-moa-management.js` and `js/error-handler.js`
+- **Consistent Styling**: Applied uniform button styling across all close buttons
+
+#### Files Modified
+- `components/shared-document-viewer.php` - Unified close button styling and positioning
+- `documents.php` - Updated modal close buttons
+- `events_activities.php` - Updated modal close buttons
+- `templates.php` - Updated modal close buttons
+- `mou-moa.php` - Updated modal close buttons
+- `js/mou-moa-management.js` - Updated modal close buttons
+- `js/error-handler.js` - Updated notification close buttons
+- `js/modal-handlers.js` - Enhanced modal close functionality
+
+#### Result
+Modal close buttons now provide:
+- ✅ **Consistent Text** → All close buttons use "Close" text instead of × symbol
+- ✅ **Unified Positioning** → Close buttons positioned at bottom of modals
+- ✅ **Professional Styling** → Consistent button appearance across all modals
+- ✅ **Better UX** → No duplicate close buttons, clear and intuitive interface
+
+---
+
 ## Version 1.1.20 - Automatic MOU Sync System and Events Page Fixes (2024-12-19)
 
 ### 🔧 MOU Page Sync Issue Resolution

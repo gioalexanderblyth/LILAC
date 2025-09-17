@@ -381,7 +381,7 @@ class DocumentsManager {
         
         const link = document.createElement('a');
         link.href = doc.file_path || doc.document_path;
-        link.download = doc.filename || doc.document_name;
+        link.download = doc.original_filename || doc.filename || doc.document_name;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

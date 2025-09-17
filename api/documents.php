@@ -153,6 +153,7 @@ try {
         id INT AUTO_INCREMENT PRIMARY KEY,
         document_name VARCHAR(255) NOT NULL,
         filename VARCHAR(255) NOT NULL,
+        original_filename VARCHAR(255) NOT NULL,
         file_path VARCHAR(500) NOT NULL,
         file_size INT NOT NULL,
         file_type VARCHAR(100) NOT NULL,
@@ -262,10 +263,11 @@ try {
         }
         
         // Insert into database with extracted content
-        $stmt = $pdo->prepare("INSERT INTO enhanced_documents (document_name, filename, file_path, file_size, file_type, category, description, extracted_content) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO enhanced_documents (document_name, filename, original_filename, file_path, file_size, file_type, category, description, extracted_content) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $documentName,
             $uniqueFilename,
+            $originalFilename,
             $filePath,
             $fileSize,
             $fileType,

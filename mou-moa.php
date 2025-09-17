@@ -18,7 +18,8 @@ require_once 'classes/DateTimeUtility.php';
     <script src="js/awards-check.js"></script>
     <script src="js/lazy-loader.js"></script>
     <script src="js/mou-moa-config.js"></script>
-    <script src="js/mou-moa-management.js?v=<?php echo time(); ?>"></script>
+    <script src="js/mou-moa-management.js?v=<?php echo time() . rand(10000, 99999); ?>"></script>
+    <script src="js/modal-handlers.js"></script>
     
     <script>
         // Initialize MOU/MOA system with enhanced functionality
@@ -288,7 +289,7 @@ require_once 'classes/DateTimeUtility.php';
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="documents-table-body" class="bg-white divide-y divide-gray-200">
@@ -335,10 +336,8 @@ require_once 'classes/DateTimeUtility.php';
         <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full mx-4">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">Delete MOU/MOA</h3>
-                <button onclick="closeDeleteModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
+                <button onclick="closeDeleteModal()" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                    Close
                 </button>
             </div>
             <div class="mb-4">
@@ -377,10 +376,8 @@ require_once 'classes/DateTimeUtility.php';
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Upload MOU/MOA</h3>
-                        <button id="close-upload-modal" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
+                        <button id="close-upload-modal" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                            Close
                         </button>
                     </div>
                     

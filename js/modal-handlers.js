@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeModalHandlers() {
     // Document viewer close buttons
-    const documentViewerCloseButtons = document.querySelectorAll('[data-modal-close="document-viewer"]');
+    const documentViewerCloseButtons = document.querySelectorAll('[data-modal-close="document-viewer"], [data-modal-close="document-viewer-overlay"]');
     documentViewerCloseButtons.forEach(button => {
         button.addEventListener('click', function() {
             const overlay = document.getElementById('document-viewer-overlay');

@@ -1141,10 +1141,8 @@ require_once 'classes/DateTimeUtility.php';
                 <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full mx-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Delete Selected Documents</h3>
-                        <button type="button" onclick="closeBulkDeleteModal()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
+                        <button type="button" onclick="closeBulkDeleteModal()" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                            Close
                         </button>
                     </div>
                     <div class="mb-4">
@@ -1261,10 +1259,8 @@ require_once 'classes/DateTimeUtility.php';
                     <!-- Header -->
                     <div class="flex items-center justify-between p-6 border-b border-gray-200">
                         <h2 class="text-xl font-semibold text-gray-900">Create New Document</h2>
-                        <button type="button" onclick="closeDocumentEditor()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
+                        <button type="button" onclick="closeDocumentEditor()" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                            Close
                         </button>
                     </div>
                     
@@ -1732,10 +1728,8 @@ require_once 'classes/DateTimeUtility.php';
                     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col">
                     <div class="flex items-center justify-between px-6 py-4 border-b">
                         <h3 class="text-lg font-semibold text-gray-900">File Upload</h3>
-                            <button type="button" onclick="document.getElementById('upload-modal').remove()" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
+                            <button type="button" onclick="document.getElementById('upload-modal').remove()" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                                Close
                         </button>
                     </div>
 
@@ -2749,7 +2743,7 @@ require_once 'classes/DateTimeUtility.php';
                             if (response.ok) {
                                 // File exists, proceed with viewing
                     const documentType = getDocumentTypeFromExtension(ext);
-                    window.documentViewer.showDocument(filePath, documentType, title);
+                    window.documentViewer.showDocument(filePath, documentType, title, doc.original_filename);
                             } else {
                                 // File doesn't exist, show error and offer to remove from database
                                 showNotification(`File not found: ${title}. The file may have been deleted.`, 'error');
@@ -2776,6 +2770,7 @@ require_once 'classes/DateTimeUtility.php';
         // Modal-based document viewer
         async function showDocumentViewer(doc) {
             const title = doc.document_name || doc.title || 'Untitled Document';
+            const originalFilename = doc.original_filename || doc.document_name || doc.title || 'Untitled Document';
             let filePath = doc.file_path || doc.filename || doc.filename;
             const ext = getFileExtension(filePath || '');
 
@@ -2885,7 +2880,7 @@ require_once 'classes/DateTimeUtility.php';
         function downloadDocument(docId) {
             const doc = currentDocuments.find(d => d.id == docId);
             if (doc) {
-                const fileName = doc.document_name || doc.title || 'Untitled Document';
+                const fileName = doc.original_filename || doc.document_name || doc.title || 'Untitled Document';
                 // Ensure proper file path with uploads directory
                 let filePath = doc.file_path || doc.filename || doc.filename;
                 
@@ -2944,10 +2939,8 @@ require_once 'classes/DateTimeUtility.php';
                 <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full mx-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Download Error</h3>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
+                        <button onclick="this.closest('.fixed').remove()" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                            Close
                         </button>
                     </div>
                     <div class="space-y-4">
@@ -3080,10 +3073,8 @@ require_once 'classes/DateTimeUtility.php';
                 <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full mx-4" onclick="event.stopPropagation()">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Share Document</h3>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
+                        <button onclick="this.closest('.fixed').remove()" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                            Close
                         </button>
                     </div>
                     <div class="space-y-4">
@@ -3490,10 +3481,8 @@ require_once 'classes/DateTimeUtility.php';
                 <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full mx-4" onclick="event.stopPropagation()">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Share Documents</h3>
-                        <button id="close-share-modal" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
+                        <button id="close-share-modal" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                            Close
                         </button>
                     </div>
                     <div class="space-y-4">

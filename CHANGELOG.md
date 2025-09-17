@@ -1,6 +1,265 @@
 # LILAC System - Changelog
 
-## Version 1.1.20 - Events Page Hamburger Button Styling and Functionality Fix (2024-12-19)
+## Version 1.1.20 - Automatic MOU Sync System and Events Page Fixes (2024-12-19)
+
+### 🔧 MOU Page Sync Issue Resolution
+
+#### Problem Resolved
+- **Issue**: KUMA-MOU document uploaded to docs page but not appearing on MOU page
+- **Root Cause**: Docs page and MOU page use separate database tables (`enhanced_documents` vs `mous`)
+- **Impact**: Documents uploaded to docs page with "MOUs & MOAs" category were not visible on MOU page
+
+#### Technical Analysis
+- **Docs Page**: Uses `enhanced_documents` table for document storage
+- **MOU Page**: Uses `mous` table for MOU/MOA management
+- **KUMA-MOU Location**: Found in `enhanced_documents` table (ID: 25) with category "MOUs & MOAs"
+- **Missing Sync**: No automatic synchronization between the two systems
+
+#### Technical Fixes Applied
+- **Document Transfer**: Created script to transfer KUMA-MOU from `enhanced_documents` to `mous` table
+- **Data Mapping**: Properly mapped document fields to MOU table structure
+- **Date Handling**: Used upload date as signed date for transferred documents
+- **Verification**: Confirmed transfer success and API response updates
+
+#### Integration Details
+- **Database Transfer**: KUMA-MOU successfully transferred to `mous` table (ID: 8)
+- **API Response**: MOU API now returns KUMA-MOU document in response
+- **File Preservation**: Original file path and metadata maintained during transfer
+- **Status Update**: Document marked as "active" status in MOU system
+
+#### Files Modified
+- `transfer_kuma_mou.php` - Created and executed transfer script (temporary file, cleaned up)
+
+#### Result
+KUMA-MOU document now appears on the MOU page. The document is properly categorized and accessible through the MOU management system. Future documents uploaded to docs page with "MOUs & MOAs" category should be manually transferred to the MOU system or a sync mechanism should be implemented.
+
+---
+
+### 🔧 MOU Page Deletion Sync Issue Resolution
+
+#### Problem Resolved
+- **Issue**: KUMA-MOU deleted from docs page but still appearing on MOU page
+- **Root Cause**: Deletion from docs page (enhanced_documents table) doesn't automatically sync with MOU page (mous table)
+- **Impact**: Inconsistent data between docs page and MOU page after deletion
+
+#### Technical Analysis
+- **Docs Page Deletion**: KUMA-MOU removed from enhanced_documents table
+- **MOU Page Persistence**: KUMA-MOU still existed in mous table (ID: 8)
+- **Sync Gap**: No automatic deletion synchronization between the two systems
+- **Data Inconsistency**: Same document showing different states on different pages
+
+#### Technical Fixes Applied
+- **Deletion Verification**: Confirmed KUMA-MOU removal from enhanced_documents table
+- **MOU Table Cleanup**: Manually deleted KUMA-MOU (ID: 8) from mous table
+- **API Verification**: Confirmed MOU API no longer returns KUMA-MOU document
+- **Data Consistency**: Both systems now show consistent state (KUMA-MOU deleted)
+
+#### Integration Details
+- **Database Cleanup**: Removed KUMA-MOU record from mous table
+- **API Response Update**: MOU API now only returns Griffith University MOU
+- **System Sync**: Docs page and MOU page now show consistent deletion state
+- **File Preservation**: Original file remains in uploads directory for reference
+
+#### Files Modified
+- `delete_kuma_mou.php` - Created and executed deletion sync script (temporary file, cleaned up)
+
+#### Result
+KUMA-MOU document no longer appears on either the docs page or MOU page. Both systems are now synchronized and show consistent deletion state. Future deletions from docs page will require manual sync with MOU page or implementation of automatic synchronization mechanism.
+
+---
+
+### 🔧 Automatic MOU Sync System Implementation
+
+#### Problem Resolved
+- **Issue**: Manual synchronization required between docs page and MOU page for uploads and deletions
+- **Root Cause**: No automatic synchronization between `enhanced_documents` and `mous` tables
+- **Impact**: Inconsistent data between docs page and MOU page, requiring manual intervention
+
+#### Technical Solution
+- **MouSyncManager Class**: Created comprehensive sync management system
+- **Automatic Upload Sync**: Documents uploaded to docs page with MOU categories automatically sync to MOU page
+- **Automatic Deletion Sync**: Documents deleted from docs page automatically remove from MOU page
+- **Smart Category Detection**: Automatically detects MOU-related categories and documents
+
+#### Technical Implementation
+- **MouSyncManager.php**: New class handling all sync operations
+- **Upload Sync**: `syncUpload()` method automatically creates MOU entries
+- **Deletion Sync**: `syncDeletion()` method automatically removes MOU entries
+- **Category Detection**: Smart detection of MOU/MOA/Agreement categories
+- **API Integration**: Integrated into `api/documents.php` for seamless operation
+
+#### Integration Details
+- **Upload Process**: Sync triggered after successful document upload to enhanced_documents
+- **Deletion Process**: Sync triggered before document deletion from enhanced_documents
+- **Response Enhancement**: API responses include sync status information
+- **Error Handling**: Comprehensive error handling and logging for sync operations
+- **Data Preservation**: All metadata preserved during sync operations
+
+#### Files Modified
+- `classes/MouSyncManager.php` - New sync management class
+- `api/documents.php` - Integrated sync functionality into upload and deletion processes
+
+#### Result
+Automatic synchronization now works seamlessly:
+- ✅ **Upload MOU to docs page** → Automatically appears on MOU page
+- ✅ **Delete MOU from docs page** → Automatically removed from MOU page
+- ✅ **No manual intervention required** → Fully automated sync system
+- ✅ **Consistent data** → Both systems always show the same state
+- ✅ **Smart detection** → Only MOU-related documents are synced
+
+---
+
+### 🔧 MOU Page Delete Modal Enhancement
+
+#### Problem Resolved
+- **Issue**: Delete modal on MOU page didn't show file attachment information or view button
+- **Root Cause**: Delete modal only showed basic confirmation without file details
+- **Impact**: Users couldn't view attached files before deleting MOU documents
+
+#### Technical Solution
+- **Enhanced Delete Modal**: Added file attachment information display
+- **View Button Integration**: Added view button when file is attached
+- **Smart Display Logic**: Only shows file info when file is actually attached
+- **Seamless Integration**: Uses existing document viewer system
+
+#### Technical Implementation
+- **Modal Enhancement**: Added file info section with filename display
+- **Conditional Display**: Shows/hides file info based on file attachment status
+- **View Functionality**: Integrated with existing `viewDocument()` method
+- **Data Management**: Enhanced document data storage for delete operations
+
+#### Integration Details
+- **HTML Structure**: Added file info section to delete modal
+- **JavaScript Logic**: Enhanced `deleteDocument()` method to show file info
+- **View Integration**: Added `viewDocumentFromDeleteModal()` function
+- **Modal Management**: Improved modal state management with document data
+
+#### Files Modified
+- `mou-moa.php` - Enhanced delete modal HTML structure
+- `js/mou-moa-bundle.js` - Added file info display and view functionality
+
+#### Result
+Enhanced delete modal now provides:
+- ✅ **File Information** → Shows attached filename when available
+- ✅ **View Button** → Allows viewing file before deletion
+- ✅ **Smart Display** → Only shows file info when file is attached
+- ✅ **Seamless Experience** → Integrates with existing document viewer
+- ✅ **Better UX** → Users can review files before permanent deletion
+
+---
+
+### 🔧 MOU Delete Modal Browser Confirmation Fix
+
+#### Problem Resolved
+- **Issue**: MOU delete modal was using browser confirmation instead of custom modal
+- **Root Cause**: MOU page was loading `js/mou-moa-management.js` which had old browser confirmation code
+- **Impact**: Enhanced delete modal with file view functionality was not being used
+
+#### Technical Solution
+- **Updated Correct JavaScript File**: Fixed `js/mou-moa-management.js` (the file actually loaded by MOU page)
+- **Replaced Browser Confirmation**: Removed `confirm()` calls and implemented custom modal logic
+- **Added Modal Integration**: Integrated with enhanced delete modal HTML structure
+- **Added Global Functions**: Added global functions for modal interactions
+
+#### Technical Implementation
+- **Delete Method Enhancement**: Updated `deleteDocument()` method to use custom modal
+- **Modal State Management**: Added document data storage for delete operations
+- **View Integration**: Added `viewDocumentFromDeleteModal()` function
+- **Global Function Support**: Added global functions for HTML onclick handlers
+
+#### Integration Details
+- **Modal Detection**: Checks for `delete-mou-modal` element existence
+- **File Info Display**: Shows/hides file information based on attachment status
+- **Fallback Support**: Maintains browser confirmation as fallback if modal not found
+- **Seamless Integration**: Uses existing document viewer and notification systems
+
+#### Files Modified
+- `js/mou-moa-management.js` - Updated delete functionality to use custom modal
+
+#### Result
+MOU delete functionality now properly uses:
+- ✅ **Custom Modal** → Enhanced delete modal with file information
+- ✅ **View Button** → File viewing capability before deletion
+- ✅ **Smart Display** → File info only shown when file is attached
+- ✅ **Proper Integration** → Uses correct JavaScript file loaded by MOU page
+- ✅ **Fallback Support** → Browser confirmation as backup if modal fails
+
+---
+
+### 🔧 MOU Delete Button Reference Fix
+
+#### Problem Resolved
+- **Issue**: Delete button still using browser confirmation despite modal implementation
+- **Root Cause**: Delete button onclick handlers were calling `mouMoaManager.deleteDocument()` but manager was initialized as `window.mouMoaManager`
+- **Impact**: Enhanced delete modal was not being triggered, falling back to browser confirmation
+
+#### Technical Solution
+- **Fixed Button References**: Updated all onclick handlers to use `window.mouMoaManager` prefix
+- **Consistent Naming**: Ensured all button calls reference the correct manager instance
+- **Global Scope Access**: Made sure all button handlers can access the manager instance
+
+#### Technical Implementation
+- **Button Handler Updates**: Changed `mouMoaManager.deleteDocument()` to `window.mouMoaManager.deleteDocument()`
+- **Consistent References**: Updated all button onclick handlers (View, Download, Delete)
+- **Global Function Access**: Ensured proper scope access for all manager methods
+
+#### Integration Details
+- **Manager Initialization**: MOU page initializes manager as `window.mouMoaManager`
+- **Button References**: All buttons now correctly reference `window.mouMoaManager`
+- **Modal Integration**: Delete buttons now properly trigger enhanced delete modal
+- **Function Calls**: All manager methods accessible from HTML onclick handlers
+
+#### Files Modified
+- `js/mou-moa-management.js` - Fixed button onclick handler references
+
+#### Result
+MOU delete buttons now properly trigger:
+- ✅ **Enhanced Delete Modal** → Custom modal with file information
+- ✅ **View Button** → File viewing capability before deletion
+- ✅ **No Browser Confirmation** → Uses custom modal instead of browser popup
+- ✅ **Proper Integration** → All buttons correctly reference manager instance
+- ✅ **Consistent Behavior** → All action buttons work properly
+
+---
+
+### 🔧 MOU View Button File Attachment Fix
+
+#### Problem Resolved
+- **Issue**: View button on MOU page not opening attached files, only showing details modal
+- **Root Cause**: `viewDocument()` function was calling `showMouDetailsModal()` instead of using shared document viewer for attached files
+- **Impact**: Users couldn't view actual attached files, only see MOU details
+
+#### Technical Solution
+- **Enhanced View Function**: Updated `viewDocument()` to detect attached files and use appropriate viewer
+- **File Detection Logic**: Added logic to check for `file_name` and `file_path` fields
+- **Document Viewer Integration**: Integrated with shared document viewer for file viewing
+- **Fallback Support**: Shows details modal only when no file is attached
+
+#### Technical Implementation
+- **Smart File Detection**: Checks if document has `file_name` and `file_path`
+- **Document Viewer Usage**: Uses `window.documentViewer.showDocument()` for attached files
+- **File Type Detection**: Added `getFileExtension()` and `getDocumentTypeFromExtension()` helper functions
+- **Path Handling**: Ensures proper file path formatting for document viewer
+
+#### Integration Details
+- **File Path Processing**: Handles various file path formats and ensures uploads directory prefix
+- **Document Type Mapping**: Maps file extensions to document types (PDF, Word, Image, etc.)
+- **Title Generation**: Uses institution/partner name as document title
+- **Error Handling**: Provides fallback to details modal when no file attached
+
+#### Files Modified
+- `js/mou-moa-management.js` - Enhanced viewDocument function with file attachment support
+
+#### Result
+MOU view button now properly handles:
+- ✅ **Attached Files** → Opens files in shared document viewer
+- ✅ **PDF Files** → Displays PDF documents properly
+- ✅ **Word Documents** → Shows Word documents correctly
+- ✅ **Images** → Displays image files appropriately
+- ✅ **No Files** → Falls back to details modal when no file attached
+- ✅ **File Type Detection** → Automatically detects and handles different file types
+
+---
 
 ### 🔧 Events Page Hamburger Button Debug and Resolution
 

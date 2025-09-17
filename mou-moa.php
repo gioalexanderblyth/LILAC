@@ -18,14 +18,20 @@ require_once 'classes/DateTimeUtility.php';
     <script src="js/awards-check.js"></script>
     <script src="js/lazy-loader.js"></script>
     <script src="js/mou-moa-config.js"></script>
-    <script src="js/mou-moa-management.js"></script>
+    <script src="js/mou-moa-management.js?v=<?php echo time(); ?>"></script>
     
     <script>
         // Initialize MOU/MOA system with enhanced functionality
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('MOU page DOM loaded');
+            console.log('MouMoaManager available:', typeof MouMoaManager !== 'undefined');
+            
             // Initialize MOU/MOA Manager
             if (typeof MouMoaManager !== 'undefined') {
                 window.mouMoaManager = new MouMoaManager();
+                console.log('MOU Manager initialized:', window.mouMoaManager);
+            } else {
+                console.log('MouMoaManager not available');
             }
             
             // Ensure LILAC notifications appear below navbar
@@ -338,6 +344,20 @@ require_once 'classes/DateTimeUtility.php';
             <div class="mb-4">
                 <p class="text-gray-700">Are you sure you want to delete this MOU/MOA?</p>
                 <p class="text-sm text-gray-500 mt-2">This action cannot be undone.</p>
+                
+                <!-- File attachment info and view button -->
+                <div id="delete-modal-file-info" class="mt-3 p-3 bg-gray-50 rounded-lg hidden">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900">Attached File:</p>
+                            <p id="delete-modal-filename" class="text-sm text-gray-600 truncate"></p>
+                        </div>
+                        <button id="delete-modal-view-btn" onclick="viewDocumentFromDeleteModal()" 
+                                class="ml-3 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
+                            View
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="flex gap-2">
                 <button onclick="confirmDeleteMou()" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">

@@ -8,6 +8,7 @@ ini_set('display_errors', 1);
 // Include universal upload handler and database config
 require_once 'universal_upload_handler.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../classes/MouSyncManager.php';
 
 // Paths
 $rootDir = dirname(__DIR__);
@@ -144,6 +145,9 @@ try {
     $database = new Database();
     $pdo = $database->getConnection();
     
+    // Initialize MOU Sync Manager
+    $mouSyncManager = new MouSyncManager($pdo);
+    
     // Ensure enhanced_documents table exists
     $pdo->exec("CREATE TABLE IF NOT EXISTS enhanced_documents (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -272,6 +276,19 @@ try {
         
         $documentId = $pdo->lastInsertId();
         
+        // Sync to MOU table if category is MOU-related
+        $syncResult = $mouSyncManager->syncUpload(
+            $documentId,
+            $documentName,
+            $uniqueFilename,
+            $filePath,
+            $fileSize,
+            $fileType,
+            $category,
+            $description,
+            $extractedContent
+        );
+        
         // Update award_readiness counters after successful upload
         updateAwardReadinessCounters($pdo);
         
@@ -294,7 +311,8 @@ try {
         
         docs_respond(true, [
             'message' => 'Document uploaded successfully', 
-            'document' => $record
+            'document' => $record,
+            'mou_sync' => $syncResult
         ]);
     }
 
@@ -316,13 +334,20 @@ try {
         }
         
         // First, get the file information before deleting
-        $stmt = $pdo->prepare("SELECT filename, file_path FROM enhanced_documents WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT document_name, filename, file_path, category FROM enhanced_documents WHERE id = ?");
         $stmt->execute([$id]);
         $fileInfo = $stmt->fetch();
         
         if (!$fileInfo) {
             docs_respond(false, ['message' => 'Document not found']);
         }
+        
+        // Sync deletion to MOU table if category is MOU-related
+        $syncResult = $mouSyncManager->syncDeletion(
+            $id,
+            $fileInfo['document_name'],
+            $fileInfo['filename']
+        );
         
         // Delete from database
         $stmt = $pdo->prepare("DELETE FROM enhanced_documents WHERE id = ?");
@@ -334,7 +359,10 @@ try {
             unlink($filePath);
         }
         
-        docs_respond(true, ['message' => 'Document permanently deleted']);
+        docs_respond(true, [
+            'message' => 'Document permanently deleted',
+            'mou_sync' => $syncResult
+        ]);
     }
 
     // Get categories

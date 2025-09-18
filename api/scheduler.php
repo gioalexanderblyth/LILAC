@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../classes/SchedulerManager.php';
 
 header('Content-Type: application/json');
@@ -8,7 +8,7 @@ $schedulerManager = new SchedulerManager();
 
 function api_respond($success, $data = [], $error = null) {
     $response = ['success' => $success, 'data' => $data];
-    if ($error) $response['error'] = $error;
+    if ($error) $response['message'] = $error;
     echo json_encode($response);
     exit;
 }
@@ -17,14 +17,22 @@ try {
     switch ($action) {
         case 'get_events':
             $result = $schedulerManager->loadAllEvents();
-            api_respond($result['success'], $result['data'], $result['error'] ?? null);
+            if ($result['success']) {
+                api_respond(true, $result['data']);
+            } else {
+                api_respond(false, [], $result['error'] ?? 'Unknown error');
+            }
             break;
             
         case 'get_events_for_date':
             $date = $_GET['date'] ?? '';
             if (empty($date)) api_respond(false, [], 'Date parameter is required');
             $result = $schedulerManager->getEventsForDate($date);
-            api_respond($result['success'], $result['data'], $result['error'] ?? null);
+            if ($result['success']) {
+                api_respond(true, $result['data']);
+            } else {
+                api_respond(false, [], $result['error'] ?? 'Unknown error');
+            }
             break;
             
         case 'get_event':
@@ -34,14 +42,18 @@ try {
             if ($result['success']) {
                 api_respond(true, $result['event']);
             } else {
-                api_respond(false, [], $result['error']);
+                api_respond(false, [], $result['error'] ?? 'Unknown error');
             }
             break;
             
         case 'get_upcoming_events':
             $limit = $_GET['limit'] ?? 5;
             $result = $schedulerManager->getUpcomingEvents($limit);
-            api_respond($result['success'], $result['data'], $result['error'] ?? null);
+            if ($result['success']) {
+                api_respond(true, $result['data']);
+            } else {
+                api_respond(false, [], $result['error'] ?? 'Unknown error');
+            }
             break;
             
         case 'create_event':
@@ -54,7 +66,11 @@ try {
                 'location' => $_POST['location'] ?? ''
             ];
             $result = $schedulerManager->createEvent($eventData);
-            api_respond($result['success'], $result, $result['error'] ?? null);
+            if ($result['success']) {
+                api_respond(true, $result);
+            } else {
+                api_respond(false, [], $result['error'] ?? 'Unknown error');
+            }
             break;
             
         case 'update_event':
@@ -69,7 +85,11 @@ try {
                 'location' => $_POST['location'] ?? ''
             ];
             $result = $schedulerManager->updateEvent($eventId, $eventData);
-            api_respond($result['success'], $result, $result['error'] ?? null);
+            if ($result['success']) {
+                api_respond(true, $result);
+            } else {
+                api_respond(false, [], $result['error'] ?? 'Unknown error');
+            }
             break;
             
         case 'delete_event':
@@ -77,7 +97,69 @@ try {
             $eventId = $_POST['id'] ?? '';
             if (empty($eventId)) api_respond(false, [], 'Event ID is required');
             $result = $schedulerManager->deleteEvent($eventId);
-            api_respond($result['success'], $result, $result['error'] ?? null);
+            if ($result['success']) {
+                api_respond(true, $result);
+            } else {
+                api_respond(false, [], $result['error'] ?? 'Unknown error');
+            }
+            break;
+            
+        case 'add':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') api_respond(false, [], 'Method not allowed');
+            
+            // Map the parameters from the form to the expected format
+            $startDate = $_POST['date'] ?? '';
+            $startTime = $_POST['time'] ?? '';
+            $endDate = $_POST['end_date'] ?? $startDate;
+            $endTime = $_POST['end_time'] ?? $startTime;
+            
+            // Combine date and time into datetime format
+            $start = $startDate . ' ' . $startTime . ':00';
+            $end = $endDate . ' ' . $endTime . ':00';
+            
+            $eventData = [
+                'title' => $_POST['title'] ?? '',
+                'description' => $_POST['description'] ?? '',
+                'start' => $start,
+                'end' => $end,
+                'location' => $_POST['location'] ?? ''
+            ];
+            $result = $schedulerManager->createEvent($eventData);
+            if ($result['success']) {
+                api_respond(true, $result);
+            } else {
+                api_respond(false, [], $result['error'] ?? 'Unknown error');
+            }
+            break;
+            
+        case 'update':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') api_respond(false, [], 'Method not allowed');
+            $eventId = $_POST['id'] ?? '';
+            if (empty($eventId)) api_respond(false, [], 'Event ID is required');
+            
+            // Map the parameters from the form to the expected format
+            $startDate = $_POST['date'] ?? '';
+            $startTime = $_POST['time'] ?? '';
+            $endDate = $_POST['end_date'] ?? $startDate;
+            $endTime = $_POST['end_time'] ?? $startTime;
+            
+            // Combine date and time into datetime format
+            $start = $startDate . ' ' . $startTime . ':00';
+            $end = $endDate . ' ' . $endTime . ':00';
+            
+            $eventData = [
+                'title' => $_POST['title'] ?? '',
+                'description' => $_POST['description'] ?? '',
+                'start' => $start,
+                'end' => $end,
+                'location' => $_POST['location'] ?? ''
+            ];
+            $result = $schedulerManager->updateEvent($eventId, $eventData);
+            if ($result['success']) {
+                api_respond(true, $result);
+            } else {
+                api_respond(false, [], $result['error'] ?? 'Unknown error');
+            }
             break;
             
         default:

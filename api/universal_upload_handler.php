@@ -5,7 +5,6 @@
  */
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/file_processor.php';
 
 class UniversalUploadHandler {
     private $pdo;
@@ -17,7 +16,8 @@ class UniversalUploadHandler {
     public function __construct() {
         $db = new Database();
         $this->pdo = $db->getConnection();
-        $this->fileProcessor = new FileProcessor($this->pdo, 'uploads/');
+        require_once __DIR__ . '/../classes/DynamicFileProcessor.php';
+        $this->fileProcessor = new DynamicFileProcessor();
         $this->createTable();
     }
     

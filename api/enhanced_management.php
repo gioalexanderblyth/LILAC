@@ -15,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/file_processor.php';
 require_once __DIR__ . '/award_analyzer.php';
 require_once __DIR__ . '/event_manager.php';
 require_once __DIR__ . '/location_analyzer.php';
@@ -30,7 +29,8 @@ try {
     $db = new Database();
     $pdo = $db->getConnection();
     
-    $fileProcessor = new FileProcessor($pdo);
+    require_once __DIR__ . '/../classes/DynamicFileProcessor.php';
+    $fileProcessor = new DynamicFileProcessor();
     $awardAnalyzer = new AwardAnalyzer($pdo);
     $eventManager = new EventManager($pdo);
     $locationAnalyzer = new LocationAnalyzer($pdo);

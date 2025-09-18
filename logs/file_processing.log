@@ -5,3 +5,6 @@
 2025-09-18 16:57:04 - EXTRACTION FAILED - File: 20.pdf, Type: pdf, Reason: No meaningful content extracted
 2025-09-18 16:57:36 - EXTRACTION FAILED - File: 20.pdf, Type: pdf, Reason: No meaningful content extracted
 2025-09-18 17:01:33 - EXTRACTION FAILED - File: 20.pdf, Type: pdf, Reason: No meaningful content extracted
+2025-09-18 18:06:42 - EXTRACTION FAILED - File: 20.pdf, Type: pdf, Reason: No meaningful content extracted
+[2025-09-18 20:05:04] SYSTEM_ERROR: Content validation passed - Context: {"file_type":"pdf","length":3017,"words":169,"preview":"REG FORM NO. 60 REV.0 (June 1, 2014) \nPERSONAL HIS..."}
+[2025-09-18 20:05:04] EXTRACTION_SUCCESS: doc_68c9e4581026b.pdf (pdf) - 3017 characters

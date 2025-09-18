@@ -31,9 +31,12 @@ class MouSyncManager {
                 $originalFilename = $doc['original_filename'];
             }
             
+            // Extract meaningful partner name from content instead of using filename
+            $partnerName = $this->extractPartnerName($extractedContent, $documentName);
+            
             // Check if already exists in mous table
             $checkStmt = $this->pdo->prepare("SELECT id FROM mous WHERE file_name = ? OR partner_name = ?");
-            $checkStmt->execute([$filename, $documentName]);
+            $checkStmt->execute([$filename, $partnerName]);
             $existing = $checkStmt->fetch();
             
             if ($existing) {
@@ -50,7 +53,7 @@ class MouSyncManager {
                 $mouDescription .= "Description: " . $description . "\n";
             }
             if ($extractedContent) {
-                $mouDescription .= "Extracted Content: " . substr($extractedContent, 0, 200) . "...\n";
+                $mouDescription .= "Extracted Content: " . substr($extractedContent, 0, 500) . "...\n";
             }
             
             // Insert into mous table
@@ -62,7 +65,7 @@ class MouSyncManager {
             $signedDate = date('Y-m-d');
             
             $insertStmt->execute([
-                $documentName,
+                $partnerName,  // Use extracted partner name instead of filename
                 $signedDate,
                 $mouDescription,
                 $filename,
@@ -125,6 +128,63 @@ class MouSyncManager {
                 'message' => 'MOU deletion sync failed: ' . $e->getMessage()
             ];
         }
+    }
+    
+    /**
+     * Extract meaningful partner name from MOU content
+     */
+    private function extractPartnerName($extractedContent, $fallbackName) {
+        if (empty($extractedContent)) {
+            return $fallbackName;
+        }
+        
+        $content = strtolower($extractedContent);
+        
+        // Look for university/institution names in the content
+        $institutionPatterns = [
+            '/(?:university|college|institute|school)\s+of\s+([^,.\n]+)/i',
+            '/([^,.\n]+)\s+(?:university|college|institute)/i',
+            '/(?:with|between|entered into by)\s+([^,.\n]+)/i',
+            '/(?:partner|institution|organization):\s*([^,.\n]+)/i'
+        ];
+        
+        foreach ($institutionPatterns as $pattern) {
+            if (preg_match($pattern, $extractedContent, $matches)) {
+                $partnerName = trim($matches[1]);
+                if (strlen($partnerName) > 5 && strlen($partnerName) < 100) {
+                    return $partnerName;
+                }
+            }
+        }
+        
+        // Look for specific known institutions
+        $knownInstitutions = [
+            'Central Philippine University',
+            'Griffith University', 
+            'University of the Philippines',
+            'Ateneo de Manila University',
+            'De La Salle University'
+        ];
+        
+        foreach ($knownInstitutions as $institution) {
+            if (strpos($content, strtolower($institution)) !== false) {
+                return $institution;
+            }
+        }
+        
+        // If no institution found, try to extract first meaningful phrase
+        $sentences = preg_split('/[.!?]+/', $extractedContent);
+        foreach ($sentences as $sentence) {
+            $sentence = trim($sentence);
+            if (strlen($sentence) > 20 && strlen($sentence) < 150) {
+                if (preg_match('/\b(?:university|college|institute|institution|organization)\b/i', $sentence)) {
+                    return $sentence;
+                }
+            }
+        }
+        
+        // Final fallback
+        return $fallbackName;
     }
     
     /**

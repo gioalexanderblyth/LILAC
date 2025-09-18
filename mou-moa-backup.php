@@ -16,40 +16,38 @@ require_once 'classes/DateTimeUtility.php';
     <script src="js/error-handler.js"></script>
     <script src="js/security-utils.js"></script>
     <script src="js/awards-check.js"></script>
-    <script src="js/mou-moa-config.js"></script>
-    <script src="js/mou-moa-management.js"></script>
-    <script src="js/modal-handlers.js"></script>
-    <script src="js/text-config.js"></script>
-    <script src="js/date-time-utility.js"></script>
     <script src="js/lazy-loader.js"></script>
-    <!-- PDF.js is handled by the shared document system -->
+    <script src="js/mou-moa-config.js"></script>
+    <script src="js/mou-moa-management.js?v=<?php echo time() . rand(10000, 99999); ?>"></script>
+    <script src="js/modal-handlers.js"></script>
+    
     <script>
-        // Initialize MOUs functionality
-        let currentDocuments = [];
-        const CATEGORY = 'MOUs & MOAs';
-
+        // Initialize MOU/MOA system with enhanced functionality
         document.addEventListener('DOMContentLoaded', function() {
-            loadDocuments();
-            loadStats();
-            initializeEventListeners();
-            setupFileUploadDetection();
-            updateCurrentDate();
+            console.log('MOU page DOM loaded');
+            console.log('MouMoaManager available:', typeof MouMoaManager !== 'undefined');
             
-            // Update date every minute
-            setInterval(updateCurrentDate, 60000);
+            // Initialize MOU/MOA Manager
+            if (typeof MouMoaManager !== 'undefined') {
+                window.mouMoaManager = new MouMoaManager();
+                console.log('MOU Manager initialized:', window.mouMoaManager);
+            } else {
+                console.log('MouMoaManager not available');
+            }
             
             // Ensure LILAC notifications appear below navbar
             setTimeout(function() {
                 if (window.lilacNotifications && window.lilacNotifications.container) {
-                    // Force reposition the LILAC container itself - navbar is 64px tall
-                    window.lilacNotifications.container.style.top = '80px'; // 64px navbar + 16px gap
+                    window.lilacNotifications.container.style.top = '80px';
                     window.lilacNotifications.container.style.zIndex = '99999';
                 }
             }, 500);
-
-            // Upcoming expiration toasts disabled on this page per request
+            
+            // Update current date display
+            updateCurrentDate();
+            setInterval(updateCurrentDate, 60000);
         });
-
+        
         function updateCurrentDate() {
             const now = new Date();
             const dateElement = document.getElementById('current-date');
@@ -62,1633 +60,252 @@ require_once 'classes/DateTimeUtility.php';
                 });
             }
         }
-
-
-
-        function initializeEventListeners() {
-            // Form submission
-            const form = document.getElementById('mou-form');
-            if (form) {
-                form.addEventListener('submit', handleFormSubmit);
-            }
-
-            // Search and filter functionality
-            const searchInput = document.getElementById('search-mous');
-            if (searchInput) {
-                searchInput.addEventListener('input', filterDocuments);
-            }
-
-            const statusFilter = document.getElementById('status-filter');
-            if (statusFilter) {
-                statusFilter.addEventListener('change', filterDocuments);
-            }
-        }
-
-        function handleFormSubmit(e) {
-            e.preventDefault();
+        
+        // Upload modal functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadBtn = document.getElementById('upload-mou-btn');
+            const uploadModal = document.getElementById('upload-modal');
+            const closeModal = document.getElementById('close-upload-modal');
+            const cancelBtn = document.getElementById('cancel-upload');
+            const uploadForm = document.getElementById('upload-mou-form');
             
-            const formEl = e.target;
-            const institution = formEl.querySelector('#mou-institution')?.value || '';
-            const location = formEl.querySelector('#mou-location')?.value || '';
-            const contact = formEl.querySelector('#mou-contact')?.value || '';
-            const term = formEl.querySelector('#mou-term')?.value || '';
-            const type = formEl.querySelector('#mou-type')?.value || '';
-            const status = formEl.querySelector('#mou-status')?.value || '';
-            const dateSigned = formEl.querySelector('#signed-date')?.value || '';
-            const endDate = formEl.querySelector('#expiry-date')?.value || '';
-            const description = formEl.querySelector('#mou-description')?.value || '';
-
-            const formData = new FormData();
-            formData.append('csrf_token', document.getElementById('csrf-token').value);
-            if (editingMouId) {
-                formData.append('action', 'update');
-                formData.append('id', editingMouId);
-            } else {
-                formData.append('action', 'add');
-            }
-            formData.append('institution', institution);
-            formData.append('location', location);
-            formData.append('contact', contact);
-            formData.append('term', term);
-            formData.append('type', type);
-            formData.append('status', status);
-            formData.append('date_signed', dateSigned);
-            formData.append('end_date', endDate);
-            formData.append('description', description);
-            
-            // File handling
-            const fileInput = formEl.querySelector('#mou-file');
-            if (fileInput && fileInput.files && fileInput.files[0]) {
-                formData.append('mou-file', fileInput.files[0]);
-            } else if (editingMouId && editingExistingFileName) {
-                // Preserve existing file name during update if no new file selected
-                formData.append('file_name', editingExistingFileName);
-            }
-            
-            fetch('api/mous.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Check for awards earned after successful MOU creation
-                    if (window.checkAwardCriteria) {
-                        window.checkAwardCriteria('mou', data.newMouId || data.document_id);
-                    }
-                    
-                    formEl.reset();
-                    loadDocuments();
-                    loadStats();
-                    // Success notification disabled per request
-                    try { closeCreateMOUModal(); } catch (e) {}
-                    // Reset editing state
-                    editingMouId = null;
-                    editingExistingFileName = null;
-                } else {
-                    showNotification(data.message || 'Error creating MOU/MOA', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('Network error. Please try again.', 'error');
-            });
-        }
-
-        function loadDocuments() {
-            // Load MOUs/MOAs directly from dedicated API
-            fetch('api/mous.php?action=get_all')
-            .then(response => response.json())
-            .then(mousData => {
-                if (mousData.success) {
-                    currentDocuments = (mousData.mous || []).map(m => ({
-                        id: m.id,
-                        institution: m.institution || 'Unknown Institution',
-                        location: m.location || 'Unknown Location',
-                        contact: m.contact || 'No contact info',
-                        term: m.term || 'Unknown Term',
-                        type: m.type || 'Unknown Type',
-                        status: m.status || 'Unknown Status',
-                        date_signed: m.date_signed || new Date().toISOString().split('T')[0],
-                        end_date: m.end_date || null,
-                        description: m.description || '',
-                        file_name: m.file_name || null,
-                        created_at: m.created_at || new Date().toISOString()
-                    }));
-
-                    displayDocuments(currentDocuments);
-                    loadStats();
-                    
-                    // Check for upcoming expirations
-                    notifyUpcomingExpirations();
-                } else {
-                    console.error('Error loading MOUs:', mousData.message);
-                    showNotification('Error loading MOUs: ' + mousData.message, 'error');
-                    displayDocuments([]);
-                    loadStats();
-                }
-            })
-            .catch(error => {
-                console.error('Error loading MOUs:', error);
-                showNotification('Network error. Please try again.', 'error');
-                displayDocuments([]);
-                loadStats();
-            });
-        }
-
-        function syncFromDocuments() {
-            const syncBtn = document.getElementById('sync-mous-btn');
-            const originalText = syncBtn.innerHTML;
-            
-            // Show loading state
-            syncBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg> Syncing...';
-            syncBtn.disabled = true;
-            
-            fetch('api/mous.php?action=sync_from_documents')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification(data.message || `Synced ${data.synced || 0} documents`, 'success');
-                    // Reload documents to show the synced ones
-                    loadDocuments();
-                    loadStats();
-                } else {
-                    showNotification(data.message || 'Sync failed', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Sync error:', error);
-                showNotification('Network error during sync', 'error');
-            })
-            .finally(() => {
-                // Restore button state
-                syncBtn.innerHTML = originalText;
-                syncBtn.disabled = false;
-            });
-        }
-
-        function extractMOUType(documentName) {
-            if (!documentName) return 'MOU';
-            
-            const name = documentName.toUpperCase();
-            if (name.includes('MOA')) return 'MOA';
-            if (name.includes('ACADEMIC')) return 'MOU-Academic';
-            if (name.includes('INTERNATIONAL')) return 'International-MOU';
-            if (name.includes('PARTNERSHIP')) return 'Industry-Partnership';
-            if (name.includes('RESEARCH')) return 'Research-Collaboration';
-            if (name.includes('EXCHANGE')) return 'Student-Exchange';
-            return 'MOU';
-        }
-
-        function loadStats() {
-            fetch('api/mous.php?action=get_stats')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.data && data.data.stats) {
-                        updateStats(data.data.stats);
-                    } else {
-                        console.log('No stats data available, using defaults');
-                        updateStats({total: 0, active: 0, expiringSoon: 0});
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading stats:', error);
-                    updateStats({total: 0, active: 0, expiringSoon: 0});
-                });
-        }
-
-        function updateStats(stats) {
-            // Ensure stats object exists and has default values
-            if (!stats) {
-                stats = {total: 0, active: 0, expiringSoon: 0};
-            }
-            
-            const totalMOUsElement = document.getElementById('total-mous');
-            const activeMOUsElement = document.getElementById('active-mous');
-            const expiringMOUsElement = document.getElementById('expiring-mous');
-            
-            if (totalMOUsElement) {
-                totalMOUsElement.textContent = stats.total || 0;
-            }
-            if (activeMOUsElement) {
-                activeMOUsElement.textContent = stats.active || 0;
-            }
-            if (expiringMOUsElement) {
-                expiringMOUsElement.textContent = stats.expiringSoon || 0;
-            }
-        }
-
-        function displayDocuments(documents) {
-            console.log('displayDocuments called with:', documents);
-            const container = document.getElementById('mous-container');
-            console.log('Container found:', container);
-            
-            if (!container) {
-                console.error('mous-container not found!');
-                return;
-            }
-            
-            // Simple test - just show a basic message first
-            container.innerHTML = `
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <p class="text-gray-600">Found ${documents.length} documents</p>
-                    <div class="mt-4">
-                        <table class="min-w-full border border-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-2 text-left border-b">Institution</th>
-                                    <th class="px-4 py-2 text-left border-b border-gray-200">Type</th>
-                                    <th class="px-4 py-2 text-left border-b border-gray-200">Status</th>
-                                    <th class="px-4 py-2 text-left border-b border-gray-200">Signed Date</th>
-                            </tr>
-                        </thead>
-                            <tbody>
-                                ${documents.length === 0 ? 
-                                    '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-500">No MOUs found</td></tr>' :
-                                    documents.map(doc => `
-                                        <tr class="border-b">
-                                            <td class="px-4 py-2">${doc.institution || 'Unknown'}</td>
-                                            <td class="px-4 py-2">${doc.type || 'Unknown'}</td>
-                                            <td class="px-4 py-2">${doc.status || 'Unknown'}</td>
-                                            <td class="px-4 py-2">${doc.date_signed || 'Unknown'}</td>
-                                        </tr>
-                                    `).join('')
-                                }
-                            </tbody>
-                        </table>
-                                    </div>
-                                </div>
-            `;
-            
-            console.log('Table HTML set successfully');
-        }
-
-        function filterDocuments() {
-            const searchTerm = document.getElementById('search-mous').value.toLowerCase();
-            const statusFilter = document.getElementById('status-filter').value;
-
-            let filtered = currentDocuments.filter(doc => {
-                const matchesSearch = doc.institution.toLowerCase().includes(searchTerm) ||
-                                    (doc.description && doc.description.toLowerCase().includes(searchTerm));
-                const matchesStatus = statusFilter === 'all' || doc.status.toLowerCase() === statusFilter.toLowerCase();
-                return matchesSearch && matchesStatus;
-            });
-
-            displayDocuments(filtered);
-        }
-
-        function getStatusIcon(status) {
-            const icons = {
-                'Active': '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>',
-                'Expired': '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>',
-                'Pending': '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>'
-            };
-            return icons[status] || icons['Pending'];
-        }
-
-        function getStatusColor(status) {
-            const colors = {
-                'Active': 'bg-green-100 text-green-600',
-                'Expired': 'bg-red-100 text-red-600',
-                'Pending': 'bg-yellow-100 text-yellow-600'
-            };
-            return colors[status] || colors['Pending'];
-        }
-
-        function getStatusBadgeColor(status) {
-            const colors = {
-                'Active': 'bg-green-100 text-green-800',
-                'Expired': 'bg-red-100 text-red-800',
-                'Pending': 'bg-yellow-100 text-yellow-800',
-                'Expiring Soon': 'bg-orange-100 text-orange-800'
-            };
-            return colors[status] || colors['Pending'];
-        }
-
-        function getTimeAgo(date) {
-            const now = new Date();
-            const diffInSeconds = Math.floor((now - date) / 1000);
-            
-            if (diffInSeconds < 60) return 'just now';
-            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-            if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-            if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)}mo ago`;
-            return `${Math.floor(diffInSeconds / 31536000)}y ago`;
-        }
-
-        function viewMOU(id) {
-            const mou = currentDocuments.find(m => m.id == id);
-            if (mou) {
-                // Populate modal with MOU details
-                document.getElementById('viewMOUPartner').textContent = mou.institution;
-                document.getElementById('viewMOUType').textContent = mou.type;
-                document.getElementById('viewMOUStatus').textContent = mou.status;
-                document.getElementById('viewMOUDateSigned').textContent = new Date(mou.date_signed).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric'
-                });
-                document.getElementById('viewMOUEndDate').textContent = mou.end_date ? 
-                    new Date(mou.end_date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric'
-                    }) : 'No end date specified';
-                document.getElementById('viewMOUDescription').textContent = mou.description || 'No description provided.';
-                
-                // Handle document file
-                const documentSection = document.getElementById('viewMOUDocument');
-                if (mou.file_name) {
-                    documentSection.innerHTML = `
-                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                            </svg>
-                            <div class="flex-1">
-                                <p class="font-medium text-gray-900">${mou.file_name}</p>
-                                <p class="text-sm text-gray-500">MOU/MOA document</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="viewMOUFile(${mou.id}, '${mou.file_name}')" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
-                                    View
-                                </button>
-                                <button onclick="downloadMOUFile(${mou.id}, '${mou.file_name}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                                    Download
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    documentSection.innerHTML = `
-                        <div class="text-center py-6 text-gray-500">
-                            <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                            </svg>
-                            <p>No document file uploaded</p>
-                        </div>
-                    `;
-                }
-                
-                // Show modal
-                document.getElementById('viewMOUModal').classList.remove('hidden');
-            }
-        }
-
-        function closeViewMOUModal() {
-            document.getElementById('viewMOUModal').classList.add('hidden');
-        }
-
-        function downloadMOUFile(id, fileName) {
-            showNotification(`Downloading ${fileName}...`, 'info');
-            // In a real implementation, this would trigger the actual file download
-            // window.open(`api/mous.php?action=download&id=${id}`, '_blank');
-        }
-
-        // Document viewer functions
-        function viewMOUFile(id, fileName) {
-            const mou = currentDocuments.find(m => m.id == id);
-            if (mou) {
-                showDocumentViewer(mou);
-            } else {
-                showNotification('MOU not found', 'error');
-            }
-        }
-
-        function getFileExtension(filename) {
-            return filename.split('.').pop().toLowerCase();
-        }
-
-        function showDocumentViewer(doc) {
-            const title = doc.institution || 'MOU Document';
-            let filePath = doc.file_name || '';
-            const ext = getFileExtension(filePath || '');
-
-            if (filePath && !filePath.startsWith('uploads/') && !filePath.startsWith('/uploads/')) {
-                filePath = `uploads/${filePath}`;
-            }
-
-            // Use shared document viewer from documents.php
-            const overlay = document.getElementById('document-viewer-overlay');
-            const titleEl = document.getElementById('document-viewer-title');
-            const contentEl = document.getElementById('document-viewer-content');
-            const downloadBtn = document.getElementById('document-viewer-download');
-            const openBtn = document.getElementById('document-viewer-open');
-
-            if (!overlay || !titleEl || !contentEl || !downloadBtn) return;
-
-            titleEl.textContent = title;
-            contentEl.innerHTML = '';
-
-            if (ext === 'pdf') {
-                const pdfUrl = new URL(filePath, window.location.origin).href;
-                const iframe = document.createElement('iframe');
-                iframe.src = pdfUrl;
-                iframe.style.width = '100%';
-                iframe.style.height = 'calc(100% - 0px)';
-                iframe.style.display = 'block';
-                contentEl.appendChild(iframe);
-                
-                openBtn.onclick = function() { window.open(pdfUrl, '_blank'); };
-            } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) {
-                const imgUrl = new URL(filePath, window.location.origin).href;
-                const img = document.createElement('img');
-                img.src = imgUrl;
-                img.style.maxWidth = '100%';
-                img.style.maxHeight = '100%';
-                img.style.objectFit = 'contain';
-                img.style.display = 'block';
-                img.style.margin = '0 auto';
-                contentEl.appendChild(img);
-                
-                openBtn.onclick = function() { window.open(imgUrl, '_blank'); };
-            } else if (['doc','docx','ppt','pptx','xls','xlsx'].includes(ext)) {
-                const isLocalhost = ['localhost','127.0.0.1','::1'].includes(location.hostname);
-                if (isLocalhost) {
-                    const info = document.createElement('div');
-                    info.className = 'text-center text-gray-600';
-                    info.textContent = 'Preview for Office files is not available on localhost. Please use Download to view the file.';
-                    contentEl.appendChild(info);
-                } else {
-                    const absoluteUrl = new URL(filePath, window.location.origin).href;
-                    const officeUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(absoluteUrl);
-                    const iframe = document.createElement('iframe');
-                    iframe.src = officeUrl;
-                    iframe.style.width = '100%';
-                    iframe.style.height = 'calc(100% - 0px)';
-                    iframe.style.display = 'block';
-                    contentEl.appendChild(iframe);
-                }
-                openBtn.onclick = function() { window.open(new URL(filePath, window.location.origin).href, '_blank'); };
-            } else {
-                contentEl.innerHTML = '<div class="text-center text-gray-600">Preview not supported for this file type. Please download to view.</div>';
-                openBtn.onclick = function() { window.open(new URL(filePath, window.location.origin).href, '_blank'); };
-            }
-
-            downloadBtn.onclick = function() { downloadMOUFile(doc.id, doc.file_name); };
-            overlay.classList.remove('hidden');
-        }
-
-        // Track editing state
-        let editingMouId = null;
-        let editingExistingFileName = null;
-
-        function editMOU(id) {
-            const mou = currentDocuments.find(m => m.id == id);
-            if (mou) {
-                // Set editing state
-                editingMouId = mou.id;
-                editingExistingFileName = mou.file_name || null;
-
-                // Pre-fill form with existing data
-                document.getElementById('mou-institution').value = mou.institution;
-                document.getElementById('mou-location').value = mou.location;
-                document.getElementById('mou-contact').value = mou.contact;
-                document.getElementById('mou-term').value = mou.term;
-                document.getElementById('mou-type').value = mou.type;
-                document.getElementById('mou-status').value = mou.status;
-                document.getElementById('signed-date').value = mou.date_signed;
-                document.getElementById('expiry-date').value = mou.end_date || '';
-                document.getElementById('mou-description').value = mou.description || '';
-                
-                // Open modal for editing
-                try { openCreateMOUModal(); } catch (e) {}
-                
-                // Scroll to form (fallback if modal not used)
-                const formNode = document.getElementById('mou-form');
-                if (formNode) {
-                    formNode.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        }
-
-        // Delete modal functionality
-        let mouToDelete = null;
-
-        function showDeleteModal(id, organization) {
-            mouToDelete = id;
-            document.getElementById('mouToDeleteName').textContent = `MOU with "${organization}"`;
-            document.getElementById('deleteConfirmModal').classList.remove('hidden');
-        }
-
-        function hideDeleteModal() {
-            mouToDelete = null;
-            document.getElementById('deleteConfirmModal').classList.add('hidden');
-        }
-
-        function confirmDelete() {
-            if (mouToDelete !== null) {
-                deleteMOU(mouToDelete);
-                hideDeleteModal();
-            }
-        }
-
-        function deleteMOU(id) {
-            const formData = new FormData();
-            formData.append('action', 'delete');
-            formData.append('csrf_token', document.getElementById('csrf-token').value);
-            formData.append('id', id);
-            
-            fetch('api/mous.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    loadDocuments();
-                    loadStats();
-                    // Success notification disabled per request
-                } else {
-                    showNotification(data.message || 'Error deleting MOU', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('Network error. Please try again.', 'error');
-            });
-        }
-
-        function showNotification(message, type = 'info') {
-            const colors = {
-                success: 'bg-green-500',
-                error: 'bg-red-500',
-                info: 'bg-blue-500'
-            };
-
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            // Slide in
-            setTimeout(() => notification.classList.remove('translate-x-full'), 100);
-            
-            // Slide out and remove
-            setTimeout(() => {
-                notification.classList.add('translate-x-full');
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-
-        function setupFileUploadDetection() {
-            const fileInput = document.getElementById('mou-file');
-            if (fileInput) {
-                fileInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        analyzeMOUFile(file);
-                    }
+            // Open modal
+            if (uploadBtn) {
+                uploadBtn.addEventListener('click', function() {
+                    uploadModal.classList.remove('hidden');
                 });
             }
-        }
-
-        function analyzeMOUFile(file) {
-            const filename = file.name;
-            const institutionInput = document.getElementById('mou-institution');
-            const locationInput = document.getElementById('mou-location');
-            const contactInput = document.getElementById('mou-contact');
-            const termInput = document.getElementById('mou-term');
-            const typeSelect = document.getElementById('mou-type');
-            const statusSelect = document.getElementById('mou-status');
-            const descriptionTextarea = document.getElementById('mou-description');
-            const signedDateInput = document.getElementById('signed-date');
-            const expiryDateInput = document.getElementById('expiry-date');
             
-            // Auto-detect institution from filename
-            if (!institutionInput.value.trim()) {
-                const detectedInstitution = extractInstitutionFromFilename(filename);
-                if (detectedInstitution) {
-                    institutionInput.value = detectedInstitution;
-                    // Auto-detect toast disabled per request
-                }
+            // Close modal
+            function closeUploadModal() {
+                uploadModal.classList.add('hidden');
+                uploadForm.reset();
             }
             
-            // Auto-detect location from filename
-            if (!locationInput.value.trim()) {
-                const detectedLocation = extractLocationFromFilename(filename);
-                if (detectedLocation) {
-                    locationInput.value = detectedLocation;
-                    // Auto-detect toast disabled per request
-                }
+            if (closeModal) {
+                closeModal.addEventListener('click', closeUploadModal);
             }
             
-            // Auto-detect contact from filename
-            if (!contactInput.value.trim()) {
-                const detectedContact = extractContactFromFilename(filename);
-                if (detectedContact) {
-                    contactInput.value = detectedContact;
-                    // Auto-detect toast disabled per request
-                }
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', closeUploadModal);
             }
             
-            // Auto-detect term from filename
-            if (!termInput.value.trim()) {
-                const detectedTerm = extractTermFromFilename(filename);
-                if (detectedTerm) {
-                    termInput.value = detectedTerm;
-                    // Auto-detect toast disabled per request
-                }
-            }
-            
-            // Auto-detect type from filename (only MOU or MOA)
-            if (!typeSelect.value) {
-                const detectedType = extractMOUTypeFromFilename(filename);
-                if (detectedType) {
-                    typeSelect.value = detectedType;
-                    // Auto-detect toast disabled per request
-                }
-            }
-            
-            // Set default status if not set
-            if (!statusSelect.value) {
-                statusSelect.value = 'Active';
-            }
-            
-            // Auto-detect dates from filename
-            const dates = extractDatesFromFilename(filename);
-            if (dates.startDate && !signedDateInput.value) {
-                signedDateInput.value = dates.startDate;
-                // Auto-detect toast disabled per request
-            }
-            if (dates.endDate && !expiryDateInput.value) {
-                expiryDateInput.value = dates.endDate;
-                // Auto-detect toast disabled per request
-            }
-            
-            // Add file analysis to description
-            if (!descriptionTextarea.value.trim()) {
-                descriptionTextarea.value = `MOU/MOA document with ${extractInstitutionFromFilename(filename) || 'partner institution'}. File: ${filename}`;
-            }
-            
-            // Auto-set signed date to today if not set and no date detected
-            if (!signedDateInput.value) {
-                signedDateInput.value = new Date().toISOString().split('T')[0];
-            }
-            
-            // NEW: Attempt to parse file contents (PDF/TXT) to infer expiry/end date
-            const ext = (filename.split('.').pop() || '').toLowerCase();
-            if (ext === 'pdf' && window.pdfjsLib) {
-                try {
-                    const reader = new FileReader();
-                    reader.onload = async function(ev) {
-                        try {
-                            const typedArray = new Uint8Array(ev.target.result);
-                            const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
-                            let fullText = '';
-                            const maxPages = Math.min(pdf.numPages, 8); // scan first pages for speed
-                            for (let p = 1; p <= maxPages; p++) {
-                                const page = await pdf.getPage(p);
-                                const content = await page.getTextContent();
-                                const strings = content.items.map(i => i.str);
-                                fullText += '\n' + strings.join(' ');
-                            }
-                            inferDatesFromText(fullText, signedDateInput, expiryDateInput, statusSelect);
-                        } catch (err) {
-                            console.warn('PDF parse failed:', err);
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                } catch (e) {
-                    console.warn('PDF analysis error:', e);
-                }
-            } else if (ext === 'txt') {
-                const reader = new FileReader();
-                reader.onload = function(ev) {
-                    const text = String(ev.target.result || '');
-                    inferDatesFromText(text, signedDateInput, expiryDateInput, statusSelect);
-                };
-                reader.readAsText(file);
-            }
-        }
-
-        function inferDatesFromText(text, signedDateInput, expiryDateInput, statusSelect) {
-            if (!text) return;
-            const lower = text.toLowerCase();
-            // Look for phrases commonly found in agreements
-            // Example patterns: "shall remain in effect until <date>", "valid until <date>", "effective on <date> and shall expire on <date>"
-            const dateRegexes = [
-                /expire(?:s|d)?\s+on\s+([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})/i,
-                /valid\s+until\s+([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})/i,
-                /until\s+([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})/i,
-                /end(?:s)?\s+on\s+([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})/i,
-                /terminate(?:s|d)?\s+on\s+([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})/i,
-                /(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s*(?:\(end\)|\(expiry\)|expiry|expiration|expire)/i
-            ];
-            let detectedEnd = null;
-            for (const rx of dateRegexes) {
-                const m = lower.match(rx);
-                if (m) {
-                    let dStr = m[1] ? m[1] : (m[0] || '');
-                    const parsed = Date.parse(dStr) ? new Date(dStr) : tryIsoFromRegex(m);
-                    if (parsed && !isNaN(parsed.getTime())) {
-                        detectedEnd = parsed.toISOString().split('T')[0];
-                        break;
-                    }
-                }
-            }
-
-            // Sometimes agreements specify term length: "for a period of X years/months from the effective date"
-            if (!detectedEnd) {
-                const termRx = /for\s+a\s+period\s+of\s+(\d{1,2})\s+(year|years|month|months)\s+from\s+the\s+effective\s+date/i;
-                const m = lower.match(termRx);
-                if (m) {
-                    const n = parseInt(m[1]);
-                    const unit = m[2].startsWith('year') ? 'year' : 'month';
-                    let base = signedDateInput.value ? new Date(signedDateInput.value) : new Date();
-                    if (unit === 'year') base.setFullYear(base.getFullYear() + n);
-                    else base.setMonth(base.getMonth() + n);
-                    detectedEnd = base.toISOString().split('T')[0];
-                }
-            }
-
-            if (detectedEnd) {
-                if (!expiryDateInput.value) {
-                    expiryDateInput.value = detectedEnd;
-                    showNotification(`Detected expiry: ${detectedEnd}`, 'success');
-                }
-                // Auto-status
-                const today = new Date();
-                const end = new Date(detectedEnd);
-                if (end < today) {
-                    statusSelect.value = 'Expired';
-                } else {
-                    const soon = new Date();
-                    soon.setDate(soon.getDate() + 30);
-                    if (end <= soon) {
-                        // Keep Active but user will see "Expiring Soon" derived badge in table
-                        statusSelect.value = 'Active';
-                    } else {
-                        statusSelect.value = 'Active';
-                    }
-                }
-            }
-        }
-
-        function tryIsoFromRegex(m) {
-            // m from /(\d{4})[-/](\d{1,2})[-/](\d{1,2})/
-            if (!m || m.length < 4) return null;
-            const y = parseInt(m[1]);
-            const mo = parseInt(m[2]);
-            const d = parseInt(m[3]);
-            const dt = new Date(y, mo - 1, d);
-            if (dt && dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d) return dt;
-            return null;
-        }
-
-        function extractInstitutionFromFilename(filename) {
-            // Remove file extension
-            let name = filename.replace(/\.[^/.]+$/, "");
-            
-            // Common patterns for institution names in MOU files
-            const patterns = [
-                /MOU[_\-\s]+(.*?)(?:[_\-\s]+\d{4}|[_\-\s]+CPU|$)/i,
-                /MOA[_\-\s]+(.*?)(?:[_\-\s]+\d{4}|[_\-\s]+CPU|$)/i,
-                /(.*?)[_\-\s]+MOU/i,
-                /(.*?)[_\-\s]+MOA/i,
-                /^([^_\-\d]+)/i
-            ];
-            
-            for (const pattern of patterns) {
-                const match = name.match(pattern);
-                if (match && match[1]) {
-                    let institution = match[1].trim();
-                    // Clean up common separators and artifacts
-                    institution = institution.replace(/[_\-]+/g, ' ');
-                    institution = institution.replace(/\s+/g, ' ');
-                    institution = institution.trim();
-                    
-                    // Skip if it's too short or contains only numbers
-                    if (institution.length > 2 && !/^\d+$/.test(institution)) {
-                        // Capitalize properly
-                        return institution.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-                    }
-                }
-            }
-            
-            return null;
-        }
-
-        function extractLocationFromFilename(filename) {
-            // Remove file extension
-            let name = filename.replace(/\.[^/.]+$/, "");
-            
-            // Common patterns for location names in MOU files
-            const patterns = [
-                /MOU[_\-\s]+(.*?)(?:[_\-\s]+\d{4}|[_\-\s]+CPU|$)/i,
-                /MOA[_\-\s]+(.*?)(?:[_\-\s]+\d{4}|[_\-\s]+CPU|$)/i,
-                /(.*?)[_\-\s]+MOU/i,
-                /(.*?)[_\-\s]+MOA/i,
-                /^([^_\-\d]+)/i
-            ];
-            
-            for (const pattern of patterns) {
-                const match = name.match(pattern);
-                if (match && match[1]) {
-                    let location = match[1].trim();
-                    // Clean up common separators and artifacts
-                    location = location.replace(/[_\-]+/g, ' ');
-                    location = location.replace(/\s+/g, ' ');
-                    location = location.trim();
-                    
-                    // Skip if it's too short or contains only numbers
-                    if (location.length > 2 && !/^\d+$/.test(location)) {
-                        // Capitalize properly
-                        return location.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-                    }
-                }
-            }
-            
-            return null;
-        }
-
-        function extractContactFromFilename(filename) {
-            // Remove file extension
-            let name = filename.replace(/\.[^/.]+$/, "");
-            
-            // Common patterns for contact names in MOU files
-            const patterns = [
-                /MOU[_\-\s]+(.*?)(?:[_\-\s]+\d{4}|[_\-\s]+CPU|$)/i,
-                /MOA[_\-\s]+(.*?)(?:[_\-\s]+\d{4}|[_\-\s]+CPU|$)/i,
-                /(.*?)[_\-\s]+MOU/i,
-                /(.*?)[_\-\s]+MOA/i,
-                /^([^_\-\d]+)/i
-            ];
-            
-            for (const pattern of patterns) {
-                const match = name.match(pattern);
-                if (match && match[1]) {
-                    let contact = match[1].trim();
-                    // Clean up common separators and artifacts
-                    contact = contact.replace(/[_\-]+/g, ' ');
-                    contact = contact.replace(/\s+/g, ' ');
-                    contact = contact.trim();
-                    
-                    // Skip if it's too short or contains only numbers
-                    if (contact.length > 2 && !/^\d+$/.test(contact)) {
-                        // Capitalize properly
-                        return contact.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-                    }
-                }
-            }
-            
-            return null;
-        }
-
-        function extractTermFromFilename(filename) {
-            // Remove file extension
-            let name = filename.replace(/\.[^/.]+$/, "");
-            
-            // Common patterns for term names in MOU files
-            const patterns = [
-                /MOU[_\-\s]+(.*?)(?:[_\-\s]+\d{4}|[_\-\s]+CPU|$)/i,
-                /MOA[_\-\s]+(.*?)(?:[_\-\s]+\d{4}|[_\-\s]+CPU|$)/i,
-                /(.*?)[_\-\s]+MOU/i,
-                /(.*?)[_\-\s]+MOA/i,
-                /^([^_\-\d]+)/i
-            ];
-            
-            for (const pattern of patterns) {
-                const match = name.match(pattern);
-                if (match && match[1]) {
-                    let term = match[1].trim();
-                    // Clean up common separators and artifacts
-                    term = term.replace(/[_\-]+/g, ' ');
-                    term = term.replace(/\s+/g, ' ');
-                    term = term.trim();
-                    
-                    // Skip if it's too short or contains only numbers
-                    if (term.length > 2 && !/^\d+$/.test(term)) {
-                        // Capitalize properly
-                        return term.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-                    }
-                }
-            }
-            
-            return null;
-        }
-
-        function extractMOUTypeFromFilename(filename) {
-            const name = filename.toUpperCase();
-            
-            if (name.includes('MOA')) return 'MOA';
-            return 'MOU';
-        }
-
-        function extractDatesFromFilename(filename) {
-            const name = filename.toUpperCase();
-            const dates = { startDate: null, endDate: null };
-            
-            // Common date patterns in filenames
-            const datePatterns = [
-                // YYYY-MM-DD or YYYY/MM/DD
-                /(\d{4})[-/](\d{1,2})[-/](\d{1,2})/g,
-                // DD-MM-YYYY or DD/MM/YYYY
-                /(\d{1,2})[-/](\d{1,2})[-/](\d{4})/g,
-                // MM-DD-YYYY or MM/DD/YYYY
-                /(\d{1,2})[-/](\d{1,2})[-/](\d{4})/g,
-                // YYYYMMDD
-                /(\d{4})(\d{2})(\d{2})/g
-            ];
-            
-            const foundDates = [];
-            
-            datePatterns.forEach(pattern => {
-                let match;
-                while ((match = pattern.exec(name)) !== null) {
-                    let year, month, day;
-                    
-                    if (match[1].length === 4) {
-                        // YYYY-MM-DD or YYYYMMDD format
-                        year = parseInt(match[1]);
-                        month = parseInt(match[2]);
-                        day = parseInt(match[3]);
-                    } else {
-                        // DD-MM-YYYY or MM-DD-YYYY format
-                        if (parseInt(match[3]) > 31) {
-                            // DD-MM-YYYY
-                            day = parseInt(match[1]);
-                            month = parseInt(match[2]);
-                            year = parseInt(match[3]);
-                        } else {
-                            // MM-DD-YYYY
-                            month = parseInt(match[1]);
-                            day = parseInt(match[2]);
-                            year = parseInt(match[3]);
-                        }
-                    }
-                    
-                    // Validate date
-                    const date = new Date(year, month - 1, day);
-                    if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
-                        const dateString = date.toISOString().split('T')[0];
-                        foundDates.push(dateString);
-                    }
+            // Close modal when clicking outside
+            uploadModal.addEventListener('click', function(e) {
+                if (e.target === uploadModal) {
+                    closeUploadModal();
                 }
             });
             
-            // Sort dates chronologically
-            foundDates.sort();
-            
-            if (foundDates.length >= 1) {
-                dates.startDate = foundDates[0];
-            }
-            if (foundDates.length >= 2) {
-                dates.endDate = foundDates[1];
-            }
-            
-            return dates;
-        }
-
-        function notifyUpcomingExpirations() {
-            fetch('api/mous.php?action=get_upcoming_expirations&days=30')
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.success || !Array.isArray(data.mous)) return;
-                    const today = new Date();
-                    data.mous.forEach(m => {
-                        const end = m.end_date ? new Date(m.end_date) : null;
-                        if (!end) return;
-                        const daysLeft = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
-                        if (daysLeft >= 0) {
-                            const msg = `${m.type || 'MOU'} with ${m.institution} expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'} (${end.toLocaleDateString('en-US')}).`;
+            // Handle form submission
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(uploadForm);
+                    formData.append('action', 'add');
+                    
+                    // Show loading state
+                    const submitBtn = uploadForm.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = 'Uploading...';
+                    submitBtn.disabled = true;
+                    
+                    fetch('api/mous.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Show success message
                             if (window.lilacNotifications) {
-                                const priority = daysLeft <= 7 ? 'warning' : 'info';
-                                window.lilacNotifications[priority](msg, 7000);
-                            } else {
-                                console.log('MOU expiry:', msg);
+                                window.lilacNotifications.show('MOU/MOA uploaded successfully!', 'success');
+                            }
+                            
+                            // Close modal and refresh data
+                            closeUploadModal();
+                            
+                            // Refresh the documents table
+                            setTimeout(() => {
+                                if (window.mouMoaManager && window.mouMoaManager.loadDocuments) {
+                                    window.mouMoaManager.loadDocuments();
+                                } else {
+                                    // Fallback: reload the page if manager not available
+                                    window.location.reload();
+                                }
+                            }, 100);
+                        } else {
+                            // Show error message
+                            if (window.lilacNotifications) {
+                                window.lilacNotifications.show(data.message || 'Upload failed', 'error');
                             }
                         }
+                    })
+                    .catch(error => {
+                        console.error('Upload error:', error);
+                        if (window.lilacNotifications) {
+                            window.lilacNotifications.show('Upload failed. Please try again.', 'error');
+                        }
+                    })
+                    .finally(() => {
+                        // Reset button state
+                        submitBtn.textContent = originalText;
+                        submitBtn.disabled = false;
                     });
-                })
-                .catch(err => console.error('Failed to fetch upcoming expirations', err));
-        }
-
-        // Upcoming expiration toasts disabled on this page per request
+                });
+            }
+        });
     </script>
 </head>
 
 <body class="bg-gray-50">
-
     <!-- Navigation Bar -->
     <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
         <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-            </button>
-        <div class="absolute left-1/2 transform -translate-x-1/2">
-            <h1 id="page-title" class="text-xl font-bold text-gray-800 cursor-pointer">MOUs & MOAs</h1>
-        </div>
-        <div class="absolute right-4 top-4 z-[90] text-sm flex items-center space-x-3">
-            <!-- Search and Filter Section -->
-            <div class="flex items-center space-x-2">
-                <!-- Search Bar -->
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </div>
-                    <input type="text" id="search-mous" name="search-mous"
-                           class="block w-48 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-sm"
-                           placeholder="Search MOUs...">
-                    <button type="button" id="clear-search-mous" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 hidden">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
-                    </button>
-                </div>
-                
-                <!-- Filter Button -->
-                <button id="filters-trigger" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors text-sm flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M8 12h8m-6 8h4"></path>
-                    </svg>
-                    Filter
-                    <span id="filters-badge" class="hidden ml-1 inline-flex items-center justify-center px-1.5 text-xs rounded-full bg-blue-600 text-white">0</span>
-                </button>
-            </div>
-            
-            <!-- Sync and Upload Buttons -->
-            <div class="flex gap-2">
-                <button id="sync-mous-btn" class="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2" onclick="syncFromDocuments()">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                    Sync
-                </button>
-                <button id="create-mou-header-btn" class="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm" onclick="openCreateMOUModal()">Upload</button>
-            </div>
+        </button>
+        
+        <div class="flex-1 flex items-center justify-start ml-16">
+            <h1 id="page-title" class="text-lg font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors">
+                MOUs & MOAs
+            </h1>
         </div>
     </nav>
 
     <!-- Sidebar -->
     <?php include 'includes/sidebar.php'; ?>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Hamburger and desktop toggle buttons are now handled globally by LILACSidebar
-    });
-    
-    // toggleSidebar function is now handled globally by LILACSidebar
-    function toggleSidebar_DISABLED() {
-        const sidebar = document.getElementById('sidebar');
-        const backdrop = document.getElementById('sidebar-backdrop');
-        if (!sidebar) return;
-        
-        // Toggle hidden/visible by translating X
-        sidebar.classList.toggle('-translate-x-full');
-        
-        // Toggle backdrop on mobile
-        if (backdrop && window.innerWidth < 1024) {
-            backdrop.classList.toggle('hidden');
-        }
-        
-        // On mobile, adjust main content margin
-        const mainContainer = document.getElementById('main-content');
-        if (mainContainer) {
-            // Only adjust margin on mobile (when sidebar is hidden by default)
-            if (window.innerWidth < 1024) { // lg breakpoint
-                mainContainer.classList.toggle('ml-0');
-            }
-        }
-        
-        // Adjust navbar left padding on desktop
-        const nav = document.querySelector('nav.modern-nav');
-        if (nav && window.innerWidth >= 1024) { // lg breakpoint
-            nav.classList.toggle('pl-64');
-        }
-    }
-
-        // Responsive floating button on scroll
-        let lastScrollTop = 0;
-        const floatingBtn = document.getElementById('view-switch-btn');
-        const floatingBtnContainer = floatingBtn?.parentElement;
-        
-        window.addEventListener('scroll', function() {
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            
-            if (floatingBtnContainer) {
-                if (scrollTop > lastScrollTop && scrollTop > 100) {
-                    // Scrolling down - move button up (current position above footer)
-                    floatingBtnContainer.style.bottom = '80px'; // bottom-20 equivalent
-                    floatingBtnContainer.style.transition = 'bottom 0.3s ease';
-                } else {
-                    // Scrolling up - move button down (old position at bottom)
-                    floatingBtnContainer.style.bottom = '16px'; // bottom-4 equivalent
-                    floatingBtnContainer.style.transition = 'bottom 0.3s ease';
-                }
-            }
-            
-            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-        });
-
-        // Update date in top-right
-        function updateCurrentDate() {
-            var el = document.getElementById('current-date');
-            if (el) {
-                var now = new Date();
-                el.textContent = now.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-            }
-        }
-        updateCurrentDate();
-        setInterval(updateCurrentDate, 60000);
-    </script>
-
     <!-- Main Content -->
     <div id="main-content" class="p-4 pt-4 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out text-sm">
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div class="bg-white rounded-lg shadow p-4">
-                <p class="text-xs font-medium text-gray-600">Total MOUs</p>
-                <p id="total-mous" class="text-xl font-bold text-gray-900">0</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <p class="text-xs font-medium text-gray-600">Active MOUs</p>
-                <p id="active-mous" class="text-xl font-bold text-gray-900">0</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <p class="text-xs font-medium text-gray-600">Expiring Soon</p>
-                <p id="expiring-mous" class="text-xl font-bold text-gray-900">0</p>
-            </div>
-        </div>
-
-        <!-- Filter Chips -->
-        <div id="filter-chips" class="mb-4 flex flex-wrap gap-2 hidden">
-            <!-- Filter chips will be dynamically added here -->
-        </div>
-
-        <!-- Export Button -->
-        <div class="flex justify-end mb-4">
-            <button id="export-results" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                Export
-            </button>
-        </div>
-
-        <!-- Expiration Alerts Section -->
-        <div id="expiration-alerts"></div>
-
-
-        <!-- Balanced Search + Filters -->
-        <div class="mb-4">
-            <div class="bg-white rounded-lg border border-gray-200 p-3">
+            <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 relative">
-                        <input type="text" id="search-mous" placeholder="Search MOUs..." class="w-64 md:w-96 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:border-cyan-500 focus:ring-0 text-gray-900 placeholder-gray-500">
-                        <div class="relative">
-                            <button id="filter-toggle" class="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50" onclick="toggleFiltersPanel(event)">Filter</button>
-                            <div id="filters-panel" class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-md shadow-lg p-3 hidden z-20">
-                                <div class="space-y-2">
-                                    <div>
-                                        <label class="block text-[11px] font-medium text-gray-700 mb-1">Status</label>
-                                        <select id="status-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
-                                            <option value="all">All Statuses</option>
-                                            <option value="Active">Active</option>
-                                            <option value="Expired">Expired</option>
-                                            <option value="Pending">Pending</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-medium text-gray-700 mb-1">Agreement Type</label>
-                                        <select id="type-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
-                                            <option value="all">All Types</option>
-                                            <option value="MOU-Academic">Academic Partnership</option>
-                                            <option value="Student-Exchange">Student Exchange</option>
-                                            <option value="Research-Collaboration">Research</option>
-                                            <option value="International-MOU">International MOU</option>
-                                            <option value="Study-Abroad">Study Abroad</option>
-                                            <option value="Industry-Partnership">Industry Partnership</option>
-                                            <option value="Internship-Agreement">Internship</option>
-                                            <option value="MOU">General MOU</option>
-                                            <option value="MOA">General MOA</option>
-                                        </select>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label class="block text-[11px] font-medium text-gray-700 mb-1">Date Range</label>
-                                            <select id="date-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
-                                                <option value="all">All Dates</option>
-                                                <option value="this-year">This Year</option>
-                                                <option value="last-year">Last Year</option>
-                                                <option value="expiring-soon">Expiring Soon</option>
-                                                <option value="expired">Expired</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-[11px] font-medium text-gray-700 mb-1">Sort By</label>
-                                            <select id="sort-filter" class="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md focus:border-cyan-500 focus:ring-0 text-sm">
-                                                <option value="date-desc">Newest First</option>
-                                                <option value="date-asc">Oldest First</option>
-                                                <option value="name-asc">A to Z</option>
-                                                <option value="name-desc">Z to A</option>
-                                                <option value="expiry-asc">Expiring Soon</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center justify-between pt-1">
-                                        <button id="clear-filters" class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs hidden" onclick="clearAllFilters()">Clear Filters</button>
-                                        <button class="px-2.5 py-1.5 bg-black text-white rounded-md text-xs" onclick="toggleFiltersPanel(event)">Close</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Total MOUs</p>
+                        <p id="total-mous" class="text-2xl font-bold text-gray-900">0</p>
                     </div>
+                    <div class="p-2 bg-blue-100 rounded-lg">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Active MOUs</p>
+                        <p id="active-mous" class="text-2xl font-bold text-green-600">0</p>
+                    </div>
+                    <div class="p-2 bg-green-100 rounded-lg">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Expiring Soon</p>
+                        <p id="expiring-mous" class="text-2xl font-bold text-yellow-600">0</p>
+                    </div>
+                    <div class="p-2 bg-yellow-100 rounded-lg">
+                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter Bar -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-4 border border-gray-200">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <input type="text" id="search-input" placeholder="Search MOUs/MOAs..." 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div class="flex gap-2">
+                    <select id="status-filter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Expired">Expired</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                    <select id="partner-filter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Partners</option>
+                        <option value="University">University</option>
+                        <option value="Private">Private</option>
+                    </select>
+                    <button id="sync-mous-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        Sync from Documents
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents Table -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">MOU/MOA Documents</h2>
                     <div class="flex items-center gap-2">
-                        <button id="export-results" aria-label="Export" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            <span>Export</span>
+                        <button id="upload-mou-btn" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Upload MOU/MOA
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Tag filter removed for now -->
-
-        <!-- Enhanced MOUs Grid -->
-        <div class="group relative">
-            <div class="absolute -inset-0.5 bg-gradient-to-r from-emerald-400 to-cyan-600 rounded-2xl blur opacity-15 group-hover:opacity-30 transition duration-1000"></div>
-            <div class="relative bg-white bg-opacity-80 backdrop-blur-xl rounded-2xl shadow-xl border border-white border-opacity-30">
-                <div class="p-4 border-b border-gray-200 border-opacity-50">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h2 class="text-xl font-extrabold text-gray-800">Your MOUs & MOAs</h2>
-                            <p class="text-gray-600 text-xs mt-1">Manage your partnership agreements</p>
-                        </div>
-                        
-                    </div>
-                </div>
-                <div class="p-8">
-                    <div id="mous-container" class="grid grid-cols-1 gap-4">
-                        <!-- Enhanced MOUs Table -->
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full">
-                                    <thead class="bg-gray-100 border-b border-gray-200">
-                                        <tr>
-                                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider shadow-sm cursor-pointer hover:bg-gray-200 transition-colors" onclick="sortTable('institution')">
-                                                <div class="flex items-center">
-                                                    Institution
-                                                    <svg class="w-4 h-4 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                                                    </svg>
-                    </div>
-                                            </th>
-                                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider shadow-sm cursor-pointer hover:bg-gray-200 transition-colors" onclick="sortTable('location')">
-                                                <div class="flex items-center">
-                                                    Location
-                                                    <svg class="w-4 h-4 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                                                    </svg>
-                </div>
-                                            </th>
-                                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider shadow-sm cursor-pointer hover:bg-gray-200 transition-colors" onclick="sortTable('type')">
-                                                <div class="flex items-center justify-center">
-                                                    Type
-                                                    <svg class="w-4 h-4 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                                                    </svg>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <!-- Checkbox column header -->
+                            </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institution</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="documents-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Documents will be loaded here by JavaScript -->
+                    </tbody>
+                </table>
             </div>
-                                            </th>
-                                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider shadow-sm cursor-pointer hover:bg-gray-200 transition-colors" onclick="sortTable('status')">
-                                                <div class="flex items-center justify-center">
-                                                    Status
-                                                    <svg class="w-4 h-4 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                                                    </svg>
-                                                </div>
-                                            </th>
-                                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider shadow-sm cursor-pointer hover:bg-gray-200 transition-colors" onclick="sortTable('date_signed')">
-                                                <div class="flex items-center justify-center">
-                                                    Signed Date
-                                                    <svg class="w-4 h-4 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                                                    </svg>
-                                                </div>
-                                            </th>
-                                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider shadow-sm cursor-pointer hover:bg-gray-200 transition-colors" onclick="sortTable('end_date')">
-                                                <div class="flex items-center justify-center">
-                                                    End Date
-                                                    <svg class="w-4 h-4 ml-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                                                    </svg>
-                                                </div>
-                                            </th>
-                                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider shadow-sm">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        <tr class="bg-white hover:bg-gray-50 transition-colors duration-200">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="text-sm font-medium text-gray-900">Sample University</div>
-                                                <div class="text-sm text-gray-500">sample@university.edu</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="text-sm text-gray-900">Manila, Philippines</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500 text-white shadow-sm">
-                                                    MOU
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500 text-white shadow-sm">
-                                                    Active
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <div class="text-sm text-gray-900">Jan 15, 2024</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <div class="text-sm text-gray-900">Jan 15, 2025</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <div class="flex items-center justify-center space-x-2">
-                                                    <button class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 hover:text-blue-700 transition-colors duration-200" title="View Details">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                                        </svg>
-                                                    </button>
-                                                    <button class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-600 hover:text-indigo-700 transition-colors duration-200" title="Edit Record">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                        </svg>
-                                                    </button>
-                                                    <button class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-700 transition-colors duration-200" title="Delete Record">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr class="bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="text-sm font-medium text-gray-900">Another University</div>
-                                                <div class="text-sm text-gray-500">contact@another.edu</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="text-sm text-gray-900">Cebu, Philippines</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-500 text-white shadow-sm">
-                                                    MOA
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-500 text-white shadow-sm">
-                                                    Pending
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <div class="text-sm text-gray-900">Mar 10, 2024</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <div class="text-sm text-gray-900">Mar 10, 2026</div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                <div class="flex items-center justify-center space-x-2">
-                                                    <button class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 hover:text-blue-700 transition-colors duration-200" title="View Details">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                                        </svg>
-                                                    </button>
-                                                    <button class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-600 hover:text-indigo-700 transition-colors duration-200" title="Edit Record">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                        </svg>
-                                                    </button>
-                                                    <button class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-700 transition-colors duration-200" title="Delete Record">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50">
-        <div class="relative p-8 bg-white w-full max-w-md m-auto flex-col flex rounded-xl shadow-xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-semibold text-gray-900">Confirm Deletion</h2>
-                <button onclick="hideDeleteModal()" class="text-gray-400 hover:text-gray-600 p-1">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            
+            <!-- Loading Indicator -->
+            <div id="loading-indicator" class="hidden p-8 text-center">
+                <div class="inline-flex items-center">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                </button>
+                    Loading documents...
+                </div>
             </div>
-            <div class="mb-6">
-                <p class="text-gray-700 mb-3">Are you sure you want to delete this MOU/MOA? This action cannot be undone.</p>
-                <p class="font-medium text-gray-900 bg-gray-50 p-3 rounded-lg" id="mouToDeleteName"></p>
-            </div>
-            <div class="flex justify-end space-x-3">
-                <button type="button" onclick="hideDeleteModal()"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                    Cancel
-                </button>
-                <button type="button" onclick="confirmDelete()"
-                        class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
-                    Delete MOU/MOA
-                </button>
+            
+            <!-- Pagination -->
+            <div id="pagination" class="p-4 border-t border-gray-200">
+                <!-- Pagination controls will be loaded here -->
             </div>
         </div>
     </div>
-
-    <!-- View MOU Modal -->
-    <div id="viewMOUModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50">
-        <div class="relative p-5 bg-white w-full max-w-lg m-auto flex-col flex rounded-md shadow-md max-h-[80vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-semibold text-gray-800 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                    </svg>
-                    MOU/MOA Details
-                </h2>
-                <button onclick="closeViewMOUModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-6 mb-6">
-                <div>
-                    <h3 class="text-sm font-medium text-gray-500 mb-1">Partner Organization</h3>
-                    <p id="viewMOUPartner" class="text-lg font-semibold text-gray-900"></p>
-                </div>
-                <div>
-                    <h3 class="text-sm font-medium text-gray-500 mb-1">Type</h3>
-                    <p id="viewMOUType" class="text-lg text-gray-700"></p>
-                </div>
-                <div>
-                    <h3 class="text-sm font-medium text-gray-500 mb-1">Status</h3>
-                    <p id="viewMOUStatus" class="text-lg text-gray-700"></p>
-                </div>
-                <div>
-                    <h3 class="text-sm font-medium text-gray-500 mb-1">Date Signed</h3>
-                    <p id="viewMOUDateSigned" class="text-lg text-gray-700"></p>
-                </div>
-                <div>
-                    <h3 class="text-sm font-medium text-gray-500 mb-1">End Date</h3>
-                    <p id="viewMOUEndDate" class="text-lg text-gray-700"></p>
-                </div>
-            </div>
-            
-            <div class="mb-6">
-                <h3 class="text-sm font-medium text-gray-500 mb-2">Description</h3>
-                <p id="viewMOUDescription" class="text-gray-700 leading-relaxed"></p>
-            </div>
-            
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-3">Document</h3>
-                <div id="viewMOUDocument">
-                    <!-- Document content will be dynamically inserted here -->
-                </div>
-            </div>
-            
-            <div class="flex justify-end mt-6">
-                <button onclick="closeViewMOUModal()" class="px-6 py-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-lg">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Create MOU Modal -->
-    <div id="createMOUModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-[80]">
-        <div class="relative p-4 bg-white w-full max-w-lg m-auto flex-col flex rounded-md shadow-md">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold text-gray-900">Create New MOU/MOA</h2>
-                <button onclick="closeCreateMOUModal()" class="text-gray-400 hover:text-gray-600 p-1">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            <form id="mou-form" class="space-y-4">
-                <!-- CSRF Token -->
-                <input type="hidden" id="csrf-token" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
-                
-                <!-- Institution Information -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="mou-institution" class="block text-xs font-medium text-gray-700 mb-1">Institution *</label>
-                        <input type="text" id="mou-institution" name="mou-institution" required class="w-full px-3 py-2 border rounded-md text-sm" placeholder="Enter institution name">
-                    </div>
-                    <div>
-                        <label for="mou-location" class="block text-xs font-medium text-gray-700 mb-1">Location of Institution *</label>
-                        <input type="text" id="mou-location" name="mou-location" required class="w-full px-3 py-2 border rounded-md text-sm" placeholder="Enter institution location">
-                    </div>
-                </div>
-                
-                <!-- Contact Details -->
-                <div>
-                    <label for="mou-contact" class="block text-xs font-medium text-gray-700 mb-1">Contact Details *</label>
-                    <textarea id="mou-contact" name="mou-contact" rows="2" required class="w-full px-3 py-2 border rounded-md text-sm" placeholder="Enter contact person, email, phone, etc."></textarea>
-                </div>
-                
-                <!-- Agreement Details -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="mou-term" class="block text-xs font-medium text-gray-700 mb-1">Term *</label>
-                        <input type="text" id="mou-term" name="mou-term" required class="w-full px-3 py-2 border rounded-md text-sm" placeholder="e.g., 2 years, 5 years, etc.">
-                    </div>
-                    <div>
-                        <label for="mou-type" class="block text-xs font-medium text-gray-700 mb-1">Type *</label>
-                        <select id="mou-type" name="mou-type" required class="w-full px-3 py-2 border rounded-md text-sm">
-                            <option value="">Select Type</option>
-                            <option value="MOU">MOU (Memorandum of Understanding)</option>
-                            <option value="MOA">MOA (Memorandum of Agreement)</option>
-                            <option value="Partnership Agreement">Partnership Agreement</option>
-                            <option value="Research Collaboration">Research Collaboration</option>
-                            <option value="Student Exchange">Student Exchange</option>
-                            <option value="Faculty Exchange">Faculty Exchange</option>
-                            <option value="Joint Program">Joint Program</option>
-                        </select>
-                    </div>
-                    </div>
-                
-                <!-- Dates -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="signed-date" class="block text-xs font-medium text-gray-700 mb-1">Signed Date *</label>
-                        <input type="date" id="signed-date" name="signed-date" required class="w-full px-3 py-2 border rounded-md text-sm">
-                    </div>
-                    <div>
-                        <label for="expiry-date" class="block text-xs font-medium text-gray-700 mb-1">End Date *</label>
-                        <input type="date" id="expiry-date" name="expiry-date" required class="w-full px-3 py-2 border rounded-md text-sm">
-                    </div>
-                </div>
-                
-                <!-- Status -->
-                <div>
-                    <label for="mou-status" class="block text-xs font-medium text-gray-700 mb-1">Status *</label>
-                    <select id="mou-status" name="mou-status" required class="w-full px-3 py-2 border rounded-md text-sm">
-                        <option value="">Select Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Expired">Expired</option>
-                        <option value="Terminated">Terminated</option>
-                        <option value="Under Review">Under Review</option>
-                        <option value="Renewed">Renewed</option>
-                    </select>
-                </div>
-                
-                <!-- Description -->
-                <div>
-                    <label for="mou-description" class="block text-xs font-medium text-gray-700 mb-1">Description *</label>
-                    <textarea id="mou-description" name="mou-description" rows="4" required class="w-full px-3 py-2 border rounded-md text-sm" placeholder="Describe the purpose, scope, and key terms of the agreement"></textarea>
-                </div>
-                
-                <!-- File Upload -->
-                <div>
-                    <label for="mou-file" class="block text-xs font-medium text-gray-700 mb-1">Upload Document</label>
-                    <input type="file" id="mou-file" name="mou-file" accept=".pdf,.doc,.docx" class="w-full">
-                    <p class="text-xs text-gray-500 mt-1">Supported formats: PDF, DOC, DOCX</p>
-                </div>
-                
-                <div class="flex justify-end gap-2 pt-1">
-                    <button type="button" onclick="closeCreateMOUModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Create MOU/MOA</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        function openCreateMOUModal(){
-            document.getElementById('createMOUModal').classList.remove('hidden');
-        }
-        function closeCreateMOUModal(){
-            document.getElementById('createMOUModal').classList.add('hidden');
-        }
-        // Submit handler already wired to #mou-form (handleFormSubmit)
-        document.addEventListener('DOMContentLoaded', function() {
-            var form = document.getElementById('mou-form');
-            // Duplicate submit listener removed to avoid double submission
-        });
-        console.log('Script ending before line 1288');
-    </script>
 
     <!-- Mobile Menu Overlay -->
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
@@ -1698,279 +315,127 @@ require_once 'classes/DateTimeUtility.php';
         <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 
-    <script>
-        console.log('Script starting at line 1293');
-        function toggleFiltersPanel(e){
-            if (e) { e.preventDefault(); e.stopPropagation(); }
-            var panel = document.getElementById('filters-panel');
-            if (!panel) return;
-            panel.classList.toggle('hidden');
-        }
-        // Mobile navigation function
-        function toggleMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('menu-overlay');
-            
-            if (sidebar && overlay) {
-                const isHidden = sidebar.classList.contains('-translate-x-full');
-                
-                if (isHidden) {
-                    // Show menu
-                    sidebar.classList.remove('-translate-x-full');
-                    overlay.classList.remove('hidden');
-                } else {
-                    // Hide menu
-                    sidebar.classList.add('-translate-x-full');
-                    overlay.classList.add('hidden');
-                }
-            }
-        }
-
-        // Setup mobile navigation when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            const menuToggle = document.getElementById('menu-toggle');
-            const overlay = document.getElementById('menu-overlay');
-            
-            if (menuToggle) {
-                menuToggle.addEventListener('click', toggleMenu);
-            }
-            
-            if (overlay) {
-                overlay.addEventListener('click', function() {
-                    const sidebar = document.getElementById('sidebar');
-                    if (sidebar) {
-                        sidebar.classList.add('-translate-x-full');
-                        overlay.classList.add('hidden');
-                    }
-                });
-            }
-        });
-
-        // Enhanced Search and Filter Functions
-        function clearAllFilters() {
-            document.getElementById('search-mous').value = '';
-            document.getElementById('status-filter').value = 'all';
-            document.getElementById('type-filter').value = 'all';
-            document.getElementById('date-filter').value = 'all';
-            document.getElementById('sort-filter').value = 'date-desc';
-            
-            // Trigger search to refresh results
-            searchMOUs();
-            
-            showNotification('All filters cleared', 'info');
-        }
-
-        function exportResults() {
-            // Get current filtered results
-            const container = document.getElementById('mous-container');
-            const mouCards = container.querySelectorAll('.mou-card:not([style*="display: none"])');
-            
-            if (mouCards.length === 0) {
-                showNotification('No MOUs to export', 'warning');
-                return;
-            }
-
-            // Create CSV content
-            let csvContent = "Organization,Type,Status,Date Signed,End Date,Description\n";
-            
-            mouCards.forEach(card => {
-                const org = card.querySelector('.mou-organization')?.textContent || '';
-                const type = card.querySelector('.mou-type')?.textContent || '';
-                const status = card.querySelector('.mou-status')?.textContent || '';
-                const signed = card.querySelector('.signed-date')?.textContent || '';
-                const end = card.querySelector('.end-date')?.textContent || '';
-                const desc = card.querySelector('.mou-description')?.textContent || '';
-                
-                // Escape quotes and commas for CSV
-                const escape = (str) => `"${str.replace(/"/g, '""')}"`;
-                
-                csvContent += `${escape(org)},${escape(type)},${escape(status)},${escape(signed)},${escape(end)},${escape(desc)}\n`;
-            });
-
-            // Download CSV file
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `MOUs_Export_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showNotification(`Exported ${mouCards.length} MOUs`, 'success');
-        }
-
-        function updateResultsCount() {
-            const container = document.getElementById('mous-container');
-            const visibleCards = container.querySelectorAll('.mou-card:not([style*="display: none"])');
-            const count = visibleCards.length;
-            
-            const resultsCountElement = document.getElementById('results-count');
-            if (resultsCountElement) {
-                resultsCountElement.textContent = count;
-                resultsCountElement.parentElement.classList.toggle('animate-pulse', count === 0);
-            }
-        }
-
-        function searchMOUs() {
-            const searchTerm = document.getElementById('search-mous').value.toLowerCase();
-            const statusFilter = document.getElementById('status-filter').value;
-            const typeFilter = document.getElementById('type-filter').value;
-            const dateFilter = document.getElementById('date-filter').value;
-            const sortFilter = document.getElementById('sort-filter').value;
-            
-            const container = document.getElementById('mous-container');
-            const mouCards = Array.from(container.querySelectorAll('.mou-card'));
-            
-            // Filter cards
-            mouCards.forEach(card => {
-                let shouldShow = true;
-                
-                // Text search
-                if (searchTerm) {
-                    const cardText = card.textContent.toLowerCase();
-                    shouldShow = shouldShow && cardText.includes(searchTerm);
-                }
-                
-                // Status filter
-                if (statusFilter !== 'all') {
-                    const status = card.querySelector('.mou-status')?.textContent || '';
-                    shouldShow = shouldShow && status === statusFilter;
-                }
-                
-                // Type filter
-                if (typeFilter !== 'all') {
-                    const type = card.querySelector('.mou-type')?.textContent || '';
-                    shouldShow = shouldShow && type === typeFilter;
-                }
-                
-                // Date filter
-                if (dateFilter !== 'all') {
-                    const signedDate = card.querySelector('.signed-date')?.textContent || '';
-                    const endDate = card.querySelector('.end-date')?.textContent || '';
-                    const currentYear = new Date().getFullYear();
-                    const lastYear = currentYear - 1;
-                    const currentDate = new Date();
-                    const threeMonthsFromNow = new Date();
-                    threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
-                    
-                    switch (dateFilter) {
-                        case 'this-year':
-                            shouldShow = shouldShow && signedDate.includes(currentYear.toString());
-                            break;
-                        case 'last-year':
-                            shouldShow = shouldShow && signedDate.includes(lastYear.toString());
-                            break;
-                        case 'expiring-soon':
-                            if (endDate) {
-                                const endDateObj = new Date(endDate);
-                                shouldShow = shouldShow && endDateObj > currentDate && endDateObj <= threeMonthsFromNow;
-                            } else {
-                                shouldShow = false;
-                            }
-                            break;
-                        case 'expired':
-                            if (endDate) {
-                                const endDateObj = new Date(endDate);
-                                shouldShow = shouldShow && endDateObj < currentDate;
-                            } else {
-                                shouldShow = false;
-                            }
-                            break;
-                    }
-                }
-                
-                card.style.display = shouldShow ? 'block' : 'none';
-            });
-            
-            // Sort visible cards
-            const visibleCards = mouCards.filter(card => card.style.display !== 'none');
-            visibleCards.sort((a, b) => {
-                switch (sortFilter) {
-                    case 'date-desc':
-                        const aDate = new Date(a.querySelector('.signed-date')?.textContent || '');
-                        const bDate = new Date(b.querySelector('.signed-date')?.textContent || '');
-                        return bDate - aDate;
-                    case 'date-asc':
-                        const aDateAsc = new Date(a.querySelector('.signed-date')?.textContent || '');
-                        const bDateAsc = new Date(b.querySelector('.signed-date')?.textContent || '');
-                        return aDateAsc - bDateAsc;
-                    case 'name-asc':
-                        const aName = a.querySelector('.mou-organization')?.textContent || '';
-                        const bName = b.querySelector('.mou-organization')?.textContent || '';
-                        return aName.localeCompare(bName);
-                    case 'name-desc':
-                        const aNameDesc = a.querySelector('.mou-organization')?.textContent || '';
-                        const bNameDesc = b.querySelector('.mou-organization')?.textContent || '';
-                        return bNameDesc.localeCompare(aNameDesc);
-                    case 'expiry-asc':
-                        const aExpiry = new Date(a.querySelector('.end-date')?.textContent || '9999-12-31');
-                        const bExpiry = new Date(b.querySelector('.end-date')?.textContent || '9999-12-31');
-                        return aExpiry - bExpiry;
-                    default:
-                        return 0;
-                }
-            });
-            
-            // Re-append sorted cards
-            visibleCards.forEach(card => container.appendChild(card));
-            
-            updateResultsCount();
-        }
-
-        // Add keyboard shortcut for search
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                e.preventDefault();
-                document.getElementById('search-mous').focus();
-            }
-        });
-
-        // Add event listeners for filters
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('search-mous');
-            const statusFilter = document.getElementById('status-filter');
-            const typeFilter = document.getElementById('type-filter');
-            const dateFilter = document.getElementById('date-filter');
-            const sortFilter = document.getElementById('sort-filter');
-            
-            if (searchInput) {
-                let searchTimeout;
-                searchInput.addEventListener('input', function() {
-                    clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(searchMOUs, 300); // Debounce search
-                });
-            }
-            
-            [statusFilter, typeFilter, dateFilter, sortFilter].forEach(filter => {
-                if (filter) {
-                    filter.addEventListener('change', searchMOUs);
-                }
-            });
-            
-            // Initialize results count
-            updateResultsCount();
-        });
-
-        // Tagging system removed for now
-    </script>
-
-    <script>
-        // Refresh page when clicking the centered title
-        document.addEventListener('DOMContentLoaded', function() {
-            var title = document.getElementById('page-title');
-            if (title) {
-                title.addEventListener('click', function() {
-                    window.location.reload();
-                });
-            }
-        });
-    </script>
-
     <!-- Shared Document Viewer Modal -->
     <?php include 'components/shared-document-viewer.php'; ?>
 
-</body>
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-mou-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[80] flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Delete MOU/MOA</h3>
+                <button onclick="closeDeleteModal()" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                    Close
+                </button>
+            </div>
+            <div class="mb-4">
+                <p class="text-gray-700">Are you sure you want to delete this MOU/MOA?</p>
+                <p class="text-sm text-gray-500 mt-2">This action cannot be undone.</p>
+                
+                <!-- File attachment info and view button -->
+                <div id="delete-modal-file-info" class="mt-3 p-3 bg-gray-50 rounded-lg hidden">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900">Attached File:</p>
+                            <p id="delete-modal-filename" class="text-sm text-gray-600 truncate"></p>
+                        </div>
+                        <button id="delete-modal-view-btn" onclick="viewDocumentFromDeleteModal()" 
+                                class="ml-3 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
+                            View
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="confirmDeleteMou()" class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                    Delete
+                </button>
+                <button onclick="closeDeleteModal()" class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
 
+    <!-- Upload MOU/MOA Modal -->
+    <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[70] hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen p-4 py-8">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+                <div class="p-3">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-base font-semibold text-gray-900">Upload MOU/MOA</h3>
+                        <button id="close-upload-modal" class="px-2 py-1 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                            Close
+                        </button>
+                    </div>
+                    
+                    <form id="upload-mou-form" enctype="multipart/form-data">
+                        <div class="space-y-2">
+                            <div>
+                                <label for="institution" class="block text-xs font-medium text-gray-700 mb-1">Institution</label>
+                                <input type="text" id="institution" name="institution" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent" 
+                                       placeholder="Enter institution name" required>
+                            </div>
+                            
+                            <div>
+                                <label for="location" class="block text-xs font-medium text-gray-700 mb-1">Location of Institution</label>
+                                <input type="text" id="location" name="location" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent" 
+                                       placeholder="Enter institution location" required>
+                            </div>
+                            
+                            <div>
+                                <label for="contact-details" class="block text-xs font-medium text-gray-700 mb-1">Contact Details</label>
+                                <input type="text" id="contact-details" name="contact_details" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                                       placeholder="Enter email or phone number" required>
+                            </div>
+                            
+                            <div>
+                                <label for="term" class="block text-xs font-medium text-gray-700 mb-1">Term</label>
+                                <input type="text" id="term" name="term" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent" 
+                                       placeholder="Enter agreement term (e.g., 3 years, 5 years)" required>
+                            </div>
+                            
+                            <div>
+                                <label for="sign-date" class="block text-xs font-medium text-gray-700 mb-1">Date of Sign</label>
+                                <input type="date" id="sign-date" name="sign_date" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent" required>
+                            </div>
+                            
+                            <div>
+                                <label for="start-date" class="block text-xs font-medium text-gray-700 mb-1">Start Date (Optional)</label>
+                                <input type="date" id="start-date" name="start_date" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            
+                            <div>
+                                <label for="end-date" class="block text-xs font-medium text-gray-700 mb-1">End Date (Optional)</label>
+                                <input type="date" id="end-date" name="end_date" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            
+                            <div>
+                                <label for="mou-file" class="block text-xs font-medium text-gray-700 mb-1">Select File (Optional)</label>
+                                <input type="file" id="mou-file" name="mou-file" accept=".pdf,.doc,.docx" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end gap-2 mt-3">
+                            <button type="button" id="cancel-upload" class="px-3 py-1 text-sm text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                                Upload MOU/MOA
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
 </html>

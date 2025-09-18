@@ -4177,14 +4177,14 @@ foreach ($meetings as $meeting) {
 			</a>
 		</div>
 		
-		<!-- Trash Bin Button in Navbar -->
+		<!-- Trash Button in Navbar -->
 		<div class="flex items-center pr-4">
-			<button id="trash-bin-btn-navbar" onclick="openTrashBin()" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2 relative" title="Trash Bin">
-				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<button id="trash-bin-btn-navbar" onclick="openTrashBin()" class="bg-gray-600 text-white px-2 py-1 rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-1 relative" title="Trash">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
 				</svg>
-				<span class="hidden sm:inline">Trash Bin</span>
-				<div id="trash-count-badge-navbar" class="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold hidden">0</div>
+				<span class="hidden sm:inline text-sm">Trash</span>
+				<div id="trash-count-badge-navbar" class="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold hidden">0</div>
 			</button>
 		</div>
 	</nav>

@@ -243,8 +243,6 @@ require_once 'classes/DateTimeUtility.php';
                     <select id="partner-filter" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">All Partners</option>
                         <option value="University">University</option>
-                        <option value="Government">Government</option>
-                        <option value="NGO">NGO</option>
                         <option value="Private">Private</option>
                     </select>
                     <button id="sync-mous-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
@@ -260,11 +258,11 @@ require_once 'classes/DateTimeUtility.php';
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold text-gray-900">MOU/MOA Documents</h2>
                     <div class="flex items-center gap-2">
-                        <button id="upload-mou-btn" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                        <button id="upload-mou-btn" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
                             <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                             </svg>
-                            Upload MOU/MOA
+                            Upload
                         </button>
                     </div>
                 </div>

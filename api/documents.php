@@ -255,15 +255,31 @@ try {
             $category = 'Templates';
         }
         
-        // Extract content from the uploaded file
+        // Extract content from the uploaded file using dynamic file processor
         $extractedContent = '';
+        $isReadable = true;
         $filePath = 'uploads/' . $uniqueFilename;
+        
         if (file_exists($filePath)) {
-            $extractedContent = file_get_contents($filePath);
+            // Use dynamic file processor
+            require_once __DIR__ . '/../classes/DynamicFileProcessor.php';
+            $dynamicProcessor = new DynamicFileProcessor($pdo);
+            
+            // Create a file array for the processor
+            $fileArray = [
+                'name' => $originalFilename,
+                'tmp_name' => $filePath,
+                'size' => $fileSize,
+                'type' => $fileType
+            ];
+            
+            $extractionResult = $dynamicProcessor->processFile($fileArray, $filePath);
+            $extractedContent = $extractionResult['content'];
+            $isReadable = $extractionResult['is_readable'];
         }
         
-        // Insert into database with extracted content
-        $stmt = $pdo->prepare("INSERT INTO enhanced_documents (document_name, filename, original_filename, file_path, file_size, file_type, category, description, extracted_content) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        // Insert into database with extracted content and readability status
+        $stmt = $pdo->prepare("INSERT INTO enhanced_documents (document_name, filename, original_filename, file_path, file_size, file_type, category, description, extracted_content, is_readable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $documentName,
             $uniqueFilename,
@@ -273,7 +289,8 @@ try {
             $fileType,
             $category,
             $description,
-            $extractedContent
+            $extractedContent,
+            $isReadable ? 1 : 0
         ]);
         
         $documentId = $pdo->lastInsertId();
@@ -293,6 +310,14 @@ try {
         
         // Update award_readiness counters after successful upload
         updateAwardReadinessCounters($pdo);
+        
+        // Analyze document for awards immediately after upload
+        require_once __DIR__ . '/../classes/AwardAnalyzer.php';
+        $awardAnalyzer = new AwardAnalyzer($pdo);
+        $analysisResult = $awardAnalyzer->analyze($documentId, $extractedContent);
+        
+        // Add analysis result to response
+        $record['analysis'] = $analysisResult;
         
         // Return success response
         $record = [

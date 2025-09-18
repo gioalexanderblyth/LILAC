@@ -1,0 +1,7 @@
+2025-09-18 16:10:24 - EXTRACTION FAILED - File: test_agreement.docx, Type: docx, Reason: ZipArchive not available for DOCX extraction
+2025-09-18 16:10:24 - EXTRACTION FAILED - File: test_binary.bin, Type: bin, Reason: Binary file format - no text extraction available
+2025-09-18 16:10:24 - EXTRACTION FAILED - File: test_binary.bin, Type: bin, Reason: No meaningful content extracted
+2025-09-18 16:56:08 - EXTRACTION FAILED - File: 20.pdf, Type: pdf, Reason: No meaningful content extracted
+2025-09-18 16:57:04 - EXTRACTION FAILED - File: 20.pdf, Type: pdf, Reason: No meaningful content extracted
+2025-09-18 16:57:36 - EXTRACTION FAILED - File: 20.pdf, Type: pdf, Reason: No meaningful content extracted
+2025-09-18 17:01:33 - EXTRACTION FAILED - File: 20.pdf, Type: pdf, Reason: No meaningful content extracted

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Suppress any output before JSON
 ob_start();
 
@@ -491,9 +491,5 @@ ob_clean();
             </div>
         </div>
     </div>
-        <!-- Footer -->
-        <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
-        <p>&copy; 2025 Central Philippine University | LILAC System</p>
-    </footer>
 </body>
 </html>

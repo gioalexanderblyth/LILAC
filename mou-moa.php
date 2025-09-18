@@ -313,12 +313,8 @@ require_once 'classes/DateTimeUtility.php';
     <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 py-4 mt-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p class="text-center text-sm text-gray-500">
-                © 2024 LILAC System. All rights reserved.
-            </p>
-        </div>
+    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
+        <p>&copy; 2025 Central Philippine University | LILAC System</p>
     </footer>
 
     <!-- Shared Document Viewer Modal -->

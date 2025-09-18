@@ -381,13 +381,6 @@ require_once 'classes/DateTimeUtility.php';
                     <form id="upload-mou-form" enctype="multipart/form-data">
                         <div class="space-y-2">
                             <div>
-                                <label for="mou-file" class="block text-xs font-medium text-gray-700 mb-1">Select File (Optional)</label>
-                                <input type="file" id="mou-file" name="mou-file" accept=".pdf,.doc,.docx" 
-                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
-                                <p class="text-xs text-gray-500 mt-1">Leave empty if no file is available</p>
-                            </div>
-                            
-                            <div>
                                 <label for="institution" class="block text-xs font-medium text-gray-700 mb-1">Institution</label>
                                 <input type="text" id="institution" name="institution" 
                                        class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent" 
@@ -403,9 +396,9 @@ require_once 'classes/DateTimeUtility.php';
                             
                             <div>
                                 <label for="contact-details" class="block text-xs font-medium text-gray-700 mb-1">Contact Details</label>
-                                <textarea id="contact-details" name="contact_details" rows="2"
-                                          class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                                          placeholder="Enter contact information (email, phone, address)" required></textarea>
+                                <input type="text" id="contact-details" name="contact_details" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                                       placeholder="Enter email or phone number" required>
                             </div>
                             
                             <div>
@@ -425,14 +418,18 @@ require_once 'classes/DateTimeUtility.php';
                                 <label for="start-date" class="block text-xs font-medium text-gray-700 mb-1">Start Date (Optional)</label>
                                 <input type="date" id="start-date" name="start_date" 
                                        class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
-                                <p class="text-xs text-gray-500 mt-1">Leave empty if MOU has no start date</p>
                             </div>
                             
                             <div>
                                 <label for="end-date" class="block text-xs font-medium text-gray-700 mb-1">End Date (Optional)</label>
                                 <input type="date" id="end-date" name="end_date" 
                                        class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
-                                <p class="text-xs text-gray-500 mt-1">Leave empty if MOU has no end date</p>
+                            </div>
+                            
+                            <div>
+                                <label for="mou-file" class="block text-xs font-medium text-gray-700 mb-1">Select File (Optional)</label>
+                                <input type="file" id="mou-file" name="mou-file" accept=".pdf,.doc,.docx" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
                             </div>
                         </div>
                         

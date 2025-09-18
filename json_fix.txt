@@ -1,0 +1,13 @@
+﻿// Handle JSON input
+$jsonInput = null;
+if ($_SERVER["REQUEST_METHOD"] === "POST" && 
+    isset($_SERVER["CONTENT_TYPE"]) && 
+    strpos($_SERVER["CONTENT_TYPE"], "application/json") !== false) {
+    $jsonInput = json_decode(file_get_contents("php://input"), true);
+    if ($jsonInput) {
+        // Merge JSON data with POST data
+        $_POST = array_merge($_POST, $jsonInput);
+    }
+}
+
+$action = $_GET["action"] ?? ($_POST["action"] ?? "get_all");

@@ -4179,12 +4179,12 @@ foreach ($meetings as $meeting) {
 		
 		<!-- Trash Bin Button in Navbar -->
 		<div class="flex items-center pr-4">
-			<button id="trash-bin-btn-navbar" onclick="openTrashBin()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm flex items-center gap-2 relative" title="Trash Bin">
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<button id="trash-bin-btn-navbar" onclick="openTrashBin()" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2 relative" title="Trash Bin">
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
 				</svg>
-				<span class="hidden sm:inline">Trash</span>
-				<div id="trash-count-badge-navbar" class="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold hidden">0</div>
+				<span class="hidden sm:inline">Trash Bin</span>
+				<div id="trash-count-badge-navbar" class="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold hidden">0</div>
 			</button>
 		</div>
 	</nav>
@@ -4226,7 +4226,7 @@ foreach ($meetings as $meeting) {
 
     <!-- Main Content -->
     <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
-        
+
         <!-- Calendar View -->
         <div id="calendar-view" class="space-y-6">
             <!-- Calendar Header removed to align Quick Reminder to top -->
@@ -4459,102 +4459,102 @@ foreach ($meetings as $meeting) {
 
     <!-- Add Event Modal -->
     <div id="add-event-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden" onclick="if(event.target===this){closeAddEventModal()}">
-        <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-xl w-full max-w-sm mx-4" onclick="event.stopPropagation()">
+        <div class="bg-white dark:bg-[#2a2f3a] rounded-lg shadow-xl w-full max-w-3xl mx-4" onclick="event.stopPropagation()">
             <!-- Modal Header -->
-            <div class="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-600">
-                <h3 id="add-event-modal-title" class="text-sm font-semibold text-gray-900 dark:text-white">Add Event</h3>
+            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600">
+                <h3 id="add-event-modal-title" class="text-lg font-semibold text-gray-900 dark:text-white">Add Event</h3>
                 <button onclick="closeAddEventModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
 
             <!-- Modal Body -->
-            <form id="add-event-form" onsubmit="handleAddEventSubmit(event)" class="p-2 space-y-2">
+            <form id="add-event-form" onsubmit="handleAddEventSubmit(event)" class="p-4 grid grid-cols-2 gap-4">
                 <!-- Event Name -->
-                <div>
-                    <label for="event-name" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div class="col-span-2">
+                    <label for="event-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Event Name*
                     </label>
                     <input type="text" id="event-name" name="event-name" required
-                           class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                            placeholder="Enter event name">
                 </div>
 
                 <!-- Description -->
-                <div>
-                    <label for="event-description" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div class="col-span-2">
+                    <label for="event-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Description
                     </label>
-                    <textarea id="event-description-input" name="event-description" rows="1"
-                              class="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                    <textarea id="event-description-input" name="event-description" rows="2"
+                              class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                               placeholder="Enter event description"></textarea>
                 </div>
 
                 <!-- All Day Checkbox -->
                 <div class="flex items-center">
                     <input type="checkbox" id="event-all-day" name="event-all-day" onchange="toggleAllDay()"
-                           class="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                    <label for="event-all-day" class="ml-1 block text-xs text-gray-700 dark:text-gray-300">
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="event-all-day" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                         All day
                     </label>
                 </div>
 
                 <!-- Start Date/Time -->
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Starts*
                     </label>
-                    <div class="grid grid-cols-2 gap-1">
+                    <div class="grid grid-cols-2 gap-3">
                         <input type="date" id="event-date-start" name="event-date-start" required
-                               class="border border-gray-300 dark:border-gray-600 rounded px-1 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white">
+                               class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white">
                         <input type="time" id="event-time-start" name="event-time-start" required
-                               class="time-input border border-gray-300 dark:border-gray-600 rounded px-1 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white">
+                               class="time-input border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white">
                     </div>
                 </div>
 
                 <!-- End Date/Time -->
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Ends*
                     </label>
-                    <div class="grid grid-cols-2 gap-1">
+                    <div class="grid grid-cols-2 gap-3">
                         <input type="date" id="event-date-end" name="event-date-end" required
-                               class="border border-gray-300 dark:border-gray-600 rounded px-1 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white">
+                               class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white">
                         <input type="time" id="event-time-end" name="event-time-end" required
-                               class="time-input border border-gray-300 dark:border-gray-600 rounded px-1 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white">
+                               class="time-input border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-[#222831] text-gray-900 dark:text-white">
                     </div>
                 </div>
 
                 <!-- Color Selection -->
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Color*
                     </label>
-                    <div class="flex items-center space-x-1">
+                    <div class="flex items-center space-x-3">
                         <label class="flex items-center">
                             <input type="radio" name="event-color" value="blue" checked
                                    class="sr-only">
-                            <div class="w-4 h-4 bg-blue-500 rounded-full cursor-pointer border border-transparent hover:border-gray-300"></div>
+                            <div class="w-6 h-6 bg-blue-500 rounded-full cursor-pointer border-2 border-transparent hover:border-gray-300"></div>
                         </label>
                         <label class="flex items-center">
                             <input type="radio" name="event-color" value="orange"
                                    class="sr-only">
-                            <div class="w-4 h-4 bg-orange-500 rounded-full cursor-pointer border border-transparent hover:border-gray-300"></div>
+                            <div class="w-6 h-6 bg-orange-500 rounded-full cursor-pointer border-2 border-transparent hover:border-gray-300"></div>
                         </label>
                         <label class="flex items-center">
                             <input type="radio" name="event-color" value="teal"
                                    class="sr-only">
-                            <div class="w-4 h-4 bg-teal-500 rounded-full cursor-pointer border border-transparent hover:border-gray-300"></div>
+                            <div class="w-6 h-6 bg-teal-500 rounded-full cursor-pointer border-2 border-transparent hover:border-gray-300"></div>
                         </label>
                         <label class="flex items-center">
                             <input type="radio" name="event-color" value="brown"
                                    class="sr-only">
-                            <div class="w-4 h-4 bg-amber-700 rounded-full cursor-pointer border border-transparent hover:border-gray-300"></div>
+                            <div class="w-6 h-6 bg-amber-700 rounded-full cursor-pointer border-2 border-transparent hover:border-gray-300"></div>
                         </label>
                         <button type="button" onclick="showColorPicker()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                             </svg>
                         </button>
@@ -4562,9 +4562,9 @@ foreach ($meetings as $meeting) {
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="flex justify-center pt-1">
+                <div class="col-span-2 flex justify-center pt-2">
                     <button type="submit" id="add-event-submit-btn" onclick="handleSubmitButtonClick(event)"
-                            class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-blue-700 focus:ring-1 focus:ring-blue-500 focus:ring-offset-1 transition-colors">
+                            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium">
                         Save
                     </button>
                 </div>

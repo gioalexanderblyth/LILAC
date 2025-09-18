@@ -168,14 +168,10 @@ require_once 'classes/DateTimeUtility.php';
             </svg>
         </button>
         
-        <div class="flex-1 flex items-center justify-center">
+        <div class="flex-1 flex items-center justify-start ml-16">
             <h1 id="page-title" class="text-lg font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors">
                 MOUs & MOAs
             </h1>
-        </div>
-        
-        <div class="flex items-center space-x-2">
-            <span id="current-date" class="text-sm text-gray-600"></span>
         </div>
     </nav>
 

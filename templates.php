@@ -58,7 +58,6 @@
 
         function updateCurrentDate() {
             const now = new Date();
-            const dateElement = document.getElementById('current-date');
             if (dateElement) {
                 dateElement.textContent = now.toLocaleDateString('en-US', {
                     weekday: 'short',
@@ -224,7 +223,7 @@
                         </button>
                         <div class="h-56 bg-gradient-to-br from-gray-900 to-gray-700 relative cursor-pointer" onclick="viewTemplate(${doc.id})">
                             ${badge}
-                            <div class="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                            <div class="absolute bottom-3 left-3 right-3 flex items-end justify-start">
                                 <div class="inline-block bg-yellow-400 text-black font-extrabold text-xs px-2 py-1 rounded">${(doc.category||'').toLowerCase().includes('report') ? 'ANNUAL REPORT' : 'TEMPLATE'}</div>
                                 ${app}
                             </div>
@@ -234,7 +233,7 @@
                         </div>
                         <div class="p-3">
                             <p class="font-semibold text-gray-800 truncate" title="${title}">${title}</p>
-                            <div class="mt-2 flex items-center justify-between text-xs text-gray-500">
+                            <div class="mt-2 flex items-center justify-start text-xs text-gray-500">
                                 <span>${formatFileSize(doc.file_size || 0)}</span>
                                 <span>#${doc.id}</span>
                             </div>
@@ -457,7 +456,7 @@
                 case 'image':
                     return `
                         <div class="space-y-4">
-                            <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-start bg-gray-50 p-3 rounded-lg">
                                 <div class="flex items-center gap-3">
                                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -493,7 +492,7 @@
                 case 'pdf':
                     return `
                         <div class="space-y-4">
-                            <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg border">
+                            <div class="flex items-center justify-start bg-gray-50 p-4 rounded-lg border">
                                 <div class="flex items-center gap-3">
                                     <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -520,7 +519,7 @@
                 case 'text':
                     return `
                         <div class="space-y-4">
-                            <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                            <div class="flex items-center justify-start bg-gray-50 p-3 rounded-lg">
                                 <div class="flex items-center gap-3">
                                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -568,7 +567,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                            <div class="flex items-center justify-start bg-gray-50 p-4 rounded-lg">
                                 <div class="flex items-center gap-4">
                                     <div class="p-3 ${iconColor} rounded-lg">
                                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1003,20 +1002,17 @@ Approved by: _________________________
 <body class="bg-gray-50">
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
+    <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-start relative transition-all duration-300 ease-in-out">
         <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
             </button>
-        <div class="absolute left-1/2 transform -translate-x-1/2">
+        <div class="ml-16">
             <h1 id="templates-title" class="text-xl font-bold text-gray-800 cursor-pointer">Templates</h1>
         </div>
-        <div class="absolute right-4 top-4 z-[90] text-sm flex items-center space-x-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
-            <span id="current-date"></span>
         </div>
     </nav>
 
@@ -1060,7 +1056,6 @@ Approved by: _________________________
 
         // Update date in top-right
         function updateCurrentDate() {
-            var el = document.getElementById('current-date');
             if (el) {
                 var now = new Date();
                 el.textContent = now.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
@@ -1074,7 +1069,7 @@ Approved by: _________________________
     <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
         <!-- Templates Display -->
         <div class="bg-white rounded-xl shadow-md p-4">
-            <h2 class="text-xl font-bold mb-2">Start with a template</h2>
+            <h2 class="text-xl font-bold mb-2"></h2>
             <div class="flex flex-wrap items-center gap-3 mb-4">
                 <div class="relative flex-1 min-w-[220px]">
                     <input id="template-search" type="search" placeholder="Search templates..." class="w-full border rounded-full px-4 py-2 pl-9 focus:outline-none focus:ring-2 focus:ring-blue-200" oninput="displayDocuments(currentDocuments)">
@@ -1102,7 +1097,7 @@ Approved by: _________________________
     <!-- Delete Confirmation Modal -->
     <div id="deleteConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50">
         <div class="relative p-8 bg-white w-full max-w-md m-auto flex-col flex rounded-lg shadow-lg">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-start items-center mb-4">
                 <h2 class="text-xl font-semibold text-gray-800">Confirm Deletion</h2>
                 <button onclick="hideDeleteModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1124,7 +1119,7 @@ Approved by: _________________________
     <!-- View Template Modal -->
     <div id="viewTemplateModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50">
         <div class="relative p-4 bg-white w-full max-w-3xl m-auto flex-col flex rounded-lg shadow-xl max-h-[80vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-6 sticky top-0 bg-white py-2">
+            <div class="flex justify-start items-center mb-6 sticky top-0 bg-white py-2">
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
                     <div class="p-2 bg-purple-100 rounded-lg">
                         <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1173,7 +1168,6 @@ Approved by: _________________________
                     <div>
                         <h3 class="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
                             Date Added
                         </h3>
@@ -1268,7 +1262,7 @@ Approved by: _________________________
     <div id="document-viewer-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-[80] hidden" onclick="this.classList.add('hidden')">
         <div class="flex items-center justify-center min-h-screen p-4">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col" onclick="event.stopPropagation()">
-                <div class="flex items-center justify-between px-4 py-3 border-b">
+                <div class="flex items-center justify-start px-4 py-3 border-b">
                     <h3 id="document-viewer-title" class="text-lg font-semibold text-gray-900"></h3>
                     <div class="flex items-center gap-2">
                         <button id="document-viewer-open" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Open in New Tab</button>

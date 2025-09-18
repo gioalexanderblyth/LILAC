@@ -2539,9 +2539,6 @@ LILAC Awards - Keyboard Shortcuts:
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
         </button>
-        
-        <div class="flex-1 flex items-center justify-start ml-16">
-        </div>
     </nav>
 
     
@@ -2551,10 +2548,6 @@ LILAC Awards - Keyboard Shortcuts:
 
     <!-- Main Content -->
     <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
-
-        
-
-
 
         <!-- Tab Navigation -->
         <div class="mb-1">
@@ -2568,8 +2561,16 @@ LILAC Awards - Keyboard Shortcuts:
                             Award Match Analysis
                         </button>
                     </nav>
-                    <div class="flex items-center gap-2">
-                        <button id="add-award-btn" aria-label="Upload" class="px-3 py-1.5 bg-purple-600 text-white rounded-md shadow hover:bg-purple-700 transition-colors text-sm" onclick="showAddAwardModal()">Upload</button>
+                    <div class="flex flex-col items-end gap-2">
+                        <div class="flex items-center gap-2">
+                            <button onclick="updateAwardMatchCounters()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2" title="Refresh Analysis">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Refresh Analysis
+                            </button>
+                            <button id="add-award-btn" aria-label="Upload" class="px-4 py-2 bg-purple-600 text-white rounded-md shadow hover:bg-purple-700 transition-colors text-sm flex items-center" onclick="showAddAwardModal()">Upload</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2864,19 +2865,8 @@ LILAC Awards - Keyboard Shortcuts:
         </div>
         </div> <!-- End of tab-overview-content -->
 
-        <!-- AwardMatch Tab Content -->
-        <div id="tab-awardmatch-content" class="tab-content hidden">
-            <!-- Header with refresh button -->
-            <div class="flex items-center justify-between mb-6">
-                <button onclick="updateAwardMatchCounters()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    Refresh Analysis
-                </button>
-            </div>
             <!-- CHED Awards Progress -->
-            <div class="grid grid-cols-5 gap-4 mb-8">
+            <div class="grid grid-cols-5 gap-5 mb-5 mt-6">
                 <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">

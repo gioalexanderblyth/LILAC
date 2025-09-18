@@ -270,9 +270,6 @@ require_once 'classes/DateTimeUtility.php';
                             </svg>
                             Upload MOU/MOA
                         </button>
-                        <button id="bulk-delete" class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
-                            Delete Selected
-                        </button>
                     </div>
                 </div>
             </div>
@@ -372,78 +369,78 @@ require_once 'classes/DateTimeUtility.php';
     <!-- Upload MOU/MOA Modal -->
     <div id="upload-modal" class="fixed inset-0 bg-black bg-opacity-50 z-[70] hidden overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen p-4 py-8">
-            <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-                <div class="p-4">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Upload MOU/MOA</h3>
-                        <button id="close-upload-modal" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+                <div class="p-3">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-base font-semibold text-gray-900">Upload MOU/MOA</h3>
+                        <button id="close-upload-modal" class="px-2 py-1 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
                             Close
                         </button>
                     </div>
                     
                     <form id="upload-mou-form" enctype="multipart/form-data">
-                        <div class="space-y-3">
+                        <div class="space-y-2">
                             <div>
-                                <label for="mou-file" class="block text-sm font-medium text-gray-700 mb-2">Select File (Optional)</label>
+                                <label for="mou-file" class="block text-xs font-medium text-gray-700 mb-1">Select File (Optional)</label>
                                 <input type="file" id="mou-file" name="mou-file" accept=".pdf,.doc,.docx" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
                                 <p class="text-xs text-gray-500 mt-1">Leave empty if no file is available</p>
                             </div>
                             
                             <div>
-                                <label for="institution" class="block text-sm font-medium text-gray-700 mb-2">Institution</label>
+                                <label for="institution" class="block text-xs font-medium text-gray-700 mb-1">Institution</label>
                                 <input type="text" id="institution" name="institution" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent" 
                                        placeholder="Enter institution name" required>
                             </div>
                             
                             <div>
-                                <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Location of Institution</label>
+                                <label for="location" class="block text-xs font-medium text-gray-700 mb-1">Location of Institution</label>
                                 <input type="text" id="location" name="location" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent" 
                                        placeholder="Enter institution location" required>
                             </div>
                             
                             <div>
-                                <label for="contact-details" class="block text-sm font-medium text-gray-700 mb-2">Contact Details</label>
+                                <label for="contact-details" class="block text-xs font-medium text-gray-700 mb-1">Contact Details</label>
                                 <textarea id="contact-details" name="contact_details" rows="2"
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                          class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                                           placeholder="Enter contact information (email, phone, address)" required></textarea>
                             </div>
                             
                             <div>
-                                <label for="term" class="block text-sm font-medium text-gray-700 mb-2">Term</label>
+                                <label for="term" class="block text-xs font-medium text-gray-700 mb-1">Term</label>
                                 <input type="text" id="term" name="term" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent" 
                                        placeholder="Enter agreement term (e.g., 3 years, 5 years)" required>
                             </div>
                             
                             <div>
-                                <label for="sign-date" class="block text-sm font-medium text-gray-700 mb-2">Date of Sign</label>
+                                <label for="sign-date" class="block text-xs font-medium text-gray-700 mb-1">Date of Sign</label>
                                 <input type="date" id="sign-date" name="sign_date" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent" required>
                             </div>
                             
                             <div>
-                                <label for="start-date" class="block text-sm font-medium text-gray-700 mb-2">Start Date (Optional)</label>
+                                <label for="start-date" class="block text-xs font-medium text-gray-700 mb-1">Start Date (Optional)</label>
                                 <input type="date" id="start-date" name="start_date" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
                                 <p class="text-xs text-gray-500 mt-1">Leave empty if MOU has no start date</p>
                             </div>
                             
                             <div>
-                                <label for="end-date" class="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+                                <label for="end-date" class="block text-xs font-medium text-gray-700 mb-1">End Date (Optional)</label>
                                 <input type="date" id="end-date" name="end_date" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent">
                                 <p class="text-xs text-gray-500 mt-1">Leave empty if MOU has no end date</p>
                             </div>
                         </div>
                         
-                        <div class="flex justify-end gap-3 mt-4">
-                            <button type="button" id="cancel-upload" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors">
+                        <div class="flex justify-end gap-2 mt-3">
+                            <button type="button" id="cancel-upload" class="px-3 py-1 text-sm text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors">
                                 Cancel
                             </button>
-                            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                            <button type="submit" class="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
                                 Upload MOU/MOA
                             </button>
                         </div>

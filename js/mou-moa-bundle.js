@@ -117,11 +117,6 @@ class MouMoaManager {
             });
         }
 
-        const bulkDeleteBtn = document.getElementById('bulk-delete');
-        if (bulkDeleteBtn) {
-            bulkDeleteBtn.addEventListener('click', () => this.handleBulkDelete());
-        }
-
         // Sync functionality
         const syncBtn = document.getElementById('sync-mous-btn');
         if (syncBtn) {
@@ -642,18 +637,6 @@ class MouMoaManager {
         if (selectAllCheckbox) {
             selectAllCheckbox.checked = this.selectAllChecked;
             selectAllCheckbox.indeterminate = this.selectedDocuments.size > 0 && this.selectedDocuments.size < this.currentDocuments.length;
-        }
-    }
-
-    handleBulkDelete() {
-        if (this.selectedDocuments.size === 0) {
-            this.showNotification('Please select documents to delete', 'warning');
-            return;
-        }
-        
-        if (confirm(`Are you sure you want to delete ${this.selectedDocuments.size} selected MOU/MOA documents?`)) {
-            console.log('Bulk delete:', Array.from(this.selectedDocuments));
-            this.showNotification('Bulk delete functionality coming soon', 'info');
         }
     }
 

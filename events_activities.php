@@ -388,7 +388,7 @@ require_once 'classes/DateTimeUtility.php';
                         <input type="text" id="event-location" name="location"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                placeholder="Enter event location (auto-detected from title/description)">
-                        <p class="text-xs text-gray-500 mt-1">ðŸ’¡ Location will be automatically suggested based on your event title and description</p>
+                        <p class="text-xs text-gray-500 mt-1">ðŸ'¡ Location will be automatically suggested based on your event title and description</p>
                     </div>
 
                     <!-- Event Description -->
@@ -405,7 +405,7 @@ require_once 'classes/DateTimeUtility.php';
                         <input type="url" id="event-original-link" name="original_link"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                placeholder="https://example.com/original-event-post">
-                        <p class="text-xs text-gray-500 mt-1">ðŸ’¡ Link to the original event post or source</p>
+                        <p class="text-xs text-gray-500 mt-1">ðŸ'¡ Link to the original event post or source</p>
                     </div>
 
                     <!-- Image Upload -->
@@ -545,7 +545,7 @@ require_once 'classes/DateTimeUtility.php';
                                     <button id="events-upload-btn" class="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
                                         Upload
                                     </button>
-                                    <button id="trash-btn" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm" onclick="showTrashModal()">
+                                    <button id="trash-btn" class="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm" onclick="showTrashModal()">
                                         <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                         </svg>
@@ -1181,7 +1181,7 @@ require_once 'classes/DateTimeUtility.php';
                             // Only suggest if confidence is high enough and location field is empty
                             if (confidence > 0.5 && !eventLocation.value) {
                                 eventLocation.value = suggestedLocation;
-                                showNotification(`ðŸ“ Location suggested: ${suggestedLocation} (${Math.round(confidence * 100)}% confidence)`, 'info');
+                                showNotification(`ðŸ" Location suggested: ${suggestedLocation} (${Math.round(confidence * 100)}% confidence)`, 'info');
                             }
                         }
                     }
@@ -1903,7 +1903,7 @@ require_once 'classes/DateTimeUtility.php';
         // Refresh events from API (for after creating new events)
         async function refreshEventsFromAPI() {
             try {
-                console.log('ðŸ”„ Refreshing events from API...');
+                console.log('ðŸ" Refreshing events from API...');
                 
                 // Try the main API first, then fallback to simple API
                 let response;
@@ -1931,7 +1931,7 @@ require_once 'classes/DateTimeUtility.php';
                     
                     // Combine upcoming and completed events
                     const allEvents = [...result.data.events.upcoming, ...result.data.events.completed];
-                    console.log('ðŸ“Š Total refreshed events:', allEvents.length);
+                    console.log('ðŸ" Total refreshed events:', allEvents.length);
                     
                     // Recreate table entries for all events
                     allEvents.forEach(eventData => {
@@ -1971,7 +1971,7 @@ require_once 'classes/DateTimeUtility.php';
         // Load events from API
         async function loadEventsFromAPI() {
             try {
-                console.log('ðŸ”„ Loading events from API...');
+                console.log('ðŸ" Loading events from API...');
                 
                 // Try the main API first, then fallback to simple API
                 let response;
@@ -2122,7 +2122,7 @@ require_once 'classes/DateTimeUtility.php';
         // Load existing events from PHP data directly
         function loadExistingEvents() {
             try {
-                console.log('ðŸ”„ Loading all events from API...');
+                console.log('ðŸ" Loading all events from API...');
                 
                 // Load events from API since PHP data loading was removed for performance
                 loadEventsFromAPI();
@@ -2159,7 +2159,7 @@ require_once 'classes/DateTimeUtility.php';
                 upcomingCountElement.textContent = upcomingCount;
                 completedCountElement.textContent = completedCount;
                 
-                console.log(`ðŸ“Š Updated counters - Upcoming: ${upcomingCount}, Completed: ${completedCount}`);
+                console.log(`ðŸ" Updated counters - Upcoming: ${upcomingCount}, Completed: ${completedCount}`);
             } catch (error) {
                 console.error('Error updating event counters:', error);
             }
@@ -2244,7 +2244,7 @@ require_once 'classes/DateTimeUtility.php';
         function attachTableDeleteListeners() {
             // Note: Delete buttons now use onclick handlers directly, so this function is disabled
             // to prevent conflicts with the new delete modal system
-            console.log('ðŸ” Delete buttons now use onclick handlers with delete modal - no event listeners needed');
+            console.log('ðŸ Delete buttons now use onclick handlers with delete modal - no event listeners needed');
             
             const allDeleteButtons = document.querySelectorAll('.delete-row-btn');
             console.log(`- Total delete buttons found: ${allDeleteButtons.length}`);
@@ -2301,11 +2301,11 @@ require_once 'classes/DateTimeUtility.php';
 
         // Debug function to test delete functionality
         function testDeleteFunctionality() {
-            console.log('ðŸ§ª Testing delete functionality...');
+            console.log('ðŸª Testing delete functionality...');
             const allButtons = document.querySelectorAll('.delete-row-btn');
             const enabledButtons = document.querySelectorAll('.delete-row-btn:not([disabled])');
             
-            console.log('ðŸ“Š Delete button summary:');
+            console.log('ðŸ" Delete button summary:');
             console.log('- Total buttons found:', allButtons.length);
             console.log('- Enabled buttons found:', enabledButtons.length);
             console.log('- Disabled buttons found:', allButtons.length - enabledButtons.length);
@@ -2321,7 +2321,7 @@ require_once 'classes/DateTimeUtility.php';
             
             if (enabledButtons.length > 0) {
                 console.log('âœ… Found enabled buttons - delete functionality should work');
-                console.log('ðŸ” Try clicking the red delete button next to TEST event');
+                console.log('ðŸ Try clicking the red delete button next to TEST event');
             } else {
                 console.log('âŒ No enabled buttons found - add new events to test delete');
             }
@@ -2329,7 +2329,7 @@ require_once 'classes/DateTimeUtility.php';
         
         // Quick fix function to manually delete the TEST event
         function deleteTestEvent() {
-            console.log('ðŸ—‘ï¸ Manually deleting TEST event...');
+            console.log('ðŸ—'ï¸ Manually deleting TEST event...');
             
             if (typeof deleteEventFromAPI === 'function') {
                 deleteEventFromAPI(2).then(result => {
@@ -2352,7 +2352,7 @@ require_once 'classes/DateTimeUtility.php';
 
         // Function to force refresh events from server
         function forceRefreshEvents() {
-            console.log('ðŸ”„ Force refreshing events from server...');
+            console.log('ðŸ" Force refreshing events from server...');
             // Clear any cached data
             if (typeof loadExistingEvents === 'function') {
                 loadExistingEvents().then(() => {
@@ -2361,14 +2361,14 @@ require_once 'classes/DateTimeUtility.php';
                     console.error('âŒ Error refreshing events:', error);
                 });
             } else {
-                console.log('ðŸ”„ Reloading page to refresh events...');
+                console.log('ðŸ" Reloading page to refresh events...');
                 window.location.reload(true);
             }
         }
         
         // Force update all delete button states
         function fixAllDeleteButtons() {
-            console.log('ðŸ”§ Fixing all delete button states...');
+            console.log('ðŸ§ Fixing all delete button states...');
             const allRows = document.querySelectorAll('tbody tr');
             
             allRows.forEach((row, index) => {
@@ -2383,13 +2383,13 @@ require_once 'classes/DateTimeUtility.php';
                         button.disabled = true;
                         button.className = 'delete-row-btn text-gray-400 cursor-not-allowed p-1';
                         button.title = 'Sample event - cannot be deleted';
-                        console.log(`ðŸ”’ Disabled: "${eventName}" (Sample: ${isSample}, No ID: ${!eventId})`);
+                        console.log(`ðŸ' Disabled: "${eventName}" (Sample: ${isSample}, No ID: ${!eventId})`);
                     } else {
                         // This is a real event - make it enabled
                         button.disabled = false;
                         button.className = 'delete-row-btn text-red-500 hover:text-red-700 transition-colors p-1';
                         button.title = 'Delete event';
-                        console.log(`ðŸ—‘ï¸ Enabled: "${eventName}" (ID: ${eventId})`);
+                        console.log(`ðŸ—' Enabled: "${eventName}" (ID: ${eventId})`);
                     }
                 }
             });
@@ -2436,7 +2436,7 @@ require_once 'classes/DateTimeUtility.php';
             }
             
             if (event) {
-                console.log('ðŸ“„ Found event in page data for delete:', event);
+                console.log('ðŸ" Found event in page data for delete:', event);
                 currentDeleteEventData = event;
                 if (eventInfo) {
                     eventInfo.innerHTML = `
@@ -2452,7 +2452,7 @@ require_once 'classes/DateTimeUtility.php';
             }
             
             // Fallback to API call if not found in page data
-            console.log('ðŸ”„ Event not found in page data, trying API for delete...');
+            console.log('ðŸ" Event not found in page data, trying API for delete...');
             
             try {
                 // Fetch event data from API
@@ -2463,7 +2463,7 @@ require_once 'classes/DateTimeUtility.php';
                 }
                 
                 const responseText = await response.text();
-                console.log('ðŸ“¥ Raw API response:', responseText);
+                console.log('ðŸ¥ Raw API response:', responseText);
                 
                 if (!responseText.trim()) {
                     throw new Error('Empty response from API');
@@ -2844,29 +2844,29 @@ require_once 'classes/DateTimeUtility.php';
         
         // Test function for action buttons
         window.testActionButtons = function() {
-            console.log('ðŸ”§ Testing action buttons...');
+            console.log('ðŸ§ Testing action buttons...');
             
             // Check if buttons exist
             const viewButtons = document.querySelectorAll('.view-file-btn');
             const deleteButtons = document.querySelectorAll('.delete-row-btn');
             
-            console.log(`ðŸ“Š Found ${viewButtons.length} view buttons and ${deleteButtons.length} delete buttons`);
+            console.log(`ðŸ" Found ${viewButtons.length} view buttons and ${deleteButtons.length} delete buttons`);
             
             // Test each button
             viewButtons.forEach((btn, index) => {
                 const eventId = btn.getAttribute('data-event-id');
                 const onclick = btn.getAttribute('onclick');
-                console.log(`ðŸ‘ï¸ View button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
+                console.log(`ðŸ'ï¸ View button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
             });
             
             deleteButtons.forEach((btn, index) => {
                 const eventId = btn.getAttribute('data-event-id');
                 const onclick = btn.getAttribute('onclick');
-                console.log(`ðŸ—‘ï¸ Delete button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
+                console.log(`ðŸ—'ï¸ Delete button ${index + 1}: ID="${eventId}", onclick="${onclick}"`);
             });
             
             // Test functions exist
-            console.log('ðŸ” Function availability:');
+            console.log('ðŸ Function availability:');
             console.log(`  - viewEventFile: ${typeof window.viewEventFile}`);
             console.log(`  - showDeleteModal: ${typeof window.showDeleteModal}`);
             console.log(`  - hideDeleteModal: ${typeof window.hideDeleteModal}`);
@@ -3113,7 +3113,7 @@ require_once 'classes/DateTimeUtility.php';
         }
 
         function viewEventFile(eventId) {
-            console.log('ðŸ” Viewing event:', eventId);
+            console.log('ðŸ Viewing event:', eventId);
             
             // First try to get event data from the page data (faster and more reliable)
             const pageEventsData = <?php echo json_encode($eventsData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES); ?>;
@@ -3125,28 +3125,28 @@ require_once 'classes/DateTimeUtility.php';
             }
             
             if (event) {
-                console.log('ðŸ“„ Found event in page data:', event);
+                console.log('ðŸ" Found event in page data:', event);
                 showEventDetails(event);
                 return;
             }
             
             // Fallback to API call if not found in page data
-            console.log('ðŸ”„ Event not found in page data, trying API...');
+            console.log('ðŸ" Event not found in page data, trying API...');
             
             // Get event data from the central events API
             fetch(`api/central_events_api.php?action=get_event&event_id=${eventId}`)
                 .then(response => {
-                    console.log('ðŸ“¡ API Response status:', response.status);
+                    console.log('ðŸ¥ API Response status:', response.status);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                     return response.json();
                 })
                 .then(result => {
-                    console.log('ðŸ“¥ API Result:', result);
+                    console.log('ðŸ¥ API Result:', result);
                     if (result.success && result.data && result.data.event) {
                         const event = result.data.event;
-                        console.log('ðŸ“„ Event data:', event);
+                        console.log('ðŸ" Event data:', event);
                         
                         // Create a document object for the viewer
                         const doc = {
@@ -3184,8 +3184,8 @@ require_once 'classes/DateTimeUtility.php';
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4';
             
             // Debug: Log event data to see what's available
-            console.log('ðŸ” Event data for view:', event);
-            console.log('ðŸ–¼ï¸ Image paths:', {
+            console.log('ðŸ Event data for view:', event);
+            console.log('ðŸ¼ï¸ Image paths:', {
                 image_path: event.image_path,
                 file_path: event.file_path,
                 hasImage: !!(event.image_path || event.file_path)

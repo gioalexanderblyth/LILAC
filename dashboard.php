@@ -223,7 +223,7 @@ ob_clean();
                 </svg>
             </button>
         </div>
-        <div class="absolute left-1/2 transform -translate-x-1/2">
+        <div class="flex-1 flex items-center justify-start ml-16">
             <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">LILAC System</h1>
         </div>
         <div class="text-sm flex items-center space-x-4">
@@ -308,12 +308,6 @@ ob_clean();
     
     <!-- Main Content -->
     <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out ml-64">
-        <!-- Welcome Section -->
-        <div class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome back, Lesley!</h1>
-            <p class="text-gray-600">Here's what's happening with your LILAC system today.</p>
-        </div>
-        
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Events & Activities -->

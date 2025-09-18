@@ -2541,7 +2541,6 @@ LILAC Awards - Keyboard Shortcuts:
         </button>
         
         <div class="flex-1 flex items-center justify-start ml-16">
-            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Awards Overview</h1>
         </div>
     </nav>
 
@@ -2817,14 +2816,14 @@ LILAC Awards - Keyboard Shortcuts:
 
             <!-- Recent Activity -->
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity Status</h3>
                 <div class="space-y-3">
                     <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                         <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
                             RV
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-900"><span class="font-medium">Ruby Vetrovs</span> 5 minutes ago</p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Global Citizenship Awards</span></p>
                             <p class="text-sm text-gray-600">Added 3 new awards data with certificates.</p>
                         </div>
                     </div>
@@ -2833,7 +2832,7 @@ LILAC Awards - Keyboard Shortcuts:
                             MJ
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-900"><span class="font-medium">Maria Johnson</span> 2 hours ago</p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Outstanding International Education Program Awards</span></p>
                             <p class="text-sm text-gray-600">Updated award status for Research Excellence.</p>
                         </div>
                     </div>
@@ -2842,7 +2841,7 @@ LILAC Awards - Keyboard Shortcuts:
                             AS
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-900"><span class="font-medium">Alex Smith</span> 1 day ago</p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Emerging Leadership Award</span></p>
                             <p class="text-sm text-gray-600">Uploaded certificate for Academic Achievement.</p>
                         </div>
                     </div>
@@ -2869,7 +2868,6 @@ LILAC Awards - Keyboard Shortcuts:
         <div id="tab-awardmatch-content" class="tab-content hidden">
             <!-- Header with refresh button -->
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg font-semibold text-gray-900">Awards Match Analysis</h3>
                 <button onclick="updateAwardMatchCounters()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>

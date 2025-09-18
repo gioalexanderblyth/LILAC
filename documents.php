@@ -42,6 +42,8 @@ require_once 'classes/DateTimeUtility.php';
     <script src="js/modal-handlers.js"></script>
     <script src="js/text-config.js"></script>
     <script src="js/date-time-utility.js"></script>
+    <script src="js/pdf-text-extractor.js"></script>
+    <script src="js/enhanced-document-upload.js"></script>
     <script>
         // PDF.js will be loaded lazily when needed
         // Configuration will be handled by the lazy loader
@@ -2809,6 +2811,16 @@ require_once 'classes/DateTimeUtility.php';
                 img.className = 'max-h-full max-w-full object-contain mx-auto';
                 contentEl.appendChild(img);
             } else if (ext === 'pdf') {
+                // Show extracted content if available
+                if (doc.ocr_text && doc.ocr_text.trim()) {
+                    const textContainer = document.createElement('div');
+                    textContainer.className = 'mb-4 p-4 bg-gray-50 rounded-lg';
+                    textContainer.innerHTML = `
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">Extracted Content:</h4>
+                        <div class="text-sm text-gray-600 whitespace-pre-wrap">${doc.ocr_text}</div>
+                    `;
+                    contentEl.appendChild(textContainer);
+                }
                 const container = document.createElement('div');
                 container.className = 'w-full h-full';
                 contentEl.appendChild(container);

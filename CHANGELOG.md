@@ -1,5 +1,363 @@
 # LILAC System - Changelog
 
+## Version 1.1.33 - Notifications Page UI Improvements and Sidebar Behavior Fix (2024-12-19)
+
+### 🔧 Notifications Page UI Improvements and Sidebar Behavior Fix
+
+#### Notifications Page Improvements
+- **Back Button**: Changed hamburger button to back button with left arrow icon
+- **Navigation**: Back button now specifically navigates to dashboard.php
+- **Sidebar Removal**: Removed sidebar from notifications page for cleaner, full-width layout
+- **Focused Experience**: Notifications page now provides dedicated interface without navigation distractions
+
+#### Sidebar Behavior Fix
+- **Default State**: Sidebar now starts closed by default on all pages
+- **No Flicker**: Eliminated sidebar show/hide flicker when navigating between pages
+- **User Control**: Sidebar only opens when user explicitly clicks hamburger button
+- **Consistent Behavior**: Same behavior whether refreshing page or navigating from notifications
+
+#### Technical Implementation
+- **CSS Default**: Sidebar uses `-translate-x-full` by default (always closed initially)
+- **JavaScript Logic**: Modified to start with `isOpen = false` and only apply saved state when different
+- **Navigation Flow**: Notifications page → Back button → Dashboard (sidebar closed by default)
+- **Responsive Design**: Maintains mobile/desktop functionality while preventing flicker
+
+#### Files Modified
+- `notifications.php` - Added back button, removed sidebar, improved navigation
+- `includes/sidebar.php` - Fixed default state and eliminated flicker behavior
+
+#### Result
+Users now have:
+- ✅ **Clean Notifications Page** → Full-width layout without sidebar distractions
+- ✅ **Intuitive Navigation** → Back button with left arrow takes users to dashboard
+- ✅ **No Sidebar Flicker** → Smooth experience when navigating between pages
+- ✅ **User-Controlled Sidebar** → Opens only when user wants it via hamburger button
+- ✅ **Consistent Behavior** → Predictable sidebar state across all navigation scenarios
+
+---
+
+## Version 1.1.32 - Remove Notifications from Sidebar (2024-12-19)
+
+### 🔧 Remove Notifications from Sidebar
+
+#### Change Made
+- **Sidebar Cleanup**: Removed notifications link from sidebar navigation
+- **Access Method**: Notifications page now only accessible via "View All Notifications" button on dashboard
+- **User Experience**: Cleaner sidebar with notifications accessed through notification bell workflow
+
+#### Technical Implementation
+- **Sidebar Update**: Removed notifications navigation item from `includes/sidebar.php`
+- **Access Control**: Notifications page remains functional but hidden from main navigation
+- **Workflow**: Users access notifications through: Dashboard → Notification Bell → "View All Notifications"
+
+#### Files Modified
+- `includes/sidebar.php` - Removed notifications link from sidebar navigation
+
+#### Result
+- ✅ **Cleaner Sidebar** → Removed notifications link from main navigation
+- ✅ **Focused Access** → Notifications only accessible through notification bell workflow
+- ✅ **Better UX** → Notifications accessed when actually needed (when bell shows notifications)
+
+---
+
+## Version 1.1.31 - Add Notifications Page (2024-12-19)
+
+### 🔧 Add Notifications Page
+
+#### New Feature
+- **Notifications Page**: Created a comprehensive notifications management page
+- **Sidebar Integration**: Added notifications link to the sidebar navigation
+- **Dashboard Integration**: Connected "View All Notifications" button to the new page
+
+#### Features Implemented
+- **Notification Types**: Support for info, success, warning, and error notifications
+- **Priority Levels**: High, medium, and low priority notifications with visual indicators
+- **Categories**: Organized notifications by category (events, documents, awards, system, mou, users)
+- **Filtering**: Filter notifications by type (all, info, success, warning, error)
+- **Actions**: Mark as read, mark all as read, delete individual notifications, clear all
+- **Real-time Updates**: Time stamps with relative time display (e.g., "2m ago", "1h ago")
+
+#### Technical Implementation
+- **Page Structure**: Full-featured notifications page with modern UI design
+- **Sample Data**: Includes sample notifications for demonstration
+- **Interactive Elements**: Clickable actions for managing notifications
+- **Responsive Design**: Mobile-friendly layout with proper spacing and typography
+- **Visual Indicators**: Color-coded notification types and priority levels
+
+#### Files Created/Modified
+- `notifications.php` - New comprehensive notifications page
+- `includes/sidebar.php` - Added notifications link to sidebar navigation
+- `dashboard.php` - Connected "View All Notifications" button to notifications page
+
+#### Result
+Users now have:
+- ✅ **Dedicated Notifications Page** → Full-featured page for managing all notifications
+- ✅ **Easy Access** → Available from sidebar navigation and dashboard notification bell
+- ✅ **Rich Functionality** → Filter, mark as read, delete, and manage notifications
+- ✅ **Professional UI** → Modern design consistent with LILAC system
+- ✅ **Complete Integration** → Seamlessly connected to existing notification system
+
+---
+
+## Version 1.1.30 - Fix Awards Table Display (2024-12-19)
+
+### 🔧 Fix Awards Table Display
+
+#### Problem Resolved
+- **Issue**: "Your Awards" section was completely empty after removing hardcoded awards data
+- **Root Cause**: `displayAwards()` function was showing plain text instead of table structure when no awards exist
+- **Impact**: Users couldn't see the table headers or understand the expected data structure
+
+#### Technical Solution
+- **Table Structure**: Modified `displayAwards()` to always show the table structure, even when empty
+- **Empty State**: Improved empty state message with better call-to-action
+- **Consistent Display**: Ensured table headers are always visible to show expected data format
+
+#### Technical Implementation
+- **Function Update**: Changed `displayAwards()` to call `displayDocuments([])` for empty state
+- **Empty State Enhancement**: Updated empty state message to be more informative and actionable
+- **Button Integration**: Fixed empty state button to properly call `showAddAwardModal()`
+
+#### Files Modified
+- `awards.php` - Fixed `displayAwards()` function to show table structure when empty
+
+#### Result
+Awards page now provides:
+- ✅ **Visible Table Structure** → Table headers always displayed to show expected data format
+- ✅ **Clear Empty State** → Informative message explaining no awards received yet
+- ✅ **Action Button** → "Add Your First Award" button to encourage user engagement
+- ✅ **Consistent Layout** → Table structure maintained whether empty or populated
+
+---
+
+## Version 1.1.29 - Remove Hardcoded Awards Data (2024-12-19)
+
+### 🔧 Remove Hardcoded Awards Data
+
+#### Problem Resolved
+- **Issue**: Awards page was displaying hardcoded mock awards that don't exist
+- **Hardcoded Data**: "Outstanding International Education Program Award" ($5,000) and "Regional Internationalization Award" ($3,000)
+- **Impact**: Misleading users by showing fake awards that haven't been won
+
+#### Technical Solution
+- **Data Cleanup**: Removed hardcoded awards array from `api/awards.php`
+- **Empty Response**: Changed `get_awards_by_period` action to return empty awards array
+- **Accurate Display**: Awards page now correctly shows "No awards received this year" when no awards exist
+
+#### Technical Implementation
+- **API Modification**: Updated `get_awards_by_period` action in `api/awards.php`
+- **Mock Data Removal**: Replaced hardcoded awards array with empty array
+- **Clean Response**: API now returns accurate empty state instead of fake data
+
+#### Files Modified
+- `api/awards.php` - Removed hardcoded awards data from `get_awards_by_period` action
+
+#### Result
+Awards page now provides:
+- ✅ **Accurate Data** → No more fake awards displayed
+- ✅ **Honest Representation** → Shows actual award status (none won yet)
+- ✅ **Clean Interface** → Displays appropriate "No awards received" message
+- ✅ **Proper Foundation** → Ready for real awards when they are actually won
+
+---
+
+## Version 1.1.28 - Awards Page UI Improvements and API Error Fixes (2024-12-19)
+
+### 🔧 Awards Page UI Improvements and API Error Fixes
+
+#### Problems Resolved
+- **Issue 1**: JavaScript errors in awards-management.js: "Error loading awards: Error: Failed to load awards"
+- **Issue 2**: Sidebar state API 500 Internal Server Error
+- **Issue 3**: "Refresh Analysis" button was located inside the Award Match Analysis tab instead of beside the Upload button
+
+#### Technical Solutions
+- **Session Management**: Added proper session handling to both `api/awards.php` and `api/sidebar_state.php`
+- **Button Repositioning**: Moved "Refresh Analysis" button from inside the tab content to the main navigation area beside the "Upload" button
+- **API Error Prevention**: Fixed potential session-related errors that could cause 500 responses
+
+#### Technical Implementation
+- **Session Fix**: Added `session_start()` with proper session status checking to prevent duplicate session starts
+- **UI Layout**: Moved "Refresh Analysis" button to the main button group in the navigation area
+- **Button Styling**: Maintained consistent styling and functionality for both buttons
+
+#### Files Modified
+- `awards.php` - Moved "Refresh Analysis" button to main navigation area beside "Upload" button
+- `api/awards.php` - Added session management to prevent 500 errors
+- `api/sidebar_state.php` - Improved session handling to prevent duplicate session starts
+
+#### Result
+Awards page now provides:
+- ✅ **Fixed API Errors** → No more "Failed to load awards" or 500 Internal Server errors
+- ✅ **Better Button Layout** → "Refresh Analysis" and "Upload" buttons are now side-by-side in the main navigation
+- ✅ **Improved User Experience** → Buttons are more accessible and logically positioned
+- ✅ **Stable Session Management** → Proper session handling prevents API errors
+
+---
+
+## Version 1.1.27 - Awards Page Button Functionality Fix (2024-12-19)
+
+### 🔧 Awards Page Button Functionality Fix
+
+#### Problem Resolved
+- **Issue**: "Refresh Analysis" button was not updating the award counters properly
+- **Root Cause**: JavaScript function was trying to update elements with incorrect IDs (`leadership-count` instead of `leadership-score`)
+- **Impact**: Award counters remained at 0 even when documents matched award criteria
+
+#### Technical Solution
+- **Element ID Correction**: Fixed the `updateAwardMatchCounters()` function to use correct element IDs
+- **Counter Mapping**: Updated element references to match actual HTML structure
+- **Button Integration**: Ensured both "Refresh Analysis" and "Upload" buttons work properly
+
+#### Technical Implementation
+- **ID Mapping Fix**: Changed element IDs from `*-count` to `*-score` format
+- **Counter Updates**: Fixed references to `leadership-score`, `education-score`, `emerging-score`, `regional-score`, and `citizenship-score`
+- **Function Validation**: Verified all button functions are properly defined and accessible
+
+#### Files Modified
+- `awards.php` - Fixed element ID references in `updateAwardMatchCounters()` function
+
+#### Result
+Awards page buttons now provide:
+- ✅ **Working Refresh Analysis** → Button properly updates award counters based on document analysis
+- ✅ **Correct Counter Updates** → All 5 award counters display accurate document counts
+- ✅ **Functional Upload Button** → Opens award upload modal correctly
+- ✅ **Proper Integration** → All button functions work as expected
+
+---
+
+## Version 1.1.26 - Templates Page JavaScript Error Fix (2024-12-19)
+
+### 🔧 Templates Page JavaScript Error Fix
+
+#### Problem Resolved
+- **Issue**: Templates page was throwing JavaScript errors: "ReferenceError: el is not defined"
+- **Root Cause**: Duplicate `updateCurrentDate` functions trying to reference undefined variables (`el` and `dateElement`)
+- **Impact**: JavaScript errors were preventing proper page functionality and causing console errors
+
+#### Technical Solution
+- **Function Cleanup**: Removed duplicate `updateCurrentDate` function that referenced undefined `el` variable
+- **Safe Implementation**: Modified the remaining function to be safe and not reference non-existent elements
+- **Error Prevention**: Eliminated JavaScript reference errors by removing calls to undefined variables
+
+#### Technical Implementation
+- **Duplicate Removal**: Removed the second `updateCurrentDate` function that was causing the error
+- **Safe Function**: Modified the first function to be a no-op since there's no date element in templates page
+- **Code Cleanup**: Removed unnecessary date update calls and intervals
+
+#### Files Modified
+- `templates.php` - Fixed duplicate function declarations and undefined variable references
+
+#### Result
+Templates page now provides:
+- ✅ **Error-Free Loading** → No more JavaScript reference errors
+- ✅ **Clean Console** → No undefined variable errors in browser console
+- ✅ **Proper Functionality** → All template features work without JavaScript interference
+- ✅ **Stable Performance** → Page loads and functions correctly
+
+---
+
+## Version 1.1.25 - Documents Page JavaScript Errors Fix (2024-12-19)
+
+### 🔧 Documents Page JavaScript Errors Fix
+
+#### Problem Resolved
+- **Issue**: Multiple JavaScript errors preventing documents page from functioning properly
+- **Root Cause**: 
+  - Duplicate `DocumentsConfig` declarations causing "Identifier already declared" error
+  - Missing API configuration properties in JavaScript config object
+  - Incorrect API action parameter (`list` vs `get_all`)
+  - Missing session start in sidebar state API causing 500 errors
+- **Impact**: Documents page was not loading documents and sidebar state management was failing
+
+#### Technical Solution
+- **Config Consolidation**: Removed duplicate `DocumentsConfig` declaration from separate JS file
+- **API Configuration**: Added missing `api` and `upload` properties to PHP-generated JavaScript config
+- **Action Parameter Fix**: Changed API call from `action=list` to `action=get_all` to match API expectations
+- **Session Management**: Added `session_start()` to sidebar state API
+
+#### Technical Implementation
+- **File Structure**: Removed `js/documents-config.js` include to prevent duplicate declarations
+- **JavaScript Config**: Enhanced PHP-generated config with complete API and upload settings
+- **API Integration**: Fixed action parameter in `documents-management.js`
+- **Session Handling**: Added proper session initialization to `api/sidebar_state.php`
+
+#### Files Modified
+- `documents.php` - Removed duplicate config include and enhanced JavaScript config
+- `js/documents-management.js` - Fixed API action parameter
+- `api/sidebar_state.php` - Added session start
+
+#### Result
+Documents page now provides:
+- ✅ **Error-Free Loading** → No more JavaScript syntax errors
+- ✅ **Proper API Integration** → Documents load correctly from API
+- ✅ **Complete Configuration** → All required config properties available
+- ✅ **Working Sidebar State** → Sidebar state management functions properly
+
+---
+
+## Version 1.1.24 - Documents Page White Screen Fix (2024-12-19)
+
+### 🔧 Documents Page White Screen Fix
+
+#### Problem Resolved
+- **Issue**: Documents page was showing a white screen and not loading properly
+- **Root Cause**: `DocumentsConfig` class was being used before the config file was included, causing a fatal PHP error
+- **Impact**: Users could not access the documents management functionality
+
+#### Technical Solution
+- **Include Order Fix**: Moved `require_once` statements to the top of the file before any class usage
+- **Dependency Resolution**: Ensured all required classes and configurations are loaded before being referenced
+
+#### Technical Implementation
+- **File Structure**: Reorganized `documents.php` to include dependencies first
+- **Class Loading**: Moved `config/documents_config.php` and `classes/DateTimeUtility.php` includes to the beginning
+- **Error Prevention**: Eliminated "Class not found" fatal errors
+
+#### Files Modified
+- `documents.php` - Fixed include order to prevent class loading errors
+
+#### Result
+Documents page now provides:
+- ✅ **Proper Loading** → Page loads correctly without white screen
+- ✅ **Class Availability** → All required classes are available when needed
+- ✅ **Error-Free Access** → Users can access documents management functionality
+- ✅ **Stable Performance** → No more fatal PHP errors blocking page access
+
+---
+
+## Version 1.1.23 - Awards System Structure Optimization (2024-12-19)
+
+### 🔧 Awards System Structure Optimization
+
+#### Problem Resolved
+- **Issue**: Awards Match Analysis content was positioned under the "Your Awards" section in `awards.php`, creating a cluttered interface
+- **Root Cause**: CHED Awards Progress section was placed outside the tab structure, appearing directly under the main awards content
+- **Impact**: Poor user experience with mixed content organization and unclear separation between different award functionalities
+
+#### Technical Solution
+- **Content Restructuring**: Moved Awards Match Analysis content to a separate dedicated tab
+- **Tab Organization**: Created proper separation between "Awards Progress" and "Award Match Analysis" tabs
+- **Interface Cleanup**: Removed duplicate content positioning and improved user navigation flow
+
+#### Technical Implementation
+- **Tab Structure**: Reorganized content to use proper tab-based navigation
+- **Content Separation**: Moved CHED Awards Progress section from main view to dedicated analysis tab
+- **User Interface**: Improved navigation between different award functionalities
+- **File Cleanup**: Removed redundant `awards1.php` file after structure optimization
+
+#### Files Modified
+- `awards.php` - Restructured Awards Match Analysis content to separate tab
+- `awards1.php` - Removed (redundant file after optimization)
+
+#### Result
+Awards system now provides:
+- ✅ **Clear Content Separation** → Awards Progress and Analysis are properly separated into distinct tabs
+- ✅ **Improved Navigation** → Users can easily switch between different award functionalities
+- ✅ **Cleaner Interface** → No more cluttered content mixing under single sections
+- ✅ **Better User Experience** → Logical organization of award-related features
+
+---
+
 ## Version 1.1.22 - Complete File Naming and MOU Sync System Overhaul (2024-12-19)
 
 ### 🔧 Complete File Naming System Overhaul

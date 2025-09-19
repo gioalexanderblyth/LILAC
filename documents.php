@@ -1,16 +1,20 @@
 <?php
+// Include required files first
+require_once 'config/documents_config.php';
+require_once 'classes/DateTimeUtility.php';
+
 // Start session for authentication
 session_start();
 
 // Check if user is logged in (more permissive for demo)
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_role'])) {
     // Set default session for demo purposes
-    $_SESSION['user_id'] = 'demo_user';
-    $_SESSION['user_role'] = 'admin';
+    $_SESSION['user_id'] = DocumentsConfig::$DEFAULT_SESSION['user_id'];
+    $_SESSION['user_role'] = DocumentsConfig::$DEFAULT_SESSION['user_role'];
 }
 
-// Check user permissions for documents management (allow all roles for demo)
-$allowed_roles = ['admin', 'manager', 'coordinator', 'user'];
+// Check user permissions for documents management (dynamic roles)
+$allowed_roles = DocumentsConfig::getAllowedRoles();
 if (!in_array($_SESSION['user_role'], $allowed_roles)) {
     // Set default role for demo
     $_SESSION['user_role'] = 'user';
@@ -18,10 +22,8 @@ if (!in_array($_SESSION['user_role'], $allowed_roles)) {
 
 // Validate session token for security
 if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(DocumentsConfig::$SECURITY['csrf_token_length']));
 }
-
-require_once 'classes/DateTimeUtility.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -33,7 +35,6 @@ require_once 'classes/DateTimeUtility.php';
     <script src="js/error-handler.js"></script>
     <script src="js/security-utils.js"></script>
     <script src="js/awards-check.js"></script>
-    <script src="js/documents-config.js"></script>
     <script src="js/documents-management.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -45,6 +46,43 @@ require_once 'classes/DateTimeUtility.php';
     <script src="js/pdf-text-extractor.js"></script>
     <script src="js/enhanced-document-upload.js"></script>
     <script>
+        // Dynamic configuration from PHP
+        const DocumentsConfig = {
+            categories: <?php echo json_encode(DocumentsConfig::getCategoryRulesForJS()); ?>,
+            categoriesByPriority: <?php echo json_encode(DocumentsConfig::getCategoriesByPriority()); ?>,
+            userRoles: <?php echo json_encode(DocumentsConfig::$USER_ROLES); ?>,
+            fileTypes: <?php echo json_encode(DocumentsConfig::$FILE_TYPES); ?>,
+            filters: <?php echo json_encode(DocumentsConfig::$FILTERS); ?>,
+            pagination: <?php echo json_encode(DocumentsConfig::$PAGINATION); ?>,
+            ui: <?php echo json_encode(DocumentsConfig::$UI); ?>,
+            security: <?php echo json_encode(DocumentsConfig::$SECURITY); ?>,
+            api: {
+                upload: 'api/documents.php',
+                list: 'api/documents.php',
+                delete: 'api/documents.php',
+                search: 'api/documents.php'
+            },
+            upload: {
+                maxFileSize: 50 * 1024 * 1024, // 50MB
+                allowedTypes: [
+                    'application/pdf',
+                    'image/jpeg',
+                    'image/png',
+                    'image/gif',
+                    'text/plain',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                ],
+                maxFiles: 10
+            },
+            currentUser: {
+                id: '<?php echo $_SESSION['user_id']; ?>',
+                role: '<?php echo $_SESSION['user_role']; ?>'
+            }
+        };
+        
         // PDF.js will be loaded lazily when needed
         // Configuration will be handled by the lazy loader
     </script>
@@ -64,11 +102,11 @@ require_once 'classes/DateTimeUtility.php';
             limit: DocumentsConfig.pagination.defaultLimit,
             search: '',
             category: '',
-            sort_by: 'upload_date',
-            sort_order: 'DESC',
-            view: 'all', // all, my, favorites, sharing, deleted
+            sort_by: DocumentsConfig.ui.default_sort_by,
+            sort_order: DocumentsConfig.ui.default_sort_order,
+            view: DocumentsConfig.filters.views[0], // Use first view from config
             // Advanced filters
-            file_group: 'all',
+            file_group: DocumentsConfig.ui.default_file_group,
             file_types: [],
             date_from: '',
             date_to: '',
@@ -80,8 +118,8 @@ require_once 'classes/DateTimeUtility.php';
         // Track file names to handle duplicates
         let existingFileNames = new Set();
         
-        // View mode state
-        let currentViewMode = 'list'; // 'list' or 'grid'
+        // View mode state (now using dynamic configuration)
+        let currentViewMode = DocumentsConfig.ui.default_view_mode;
         
         // Local state for recent uploads (no API dependency)
         let recentUploads = [];
@@ -95,7 +133,7 @@ require_once 'classes/DateTimeUtility.php';
         let isEditorOpen = false;
         
         let debounceTimer;
-        let availableCategories = [];
+        let availableCategories = DocumentsConfig.categoriesByPriority || [];
         let currentDocuments = [];
 
         // Initialize documents functionality
@@ -280,12 +318,7 @@ require_once 'classes/DateTimeUtility.php';
             const now = new Date();
             const dateElement = document.getElementById('current-date');
             if (dateElement) {
-                dateElement.textContent = now.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                });
+                dateElement.textContent = now.toLocaleDateString(DocumentsConfig.ui.date_format, DocumentsConfig.ui.date_options);
             }
         }
 
@@ -2223,11 +2256,35 @@ require_once 'classes/DateTimeUtility.php';
 
         function detectCategoryFromText(text) {
             try {
-                if (!text) return '';
-                if (/\b(MOU|MOA|Memorandum of Understanding|Agreement|Partnership|Renewal|KUMA-MOU)\b/i.test(text)) return 'MOUs & MOAs';
-                if (/\b(Registrar|Enrollment|Transcript|TOR|Certificate|COR|Student\s*Record|GWA|Grades)\b/i.test(text)) return 'Registrar Files';
-                if (/\b(Template|Form|Admission|Application|Registration|Checklist|Request)\b/i.test(text)) return 'Templates';
-            } catch(e) {}
+                if (!text || !DocumentsConfig.categories) return '';
+                
+                // Sort categories by priority for proper detection order
+                const sortedCategories = DocumentsConfig.categoriesByPriority;
+                
+                for (const category of sortedCategories) {
+                    const rules = DocumentsConfig.categories[category];
+                    if (!rules) continue;
+                    
+                    // Check keywords first
+                    const keywords = rules.keywords || [];
+                    for (const keyword of keywords) {
+                        const regex = new RegExp('\\b' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+                        if (regex.test(text)) {
+                            return category;
+                        }
+                    }
+                    
+                    // Check patterns
+                    const patterns = rules.patterns || [];
+                    for (const pattern of patterns) {
+                        if (new RegExp(pattern.slice(1, -2), pattern.slice(-2)).test(text)) {
+                            return category;
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error('Category detection error:', e);
+            }
             return '';
         }
 

@@ -180,7 +180,7 @@ function sanitize_filename($name) {
 $action = $_GET['action'] ?? ($_POST['action'] ?? 'get_all');
 
 try {
-    error_log("API called with action: " . ($_GET['action'] ?? 'none'));
+    // API request received
 
     // Simple auto-category detection based on filename/title keywords
     function detect_category_from_name($name) {
@@ -245,38 +245,47 @@ try {
             docs_respond(false, ['message' => 'File already exists in the database']);
         }
         
-        // Determine category
-        $category = 'Awards'; // Default category
-        if (preg_match('/\b(MOU|MOA|MEMORANDUM OF UNDERSTANDING|AGREEMENT|KUMA-MOU)\b/i', $documentName)) {
-            $category = 'MOUs & MOAs';
-        } elseif (preg_match('/\b(REGISTRAR|TRANSCRIPT|TOR|CERTIFICATE|COR|GWA|GRADES|ENROLLMENT|STUDENT\s*RECORD)\b/i', $documentName)) {
-            $category = 'Registrar Files';
-        } elseif (preg_match('/\b(TEMPLATE|FORM|ADMISSION|APPLICATION|REGISTRATION|CHECKLIST|REQUEST)\b/i', $documentName)) {
-            $category = 'Templates';
-        }
-        
-        // Extract content from the uploaded file using dynamic file processor
+        // Extract content from the uploaded file using dynamic file processor FIRST
         $extractedContent = '';
         $isReadable = true;
         $filePath = 'uploads/' . $uniqueFilename;
         
         if (file_exists($filePath)) {
-            // Use dynamic file processor
-            require_once __DIR__ . '/../classes/DynamicFileProcessor.php';
-            $dynamicProcessor = new DynamicFileProcessor($pdo);
+            // Use test_file.php as the file reader
+            require_once __DIR__ . '/../test_file.php';
             
-            // Create a file array for the processor
-            $fileArray = [
-                'name' => $originalFilename,
-                'tmp_name' => $filePath,
-                'size' => $fileSize,
-                'type' => $fileType
-            ];
+            // Fix: Use correct path construction since API runs from api/ directory
+            $absoluteFilePath = __DIR__ . '/../' . $filePath;
             
-            $extractionResult = $dynamicProcessor->processFile($fileArray, $filePath);
-            $extractedContent = $extractionResult['content'];
-            $isReadable = $extractionResult['is_readable'];
+            // Extract content using test_file.php reader
+            $extractedContent = readFileContent($absoluteFilePath);
+            $isReadable = !empty(trim($extractedContent)) && !str_starts_with($extractedContent, '[Error:') && !str_starts_with($extractedContent, '[Unsupported');
+            
+            // Debug logging
+            error_log("API File Processing: Path=$absoluteFilePath, Content Length=" . strlen($extractedContent) . ", Readable=" . ($isReadable ? 'Yes' : 'No'));
+            
+            // Document extraction completed using test_file.php
+            
         }
+        
+        // Determine category using content-based detection (since we're using test_file.php now)
+        $category = 'Awards'; // Default category
+        
+        // Use extracted content if available, otherwise fall back to document name
+        $contentToCheck = !empty($extractedContent) ? $extractedContent : $documentName;
+        
+        // Apply category detection rules using regex patterns
+        if (preg_match('/\b(mou|moa|memorandum of understanding|agreement|kuma-mou|collaboration|partnership|cooperation|institution|university|college|student exchange|international|global|research collaboration)\b/i', $contentToCheck)) {
+            $category = 'MOUs & MOAs';
+        } elseif (preg_match('/\b(registrar|transcript|tor|certificate|cor|gwa|grades|enrollment|student\s*record)\b/i', $contentToCheck)) {
+            $category = 'Registrar Files';
+        } elseif (preg_match('/\b(template|form|admission|application|registration|checklist|request)\b/i', $contentToCheck)) {
+            $category = 'Templates';
+        } elseif (preg_match('/\b(conference|seminar|workshop|meeting|symposium|event|activity|program|training|session)\b/i', $contentToCheck)) {
+            $category = 'Events & Activities';
+        }
+        
+        // Document processing completed
         
         // Insert into database with extracted content and readability status
         $stmt = $pdo->prepare("INSERT INTO enhanced_documents (document_name, filename, original_filename, file_path, file_size, file_type, category, description, extracted_content, is_readable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -308,8 +317,12 @@ try {
             $extractedContent
         );
         
-        // Update award_readiness counters after successful upload
-        updateAwardReadinessCounters($pdo);
+        // MOU sync completed
+        
+        // Update award_readiness counters after successful upload using intelligent analysis
+        require_once __DIR__ . '/../classes/IntelligentAwardAnalyzer.php';
+        $awardAnalyzer = new IntelligentAwardAnalyzer($pdo);
+        $awardAnalyzer->updateAwardReadinessCounters();
         
         // Analyze document for awards immediately after upload
         require_once __DIR__ . '/../classes/AwardAnalyzer.php';
@@ -349,7 +362,7 @@ try {
     }
 
     if ($action === 'recalculate_counters') {
-        $counters = recalculateAllCounters();
+        $counters = recalculateAllCounters($pdo);
         docs_respond(true, ['message' => 'Counters recalculated', 'counters' => $counters]);
     }
 
@@ -428,10 +441,7 @@ try {
 
     // get_all with pagination, search, category, sorting
     if ($action === 'get_all' || $action === 'get_by_category') {
-        error_log("Processing get_all action");
-        
-        // Add debugging
-        error_log("Database connection successful");
+        // Processing document retrieval request
         
         $page = max(1, intval($_GET['page'] ?? 1));
         $limit = max(1, min(100, intval($_GET['limit'] ?? 10)));
@@ -471,8 +481,7 @@ try {
         $params[':offset'] = $offset;
 
         try {
-            error_log("Executing SQL: " . $sql);
-            error_log("Parameters: " . json_encode($params));
+            // Executing database query
             
             $stmt = $pdo->prepare($sql);
             foreach ($params as $key => $value) {
@@ -481,7 +490,7 @@ try {
             $stmt->execute();
             $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            error_log("Found " . count($docs) . " documents");
+            // Documents retrieved successfully
 
             // Get total count for pagination
             $countSql = "SELECT COUNT(*) FROM enhanced_documents WHERE 1=1";
@@ -524,7 +533,7 @@ try {
                 ];
             }
 
-            error_log("Responding with " . count($transformedDocs) . " documents");
+            // Preparing response
             docs_respond(true, [
                 'documents' => $transformedDocs,
                 'pagination' => [
@@ -535,8 +544,7 @@ try {
                 ]
             ]);
         } catch (PDOException $e) {
-            error_log("Database error in get_all: " . $e->getMessage());
-            docs_respond(false, ['message' => 'Database error: ' . $e->getMessage()]);
+            docs_respond(false, ['message' => 'Database error occurred']);
         }
     }
 
@@ -564,33 +572,53 @@ function getAwardCounters() {
     ];
 }
 
-function recalculateAllCounters() {
-    return getAwardCounters();
+function recalculateAllCounters($pdo) {
+    try {
+        // Use intelligent award analyzer to recalculate
+        require_once __DIR__ . '/../classes/IntelligentAwardAnalyzer.php';
+        $awardAnalyzer = new IntelligentAwardAnalyzer($pdo);
+        $awardAnalyzer->updateAwardReadinessCounters();
+        
+        // Return updated counters
+        $stmt = $pdo->query("SELECT award_key, total_documents, total_events, total_items, readiness_percentage, is_ready FROM award_readiness");
+        $awardsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $counters = [];
+        foreach ($awardsData as $award) {
+            $counters[$award['award_key']] = [
+                'total_content' => $award['total_items'],
+                'documents_count' => $award['total_documents'],
+                'events_count' => $award['total_events'],
+                'readiness_percentage' => $award['readiness_percentage'],
+                'is_ready' => (bool)$award['is_ready']
+            ];
+        }
+        
+        return $counters;
+    } catch (Exception $e) {
+        return [];
+    }
 }
 
 if ($action === 'get_award_counters') {
     try {
-        // Get award counters from our new awards API
-        $awardsResponse = file_get_contents('http://localhost/LILAC/api/awards.php?action=get_counts');
-        $awardsData = json_decode($awardsResponse, true);
+        // Get award counters directly from database
+        $stmt = $pdo->query("SELECT award_key, total_documents, total_events, total_items, readiness_percentage, is_ready FROM award_readiness");
+        $awardsData = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        if ($awardsData && $awardsData['success']) {
-            $counters = [];
-            foreach ($awardsData['counts'] as $awardKey => $awardData) {
-                $counters[$awardKey] = [
-                    'total_content' => $awardData['count'],
-                    'documents_count' => $awardData['count'],
-                    'events_count' => 0, // We can add events counting later
-                    'mous_count' => 0    // We can add MOU counting later
-                ];
-            }
-            
-            docs_respond(true, ['counters' => $counters]);
-        } else {
-            docs_respond(true, ['counters' => []]);
+        $counters = [];
+        foreach ($awardsData as $award) {
+            $counters[$award['award_key']] = [
+                'total_content' => $award['total_items'],
+                'documents_count' => $award['total_documents'],
+                'events_count' => $award['total_events'],
+                'readiness_percentage' => $award['readiness_percentage'],
+                'is_ready' => (bool)$award['is_ready']
+            ];
         }
+        
+        docs_respond(true, ['counters' => $counters]);
     } catch (Exception $e) {
-        error_log("Error getting award counters: " . $e->getMessage());
         docs_respond(true, ['counters' => []]);
     }
 }

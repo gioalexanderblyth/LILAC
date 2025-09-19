@@ -623,18 +623,53 @@ require_once 'classes/DateTimeUtility.php';
                 return JSON.parse(text);
             })
             .then(data => {
-                if (data.success && data.awards && data.awards.length > 0) {
-                    // Show awards in table format when there are awards
-                    displayDocuments(data.awards);
+                if (data.success && data.awards) {
+                    let awardsHTML = '';
+                    
+                    data.awards.forEach(award => {
+                        const awardDate = new Date(award.date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                        
+                        awardsHTML += `
+                            <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-lg font-semibold text-gray-900">${award.title}</h3>
+                                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                        Received
+                                    </span>
+                                </div>
+                                <div class="mb-4">
+                                    <p class="text-gray-600 text-sm mb-1">${award.description}</p>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Recipient:</span>
+                                        <span class="font-medium">${award.recipient}</span>
+                                    </div>
+                                    </div>
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-500">Date:</span>
+                                        <span class="font-medium">${awardDate}</span>
+                                </div>
+                                    <div>
+                                        <span class="text-gray-500">Amount:</span>
+                                        <span class="font-medium">${award.amount}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    container.innerHTML = awardsHTML;
                 } else {
-                    // Show empty table structure when no awards
-                    displayDocuments([]);
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">No awards received this year</p>';
                 }
             })
             .catch(error => {
                 console.error('Error loading awards:', error);
-                // Show empty table structure on error
-                displayDocuments([]);
+                container.innerHTML = '<p class="text-red-500 text-center py-8">Error loading awards data</p>';
             });
         }
 
@@ -706,10 +741,10 @@ require_once 'classes/DateTimeUtility.php';
                             <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                             </svg>
-                            <h3 class="text-lg font-medium text-gray-900 mb-1">No awards received yet</h3>
-                            <p class="text-gray-500 mb-4">Start building your award portfolio by adding your first award</p>
-                            <button onclick="showAddAwardModal()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-                                Add Your First Award
+                            <h3 class="text-lg font-medium text-gray-900 mb-1">No awards yet</h3>
+                            <p class="text-gray-500 mb-4">Add your first award to get started</p>
+                            <button onclick="document.getElementById('award-title').focus()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                                Add Award
                             </button>
                         </div>
                     </td>
@@ -2499,18 +2534,11 @@ LILAC Awards - Keyboard Shortcuts:
 
     <!-- Navigation Bar -->
     <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
-        <div class="flex items-center space-x-4 pl-16">
-            <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-            </button>
-            
-            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Awards Progress</h1>
-            
-            <a href="dashboard.php" class="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer">
-            </a>
-        </div>
+        <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
     </nav>
 
     
@@ -2520,10 +2548,6 @@ LILAC Awards - Keyboard Shortcuts:
 
     <!-- Main Content -->
     <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
-
-        
-
-
 
         <!-- Tab Navigation -->
         <div class="mb-1">
@@ -2537,14 +2561,16 @@ LILAC Awards - Keyboard Shortcuts:
                             Award Match Analysis
                         </button>
                     </nav>
-                    <div class="flex items-center gap-2">
-                        <button onclick="updateAwardMatchCounters()" class="px-3 py-1.5 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition-colors text-sm flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                            </svg>
-                            Refresh Analysis
-                        </button>
-                        <button id="add-award-btn" aria-label="Upload" class="px-3 py-1.5 bg-purple-600 text-white rounded-md shadow hover:bg-purple-700 transition-colors text-sm" onclick="showAddAwardModal()">Upload</button>
+                    <div class="flex flex-col items-end gap-2">
+                        <div class="flex items-center gap-2">
+                            <button onclick="updateAwardMatchCounters()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2" title="Refresh Analysis">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Refresh Analysis
+                            </button>
+                            <button id="add-award-btn" aria-label="Upload" class="px-4 py-2 bg-purple-600 text-white rounded-md shadow hover:bg-purple-700 transition-colors text-sm flex items-center" onclick="showAddAwardModal()">Upload</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2552,75 +2578,6 @@ LILAC Awards - Keyboard Shortcuts:
 
         <!-- Tab Content Container -->
         <div id="tab-overview-content" class="tab-content">
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3 bg-gray-50 p-2 rounded-lg">
-            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <div class="text-xl font-extrabold text-gray-900" id="total-awards">0</div>
-                        <div class="text-xs text-gray-600" data-text="awards.totalAwards">Total Awards</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/></svg>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <div class="text-xl font-extrabold text-gray-900" id="leadership-score">0</div>
-                        <div class="text-xs text-gray-600">International Leadership</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <div class="text-xl font-extrabold text-gray-900" id="education-score">0</div>
-                        <div class="text-xs text-gray-600">Outstanding International Education</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <div class="text-xl font-extrabold text-gray-900" id="emerging-score">0</div>
-                        <div class="text-xs text-gray-600">Emerging Leadership Award</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <div class="text-xl font-extrabold text-gray-900" id="regional-score">0</div>
-                        <div class="text-xs text-gray-600">Best Regional Office for International</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl p-1.5 border border-gray-200 shadow-sm hover:shadow-md transition transform hover:scale-[1.01]">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <div class="text-xl font-extrabold text-gray-900" id="global-score">0</div>
-                        <div class="text-xs text-gray-600">Global Citizenship Award</div>
-                    </div>
-                    <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Awards Progress Dashboard -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -2791,14 +2748,14 @@ LILAC Awards - Keyboard Shortcuts:
 
             <!-- Recent Activity -->
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity Status</h3>
                 <div class="space-y-3">
                     <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                         <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
                             RV
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-900"><span class="font-medium">Ruby Vetrovs</span> 5 minutes ago</p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Global Citizenship Awards</span></p>
                             <p class="text-sm text-gray-600">Added 3 new awards data with certificates.</p>
                         </div>
                     </div>
@@ -2807,7 +2764,7 @@ LILAC Awards - Keyboard Shortcuts:
                             MJ
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-900"><span class="font-medium">Maria Johnson</span> 2 hours ago</p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Outstanding International Education Program Awards</span></p>
                             <p class="text-sm text-gray-600">Updated award status for Research Excellence.</p>
                         </div>
                     </div>
@@ -2816,7 +2773,7 @@ LILAC Awards - Keyboard Shortcuts:
                             AS
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-900"><span class="font-medium">Alex Smith</span> 1 day ago</p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Emerging Leadership Award</span></p>
                             <p class="text-sm text-gray-600">Uploaded certificate for Academic Achievement.</p>
                         </div>
                     </div>
@@ -2838,403 +2795,6 @@ LILAC Awards - Keyboard Shortcuts:
             </div>
         </div>
         </div> <!-- End of tab-overview-content -->
-
-        <!-- AwardMatch Tab Content -->
-        <div id="tab-awardmatch-content" class="tab-content hidden">
-            <!-- Header -->
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold text-gray-900">Awards Match Analysis</h3>
-            </div>
-            <!-- CHED Awards Progress -->
-            <div class="grid grid-cols-5 gap-4 mb-8">
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs font-medium text-gray-600 truncate">International Leadership Award</p>
-                            <p class="text-xl font-bold text-gray-900" id="leadership-score">0</p>
-                            <p class="text-xs text-blue-600">Documents Count</p>
-                        </div>
-                        <div class="p-2 rounded-full bg-blue-100 ml-2">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs font-medium text-gray-600 truncate">Outstanding International Education Program</p>
-                            <p class="text-xl font-bold text-gray-900" id="education-score">0</p>
-                            <p class="text-xs text-green-600">Documents Count</p>
-                        </div>
-                        <div class="p-2 rounded-full bg-green-100 ml-2">
-                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs font-medium text-gray-600 truncate">Emerging Leadership Award</p>
-                            <p class="text-xl font-bold text-gray-900" id="emerging-score">0</p>
-                            <p class="text-xs text-purple-600">Documents Count</p>
-                        </div>
-                        <div class="p-2 rounded-full bg-purple-100 ml-2">
-                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs font-medium text-gray-600 truncate">Best Regional Office for International</p>
-                            <p class="text-xl font-bold text-gray-900" id="regional-score">0</p>
-                            <p class="text-sm text-orange-600">Documents Count</p>
-                        </div>
-                        <div class="p-2 rounded-full bg-orange-100 ml-2">
-                            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs font-medium text-gray-600 truncate">Global Citizenship Award</p>
-                            <p class="text-xl font-bold text-gray-900" id="citizenship-score">0</p>
-                            <p class="text-sm text-red-600">Documents Count</p>
-                        </div>
-                        <div class="p-2 rounded-full bg-red-100 ml-2">
-                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 5 0 012 2 2.5 2.5 0 002.5 2.5.5.5 0 01.5.5v.5M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 5 0 012 2 2.5 2.5 0 002.5 2.5.5.5 0 01.5.5v.5"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Award Criteria and Matching Analysis -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <!-- Award Criteria -->
-                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                    <div class="flex items-center justify-between mb-2">
-                        <h3 class="text-xl font-bold text-gray-900">CHED Award Criteria</h3>
-                        <div class="flex items-center gap-1 text-sm text-gray-600 bg-white px-2 py-0.5 rounded-full border border-gray-200">
-                            <span class="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
-                            <span>All criteria not started</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Award Cards Grid -->
-                    <div class="grid grid-cols-1 gap-2">
-                        <!-- International Leadership Award -->
-                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200 hover:shadow-md transition-all duration-200">
-                            <div class="p-2">
-                                <div class="flex items-center justify-between mb-1">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
-                                            <span class="text-white text-sm">🏆</span>
-                        </div>
-                                        <div>
-                                            <h4 class="font-semibold text-gray-900 text-sm">International Leadership Award</h4>
-                                            <p class="text-xs text-gray-600">Leadership in international partnerships</p>
-                                        </div>
-                                    </div>
-                                    <button onclick="toggleAwardDetails('leadership')" class="p-1 rounded bg-white hover:bg-blue-50 transition-colors border border-blue-200">
-                                        <svg id="leadership-arrow" class="w-3 h-3 text-blue-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                                <div id="leadership-details" class="hidden space-y-1">
-                                    <div class="bg-white rounded p-1.5 border border-blue-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
-                                               data-award="leadership" data-criterion="Champion Bold Innovation"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Champion Bold Innovation</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Champion Bold Innovation-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-blue-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
-                                               data-award="leadership" data-criterion="Cultivate Global Citizens"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Cultivate Global Citizens</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Cultivate Global Citizens-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-blue-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
-                                               data-award="leadership" data-criterion="Nurture Lifelong Learning"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Nurture Lifelong Learning</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Nurture Lifelong Learning-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-blue-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
-                                               data-award="leadership" data-criterion="Lead with Purpose"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Lead with Purpose</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Lead with Purpose-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-blue-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500" 
-                                               data-award="leadership" data-criterion="Ethical and Inclusive Leadership"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Ethical and Inclusive Leadership</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="leadership-Ethical and Inclusive Leadership-status">Not Started</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Outstanding International Education Program -->
-                        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200 hover:shadow-md transition-all duration-200">
-                            <div class="p-2">
-                                <div class="flex items-center justify-between mb-1">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-6 h-6 bg-green-500 rounded flex items-center justify-center">
-                                            <span class="text-white text-sm">🎓</span>
-                        </div>
-                                        <div>
-                                            <h4 class="font-semibold text-gray-900 text-sm">Outstanding International Education Program</h4>
-                                            <p class="text-xs text-gray-600">Excellence in international curriculum</p>
-                                        </div>
-                                    </div>
-                                    <button onclick="toggleAwardDetails('education')" class="p-1 rounded bg-white hover:bg-green-50 transition-colors border border-green-200">
-                                        <svg id="education-arrow" class="w-3 h-3 text-green-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                                <div id="education-details" class="hidden space-y-1">
-                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
-                                               data-award="education" data-criterion="Expand Access to Global Opportunities"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Expand Access to Global Opportunities</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Expand Access to Global Opportunities-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
-                                               data-award="education" data-criterion="Foster Collaborative Innovation"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Foster Collaborative Innovation</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Foster Collaborative Innovation-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
-                                               data-award="education" data-criterion="Embrace Inclusivity and Beyond"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Embrace Inclusivity and Beyond</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Embrace Inclusivity and Beyond-status">Not Started</span>
-                                        </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
-                                                   data-award="education" data-criterion="Drive Academic Excellence"
-                                                   onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Drive Academic Excellence</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Drive Academic Excellence-status">Not Started</span>
-                                        </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-green-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-green-300 text-green-600 focus:ring-green-500" 
-                                                   data-award="education" data-criterion="Build Sustainable Partnerships"
-                                                   onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Build Sustainable Partnerships</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="education-Build Sustainable Partnerships-status">Not Started</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Emerging Leadership Award -->
-                        <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200 hover:shadow-md transition-all duration-200">
-                            <div class="p-2">
-                                <div class="flex items-center justify-between mb-1">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-6 h-6 bg-purple-500 rounded flex items-center justify-center">
-                                            <span class="text-white text-sm">🌱</span>
-                        </div>
-                                        <div>
-                                            <h4 class="font-semibold text-gray-900 text-sm">Emerging Leadership Award</h4>
-                                            <p class="text-xs text-gray-600">Innovative approaches to internationalization</p>
-                                        </div>
-                                    </div>
-                                    <button onclick="toggleAwardDetails('emerging')" class="p-1 rounded bg-white hover:bg-purple-50 transition-colors border border-purple-200">
-                                        <svg id="emerging-arrow" class="w-3 h-3 text-purple-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                                <div id="emerging-details" class="hidden space-y-1">
-                                    <div class="bg-white rounded-lg p-1.5 border border-purple-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
-                                                   data-award="emerging" data-criterion="Pioneer New Frontiers"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Pioneer New Frontiers</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="emerging-Pioneer New Frontiers-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-purple-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
-                                                   data-award="emerging" data-criterion="Adapt and Transform"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Adapt and Transform</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="emerging-Adapt and Transform-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-purple-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
-                                                   data-award="emerging" data-criterion="Build Capacity"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Build Capacity</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="emerging-Build Capacity-status">Not Started</span>
-                                        </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-purple-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
-                                                   data-award="emerging" data-criterion="Create Impact"
-                                                   onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Create Impact</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="emerging-Create Impact-status">Not Started</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Best Regional Office for International -->
-                        <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200 hover:shadow-md transition-all duration-200">
-                            <div class="p-2">
-                                <div class="flex items-center justify-between mb-1">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-6 h-6 bg-orange-500 rounded flex items-center justify-center">
-                                            <span class="text-white text-sm">🌍</span>
-                        </div>
-                                        <div>
-                                            <h4 class="font-semibold text-gray-900 text-sm">Best Regional Office for International</h4>
-                                            <p class="text-xs text-gray-600">Regional excellence in internationalization</p>
-                                        </div>
-                                    </div>
-                                    <button onclick="toggleAwardDetails('regional')" class="p-1 rounded bg-white hover:bg-orange-50 transition-colors border border-orange-200">
-                                        <svg id="regional-arrow" class="w-3 h-3 text-orange-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                                <div id="regional-details" class="hidden space-y-1">
-                                    <div class="bg-white rounded-lg p-1.5 border border-orange-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
-                                               data-award="regional" data-criterion="Comprehensive Internationalization Efforts"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Comprehensive Internationalization Efforts</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="regional-Comprehensive Internationalization Efforts-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-orange-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
-                                               data-award="regional" data-criterion="Cooperation and Collaboration"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Cooperation and Collaboration</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="regional-Cooperation and Collaboration-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-orange-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-orange-300 text-orange-600 focus:ring-orange-500" 
-                                               data-award="regional" data-criterion="Measurable Impact"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Measurable Impact</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="regional-Measurable Impact-status">Not Started</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Global Citizenship Award -->
-                        <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg border border-red-200 hover:shadow-md transition-all duration-200">
-                            <div class="p-2">
-                                <div class="flex items-center justify-between mb-1">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-6 h-6 bg-red-500 rounded flex items-center justify-center">
-                                            <span class="text-white text-sm">🤝</span>
-                        </div>
-                                        <div>
-                                            <h4 class="font-semibold text-gray-900 text-sm">Global Citizenship Award</h4>
-                                            <p class="text-xs text-gray-600">Promoting global citizenship</p>
-                                        </div>
-                                    </div>
-                                    <button onclick="toggleAwardDetails('citizenship')" class="p-1 rounded bg-white hover:bg-red-50 transition-colors border border-red-200">
-                                        <svg id="citizenship-arrow" class="w-3 h-3 text-red-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                                <div id="citizenship-details" class="hidden space-y-1">
-                                    <div class="bg-white rounded-lg p-1.5 border border-red-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-red-300 text-red-600 focus:ring-red-500" 
-                                                   data-award="citizenship" data-criterion="Ignite Intercultural Understanding"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Ignite Intercultural Understanding</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="citizenship-Ignite Intercultural Understanding-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-red-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-red-300 text-red-600 focus:ring-red-500" 
-                                                   data-award="citizenship" data-criterion="Empower Changemakers"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Empower Changemakers</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="citizenship-Empower Changemakers-status">Not Started</span>
-                                    </div>
-                                    </div>
-                                    <div class="bg-white rounded-lg p-1.5 border border-red-100">
-                                        <div class="flex items-center text-sm">
-                                            <input type="checkbox" class="mr-1.5 rounded border-red-300 text-red-600 focus:ring-red-500" 
-                                                   data-award="citizenship" data-criterion="Cultivate Active Engagement"
-                                               onchange="updateCriterionStatus(this)" disabled>
-                                            <span class="flex-1 text-gray-800">Cultivate Active Engagement</span>
-                                            <span class="text-xs text-gray-500 px-1.5 py-0.5 bg-gray-100 rounded" id="citizenship-Cultivate Active Engagement-status">Not Started</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Award Readiness Summary -->
                 <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
@@ -3270,19 +2830,9 @@ LILAC Awards - Keyboard Shortcuts:
                             <span class="text-sm text-blue-600 font-medium" id="overall-score">0</span>
                         </div>
                     </div>
-                    <div class="flex gap-2 mt-4">
-                        <button onclick="runAwardMatch()" class="flex-1 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">
-                        Run AwardMatch Analysis
-                    </button>
-                        <button onclick="analyzeAllDocuments()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                            Analyze All Content
-                        </button>
-                        <button onclick="generateAwardReport()" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors ml-2">
-                            Generate Report
-                        </button>
-                    </div>
                 </div>
             </div>
+        </div> <!-- End of tab-awardmatch-content -->
 
             <!-- Strategic Recommendations -->
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
@@ -3292,1109 +2842,244 @@ LILAC Awards - Keyboard Shortcuts:
                         <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
                         </svg>
-                        <p>Run AwardMatch Analysis to see personalized recommendations</p>
+                        <p>No recommendations available yet</p>
+                        <p class="text-sm">Upload documents to receive strategic insights</p>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- End of tab-overview-content -->
+
+        <!-- Award Match Analysis Tab Content -->
+        <div id="tab-awardmatch-content" class="tab-content hidden">
+            <!-- Award Match Analysis Dashboard -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Individual Award Counters -->
+                <div class="lg:col-span-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Leadership Award Counter -->
+                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-600">International Leadership Award</h3>
+                                    <p class="text-2xl font-bold text-blue-600" id="leadership-count">0</p>
+                                </div>
+                                <div class="p-3 bg-blue-100 rounded-full">
+                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Education Award Counter -->
+                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-600">Outstanding International Education</h3>
+                                    <p class="text-2xl font-bold text-green-600" id="education-count">0</p>
+                                </div>
+                                <div class="p-3 bg-green-100 rounded-full">
+                                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emerging Award Counter -->
+                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-600">Emerging Leadership Award</h3>
+                                    <p class="text-2xl font-bold text-purple-600" id="emerging-count">0</p>
+                                </div>
+                                <div class="p-3 bg-purple-100 rounded-full">
+                                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Regional Award Counter -->
+                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-600">Best Regional Office</h3>
+                                    <p class="text-2xl font-bold text-orange-600" id="regional-count">0</p>
+                                </div>
+                                <div class="p-3 bg-orange-100 rounded-full">
+                                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Global Award Counter -->
+                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-600">Global Citizenship Award</h3>
+                                    <p class="text-2xl font-bold text-red-600" id="global-count">0</p>
+                                </div>
+                                <div class="p-3 bg-red-100 rounded-full">
+                                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Statistics -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Analysis Summary</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-600">Total Documents</span>
+                                <span class="text-lg font-bold text-blue-600" id="activities-count">0</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-600">Best Match</span>
+                                <span class="text-sm text-green-600 font-medium" id="best-match">None</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-600">Overall Score</span>
+                                <span class="text-lg font-bold text-purple-600" id="overall-score">0</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div> <!-- End of tab-awardmatch-content -->
     </div>
 
-    <!-- Mobile Menu Overlay -->
-    <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
-
-    <!-- Missing Data Modal -->
-    <div id="awardMatchMissingDataModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" onclick="hideAwardMatchMissingDataModal()">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-xl max-w-md w-full" onclick="event.stopPropagation()">
-                <div class="p-6 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-900">Action Required</h3>
-                    </div>
-                </div>
-                <div class="p-6 space-y-3">
-                    <p class="text-sm text-gray-700">Please upload both award and record data before running analysis.</p>
-                </div>
-                <div class="p-4 border-t border-gray-200 flex justify-end">
-                    <button onclick="hideAwardMatchMissingDataModal()" class="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    
-
-    <!-- Add Award Confirmation Modal -->
-    <div id="addAwardConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" onclick="this.classList.add('hidden')">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-xl max-w-md w-full" onclick="event.stopPropagation()">
-                <div class="p-6 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-900">Confirm Award Details</h3>
-                        <button onclick="hideAddAwardConfirmModal()" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Award Title</label>
-                        <p id="confirmAwardTitle" class="mt-1 text-sm text-gray-900 font-medium"></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Date Received</label>
-                        <p id="confirmAwardDate" class="mt-1 text-sm text-gray-900"></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Description</label>
-                        <p id="confirmAwardDescription" class="mt-1 text-sm text-gray-900"></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Certificate File</label>
-                        <p id="confirmAwardFile" class="mt-1 text-sm text-gray-900"></p>
-                    </div>
-                </div>
-                <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
-                    <button onclick="hideAddAwardConfirmModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                        Cancel
-                    </button>
-                    <button onclick="confirmAddAward()" class="px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-colors">
-                        Confirm & Add Award
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Floating Add Award Button Above Footer -->
-
-    <!-- Footer -->
-    <footer id="page-footer" class="bg-gray-800 text-white text-center p-4 mt-8">
-        <p>&copy; 2025 Central Philippine University | LILAC System</p>
-    </footer>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50" onclick="this.classList.add('hidden')">
-        <div class="relative p-8 bg-white w-full max-w-md m-auto flex-col flex rounded-lg shadow-lg" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-800">Confirm Deletion</h2>
-                <button id="closeDeleteModalBtn" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <div class="mb-6">
-                <p class="text-gray-700">Are you sure you want to delete this award? This action cannot be undone.</p>
-                <p id="awardToDeleteName" class="font-semibold text-gray-700 mt-2"></p>
-            </div>
-            <div class="flex justify-end space-x-3">
-                <button type="button" id="cancelDeleteBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
-                <button type="button" id="confirmDeleteBtn" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg">Delete</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Award Modal -->
-    <div id="viewAwardModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full flex items-center justify-center z-50" onclick="this.classList.add('hidden')">
-        <div class="relative p-8 bg-white w-full max-w-2xl m-auto flex-col flex rounded-lg shadow-lg" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-semibold text-gray-800 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                    </svg>
-                    Award Details
-                </h2>
-                <button onclick="closeViewAwardModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="space-y-6">
-                <!-- Award Information -->
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Award Information</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600">Award Title</label>
-                            <p id="viewAwardTitle" class="text-gray-900 font-medium"></p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600">Date Received</label>
-                            <p id="viewAwardDateReceived" class="text-gray-900"></p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600">Added to System</label>
-                            <p id="viewAwardDateAdded" class="text-gray-900"></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Description -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Description</label>
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <p id="viewAwardDescription" class="text-gray-900"></p>
-                    </div>
-                </div>
-
-                <!-- Certificate File -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Certificate File</label>
-                    <div id="viewAwardCertificate">
-                        <!-- Certificate content will be dynamically inserted here -->
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-end mt-6">
-                <button onclick="closeViewAwardModal()" class="px-6 py-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-lg">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add New Award Modal -->
-    <div id="add-award-modal" class="fixed inset-0 bg-black/50 z-[70] hidden" onclick="this.classList.add('hidden')">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg" onclick="event.stopPropagation()">
-                <div class="flex items-center justify-between p-4 border-b">
-                    <h3 class="text-lg font-semibold text-gray-900">Add New Award</h3>
-                    <button class="text-gray-400 hover:text-gray-600" onclick="closeAddAwardModal()">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
-                <form id="award-modal-form" class="p-6 space-y-4">
-                    <div>
-                        <label for="m-award-title" class="block text-sm font-medium text-gray-700 mb-1">Award Title *</label>
-                        <input id="m-award-title" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
-                    </div>
-                    <div>
-                        <label for="m-date-received" class="block text-sm font-medium text-gray-700 mb-1">Date Received *</label>
-                        <input id="m-date-received" type="date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
-                    </div>
-                    <div>
-                        <label for="m-award-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <textarea id="m-award-description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"></textarea>
-                    </div>
-                    <div>
-                        <label for="m-award-file" class="block text-sm font-medium text-gray-700 mb-1">Upload Certificate</label>
-                        <input id="m-award-file" type="file" accept=".pdf,.jpg,.jpeg,.png" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent" />
-                        <p class="mt-2 text-sm text-gray-500">Supported formats: PDF, JPG, PNG (Max 5MB)</p>
-                    </div>
-                    <div class="flex justify-end gap-2 pt-2">
-                        <button type="button" onclick="closeAddAwardModal()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
-                        <button type="submit" class="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800">Add Award</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Import Data Modal -->
-    <div id="import-data-modal" class="fixed inset-0 bg-black/50 z-[70] hidden" onclick="this.classList.add('hidden')">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl" onclick="event.stopPropagation()">
-                <div class="flex items-center justify-between p-4 border-b">
-                    <h3 class="text-lg font-semibold text-gray-900">Import Awards Data</h3>
-                    <button class="text-gray-400 hover:text-gray-600" onclick="closeImportDataModal()">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <p class="text-sm text-gray-700">Upload a CSV or Excel file (.csv, .xlsx) with award data. You can download a sample template below.</p>
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <button class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" onclick="downloadImportTemplate()">Download Template</button>
-                            <label class="px-3 py-2 rounded-lg bg-black text-white hover:bg-gray-800 cursor-pointer">
-                                <input id="import-file" type="file" accept=".csv,.xlsx" class="hidden" onchange="handleImportFileChange(event)" />
-                                Choose File
-                            </label>
-                            <span id="import-file-name" class="text-sm text-gray-600"></span>
-                        </div>
-                    </div>
-                    <div class="flex justify-end gap-2 pt-2">
-                        <button type="button" onclick="closeImportDataModal()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
-                        <button type="button" onclick="processImport()" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Import</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- JavaScript for Awards Page -->
     <script>
-    // Simple chart initialization
-    function initializeCharts() {
-        if (typeof Chart === 'undefined') {
-            setTimeout(initializeCharts, 100);
-            return;
-        }
-        renderAwardsLineChart();
-    }
-    
-    // Helper: render when canvas has a layout size
-    function renderWhenReady(attempts = 10) {
-        const canvas = document.getElementById('monthlyTrendChart');
-        if (!canvas) return initializeCharts();
-        const ready = canvas.offsetWidth > 0 && canvas.offsetHeight > 0;
-        if (ready) {
-            hideChartFallback();
-            initializeCharts();
-        } else if (attempts > 0) {
-            setTimeout(() => renderWhenReady(attempts - 1), 150);
-        } else {
-            initializeCharts();
-        }
-    }
-
-    // Start initialization when DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-        if (document.getElementById('awardsLineChartCanvas')) {
-            renderAwardsLineChart();
-            const period = document.getElementById('avg-awards-period');
-            if (period) {
-                period.addEventListener('change', function(){
-                    // For now only 'This Year' is available; re-render to simulate filter
-                    renderAwardsLineChart();
-                });
-            }
-        } else {
-            renderWhenReady();
-        }
-        // Zero Awards Progress counters until data is uploaded
-        (function(){
-            const ids = ['total-awards','academic-count','research-count','leadership-count'];
-            ids.forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '0'; });
-        })();
-    });
-    
-    // Also try on window load
-    window.addEventListener('load', function() {
-        if (typeof Chart !== 'undefined' && !window.monthlyTrendChart) {
-            renderWhenReady();
-        }
-    });
-
-    function renderMonthlyTrendChart() {
-        // Rendering monthly trend chart
-        const canvasEl = document.getElementById('monthlyTrendChart');
-        if (!canvasEl) {
-            createFallbackChart();
-            return;
-        }
-        // Ensure canvas has dimensions
-        canvasEl.style.display = 'block';
-        canvasEl.width = canvasEl.parentElement.clientWidth;
-        canvasEl.height = 160;
-        
-        console.log('Canvas found, destroying existing chart if any...');
-        const ctx = canvasEl.getContext('2d');
-        // build gradients similar to provided snippet
-        const gradientStroke = ctx.createLinearGradient(500, 0, 100, 0);
-        gradientStroke.addColorStop(0, '#ff6c00');
-        gradientStroke.addColorStop(1, '#ff3b74');
-        const gradientBkgrd = ctx.createLinearGradient(0, 0, 0, canvasEl.height);
-        gradientBkgrd.addColorStop(0, 'rgba(244,94,132,0.2)');
-        gradientBkgrd.addColorStop(1, 'rgba(249,135,94,0)');
-        // Destroy existing chart if it exists
-        if (window.monthlyTrendChart) {
-            window.monthlyTrendChart.destroy();
-        }
-        
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        
-        // Get current year and last year
-        const currentYear = new Date().getFullYear();
-        const lastYear = currentYear - 1;
-        
-        // Use data to match the financial dashboard design with Rp values
-        // Fetch real data from API instead of using hardcoded values
-        fetch('api/awards.php?action=get_monthly_trends')
-            .then(response => response.json())
-            .then(result => {
-                if (result.success && result.data) {
-                    const thisYearData = result.data.thisYear || [1200, 1800, 1500, 2200, 2800, 2500, 3200, 7200, 3800, 4200, 3500, 4000];
-                    const lastYearData = result.data.lastYear || [1000, 1400, 1600, 1900, 2100, 1800, 2400, 2800, 2200, 2600, 2000, 2400];
-                    
-                    createMonthlyTrendChart(thisYearData, lastYearData);
-                } else {
-                    // Fallback to default data if API fails
-                    const thisYearData = [1200, 1800, 1500, 2200, 2800, 2500, 3200, 7200, 3800, 4200, 3500, 4000];
-                    const lastYearData = [1000, 1400, 1600, 1900, 2100, 1800, 2400, 2800, 2200, 2600, 2000, 2400];
-                    createMonthlyTrendChart(thisYearData, lastYearData);
-                }
-            })
-            .catch(error => {
-                console.error('Error loading monthly trends:', error);
-                // Fallback to default data
-                const thisYearData = [1200, 1800, 1500, 2200, 2800, 2500, 3200, 7200, 3800, 4200, 3500, 4000];
-                const lastYearData = [1000, 1400, 1600, 1900, 2100, 1800, 2400, 2800, 2200, 2600, 2000, 2400];
-                createMonthlyTrendChart(thisYearData, lastYearData);
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.add('hidden');
             });
-        
-        function createMonthlyTrendChart(thisYearData, lastYearData) {
-            try {
-                console.log('Creating new Chart.js instance...');
-                
-                const canvasEl = document.getElementById('monthlyTrendChart');
-                if (!canvasEl) {
-                    console.error('Monthly trend chart canvas not found');
-                    return;
-                }
-                
-                const ctx = canvasEl.getContext('2d');
-                if (!ctx) {
-                    console.error('Could not get 2D context for monthly trend chart');
-                    return;
-                }
-                
-                const lineShadow = { id: 'lineShadow', beforeDatasetsDraw(chart){ const {ctx}=chart; ctx.save(); ctx.shadowBlur=8; ctx.shadowOffsetX=0; ctx.shadowOffsetY=6; ctx.shadowColor='rgba(244,94,132,0.35)'; }, afterDatasetsDraw(chart){ chart.ctx.restore(); } };
-                if (typeof Chart !== 'undefined') { Chart.register(lineShadow); }
-                
-                window.monthlyTrendChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr"],
-                        datasets: [{
-                            label: "Income",
-                            data: thisYearData.slice(0, 8), // Use first 8 months of this year data
-                            borderColor: '#3B82F6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        pointBorderColor: 'rgba(255,255,255,0)',
-                        pointBackgroundColor: 'rgba(255,255,255,0)',
-                        pointBorderWidth: 0,
-                        pointHoverRadius: 8,
-                        pointHoverBackgroundColor: '#ff6c00',
-                        pointHoverBorderColor: 'rgba(220,220,220,1)',
-                        pointHoverBorderWidth: 4,
-                        pointRadius: 1,
-                        borderWidth: 5,
-                        pointHitRadius: 16,
-                        tension: 0.35,
-                        fill: 'start'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: '#fff',
-                            titleColor: '#000',
-                            bodyColor: '#000',
-                            borderColor: '#E5E7EB',
-                            borderWidth: 1,
-                            cornerRadius: 8,
-                            displayColors: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: '#f3f4f6', drawBorder: false },
-                            ticks: {
-                                color: '#6b7280',
-                                font: { size: 11 },
-                                padding: 8,
-                                callback: function(value){ return (value/1000) + 'K'; }
-                            },
-                            border: { display: false }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: '#6b7280', font: { size: 11 }, padding: 8 },
-                            border: { display: false }
-                        }
-                    },
-                    interaction: { intersect: false, mode: 'index' }
-                }
+
+            // Remove active class from all tab buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+                button.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
+                button.classList.add('text-gray-500', 'hover:text-gray-700');
             });
-                console.log('Chart created successfully!');
-            } catch (error) {
-                console.error('Error creating monthly trend chart:', error);
-                createFallbackChart();
+
+            // Show selected tab content
+            const selectedTab = document.getElementById('tab-' + tabName + '-content');
+            if (selectedTab) {
+                selectedTab.classList.remove('hidden');
+            }
+
+            // Add active class to selected tab button
+            const selectedButton = document.getElementById('tab-' + tabName);
+            if (selectedButton) {
+                selectedButton.classList.add('active');
+                selectedButton.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
+                selectedButton.classList.remove('text-gray-500', 'hover:text-gray-700');
+            }
+
+            // Load data for the selected tab
+            if (tabName === 'awardmatch') {
+                updateAwardMatchCounters();
             }
         }
 
-    function createFallbackChart() {
-        const canvas = document.getElementById('monthlyTrendChart');
-        const fallback = document.getElementById('monthlyTrendChartFallback');
-        
-        if (canvas && fallback) {
-            canvas.style.display = 'none';
-            fallback.classList.remove('hidden');
-        }
-    }
-    
-    // Manual function to show fallback
-    function showChartFallback() {
-        createFallbackChart();
-    }
-    
-    // Manual function to hide fallback and show chart
-    function hideChartFallback() {
-        const canvas = document.getElementById('monthlyTrendChart');
-        const fallback = document.getElementById('monthlyTrendChartFallback');
-        
-        if (canvas && fallback) {
-            canvas.style.display = 'block';
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = 160;
-            fallback.classList.add('hidden');
-        }
-    }
-
-    function updateCurrentMonthDisplay() {
-        const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short' });
-        const monthElement = document.getElementById('current-month');
-        if (monthElement) {
-            monthElement.textContent = currentMonth;
-        }
-    }
-    
-    // Close the renderMonthlyTrendChart function
-    }
-
-    // Function to refresh chart data (can be called from other parts of the code)
-    function refreshMonthlyTrendChart() {
-        if (typeof Chart !== 'undefined') {
-            renderMonthlyTrendChart();
-        }
-    }
-
-    // Handle window resize for better chart responsiveness
-    window.addEventListener('resize', function() {
-        if (window.monthlyTrendChart && typeof Chart !== 'undefined') {
-            window.monthlyTrendChart.resize();
-        }
-    });
-
-    </script>
-
-    <script>
-        // Essential functions only - 2024-12-19-4
-        function showAddAwardModal(){ openAddAwardModal(); }
-        function openAddAwardModal(){
-            document.getElementById('add-award-modal').classList.remove('hidden');
-        }
-        function closeAddAwardModal(){
-            document.getElementById('add-award-modal').classList.add('hidden');
-        }
-        function openImportDataModal(){
-            document.getElementById('import-data-modal').classList.remove('hidden');
-        }
-        function closeImportDataModal(){
-            document.getElementById('import-data-modal').classList.add('hidden');
-        }
-        function handleImportFileChange(e){
-            const file = e.target.files[0];
-            document.getElementById('import-file-name').textContent = file ? file.name : '';
-        }
-        function downloadImportTemplate(){
-            const csv = 'Title,Date,Description\nSample Award,2025-01-15,Description here';
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'awards_template.csv'; a.click();
-            URL.revokeObjectURL(url);
-        }
-        function processImport(){
-            const input = document.getElementById('import-file');
-            if (!input.files || !input.files[0]) { alert('Please choose a file first'); return; }
-            closeImportDataModal();
-        }
-        
-        // Simplified functions for stability
-        function toggleAwardDetails(awardType) {
-            const detailsElement = document.getElementById(`${awardType}-details`);
-            const arrowElement = document.getElementById(`${awardType}-arrow`);
-            
-            if (detailsElement && arrowElement) {
-                const isHidden = detailsElement.classList.contains('hidden');
-
-                if (isHidden) {
-                    // Show details
-                    detailsElement.classList.remove('hidden');
-                    arrowElement.style.transform = 'rotate(180deg)';
-                } else {
-                    // Hide details
-                    detailsElement.classList.add('hidden');
-                    arrowElement.style.transform = 'rotate(0deg)';
-                }
-            }
-        }
-        
-        // Simplified event listeners for stability
-        document.getElementById('award-modal-form')?.addEventListener('submit', function(e){
-            e.preventDefault();
-            closeAddAwardModal();
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default active tab
+            switchTab('overview');
         });
-        
-        // Simplified functions for stability
-        function displayAwardReport(summary) {
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            modal.innerHTML = `
-                <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                    <div class="p-6 border-b border-gray-200">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-2xl font-bold text-gray-900">Award Application Report</h2>
-                            <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <p class="text-gray-600 mt-2">Comprehensive overview of award readiness and missing requirements</p>
-                    </div>
-                    <div class="p-6">
-                        ${generateReportContent(summary)}
-                    </div>
-                    <div class="p-6 border-t border-gray-200 flex justify-end">
-                        <button onclick="this.closest('.fixed').remove()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        }
 
-        function generateReportContent(summary) {
-            if (!summary || summary.length === 0) {
-                return '<div class="p-4"><h3 class="text-lg font-semibold mb-4">Award Report</h3><p class="text-gray-600">No award data available for report generation.</p></div>';
-            }
+        // Award Match Analysis functionality
+        function updateAwardMatchCounters() {
+            fetch('api/documents.php?action=get_all')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const documents = data.documents || [];
+                        
+                        // Initialize counters
+                        const documentCounts = {
+                            'leadership': 0,
+                            'education': 0,
+                            'emerging': 0,
+                            'regional': 0,
+                            'global': 0,
+                            'total': 0
+                        };
 
-            let reportHTML = '<div class="p-4">';
-            reportHTML += '<h3 class="text-lg font-semibold mb-4">Award Application Report</h3>';
-            
-            // Generate report for each award type
-            summary.forEach(award => {
-                const readinessPercentage = Math.round((award.satisfied / award.total) * 100);
-                const statusColor = readinessPercentage >= 80 ? 'text-green-600' : readinessPercentage >= 60 ? 'text-yellow-600' : 'text-red-600';
-                
-                reportHTML += `
-                    <div class="mb-6 p-4 border border-gray-200 rounded-lg">
-                        <h4 class="font-semibold text-lg mb-1">${award.award_type.charAt(0).toUpperCase() + award.award_type.slice(1)} Award</h4>
-                        <div class="flex items-center mb-1">
-                            <span class="text-sm text-gray-600 mr-2">Readiness:</span>
-                            <span class="${statusColor} font-semibold">${readinessPercentage}%</span>
-                            <span class="text-sm text-gray-500 ml-2">(${award.satisfied}/${award.total} criteria met)</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2 mb-1">
-                            <div class="bg-blue-600 h-2 rounded-full" style="width: ${readinessPercentage}%"></div>
-                        </div>
-                        <p class="text-sm text-gray-600">${award.satisfied} of ${award.total} criteria satisfied</p>
-                    </div>
-                `;
-            });
-            
-            reportHTML += '</div>';
-            return reportHTML;
-    }
-    </script>
-
-    <script>
-    // Function to render the awards line chart
-    function renderAwardsLineChart() {
-        try {
-            if (typeof Chart !== 'undefined') {
-                const lineShadow = {
-                    id: 'lineShadowAwards',
-                    beforeDatasetsDraw(chart) {
-                        const { ctx } = chart;
-                        ctx.save();
-                        ctx.shadowBlur = 8;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 6;
-                        ctx.shadowColor = 'rgba(244,94,132,0.35)';
-                    },
-                    afterDatasetsDraw(chart) {
-                        chart.ctx.restore();
-                    }
-                };
-                Chart.register(lineShadow);
-
-                const ctx = document.getElementById('awardsLineChartCanvas')?.getContext('2d');
-                if (ctx) {
-                    if (window.awardsLineChart) {
-                        window.awardsLineChart.destroy();
-                    }
-
-                    window.awardsLineChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
-                datasets: [{
-                    label: 'Income',
-                    data: [5500, 2500, 10000, 6000, 14000, 1500, 7000, 20000],
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderColor: '#3B82F6',
-                    pointBorderColor: 'rgba(255,255,255,0)',
-                    pointBackgroundColor: 'rgba(255,255,255,0)',
-                    pointBorderWidth: 0,
-                    pointHoverRadius: 8,
-                    pointHoverBackgroundColor: '#3B82F6',
-                    pointHoverBorderColor: 'rgba(220,220,220,1)',
-                    pointHoverBorderWidth: 4,
-                    pointRadius: 1,
-                    borderWidth: 5,
-                    pointHitRadius: 16,
-                    tension: 0.35,
-                    fill: 'start'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                                legend: {
-                                    display: false
-                                },
-                    tooltip: {
-                        backgroundColor: '#fff',
-                        displayColors: false,
-                        titleColor: '#000',
-                        bodyColor: '#000'
-                    }
-                },
-                scales: {
-                                x: {
-                                    grid: {
-                                        display: false
-                                    }
-                                },
-                    y: {
-                        display: false
-                    }
-                }
-            }
-        });
-                }
-            }
-        } catch (error) {
-            console.log('Chart.js not available or error creating awards line chart:', error);
-        }
-    }
-
-
-    // Award Criteria Dropdown and Linking Functions
-    function updateCriterionStatus(checkbox) {
-        const award = checkbox.dataset.award;
-        const criterion = checkbox.dataset.criterion;
-        const isChecked = checkbox.checked;
-        
-        // Update the criterion status via API
-        fetch('api/checklist.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `action=update_criterion_status&award_type=${encodeURIComponent(award)}&criterion=${encodeURIComponent(criterion)}&satisfied=${isChecked ? '1' : '0'}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log(`Criterion ${criterion} status updated to ${isChecked ? 'satisfied' : 'not satisfied'}`);
-                // Refresh the readiness summary if it exists
-                if (typeof loadReadinessSummary === 'function') {
-                    loadReadinessSummary();
-                }
-            } else {
-                console.error('Failed to update criterion status:', data.message);
-                // Revert checkbox state
-                checkbox.checked = !isChecked;
-            }
-        })
-        .catch(error => {
-            console.error('Error updating criterion status:', error);
-            // Revert checkbox state
-            checkbox.checked = !isChecked;
-        });
-    }
-
-    // Function to update checklist status automatically based on counters
-    function updateChecklistStatusAutomatically() {
-        const awardTypes = ['leadership', 'education', 'emerging', 'regional', 'citizenship'];
-        
-        awardTypes.forEach(awardType => {
-            fetch(`api/checklist_working.php?action=get_checklist_status&award_type=${encodeURIComponent(awardType)}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text();
-            })
-            .then(text => {
-                if (!text.trim()) {
-                    throw new Error('Empty response from server');
-                }
-                return JSON.parse(text);
-            })
-            .then(data => {
-                if (data.success) {
-                    data.status.forEach(criterionStatus => {
-                        const checkbox = document.querySelector(`input[data-award="${awardType}"][data-criterion="${criterionStatus.criterion}"]`);
-                        const statusElement = document.getElementById(`${awardType}-${criterionStatus.criterion}-status`);
-        
-                        if (checkbox) {
-                            checkbox.checked = criterionStatus.satisfied;
-                        }
-        
-                        if (statusElement) {
-                            if (criterionStatus.satisfied) {
-                                statusElement.textContent = 'Satisfied';
-                                statusElement.className = 'text-xs text-green-600 ml-2';
-                            } else {
-                                statusElement.textContent = 'Not Started';
-                                statusElement.className = 'text-xs text-gray-500 ml-2';
+                        // Analyze each document
+                        documents.forEach(doc => {
+                            const content = (doc.extracted_content || '').toLowerCase();
+                            const docName = (doc.document_name || '').toLowerCase();
+                            const fullContent = content + ' ' + docName;
+                            
+                            // Simple keyword matching for award categories
+                            if (fullContent.includes('leadership') || fullContent.includes('international') || fullContent.includes('partnership')) {
+                                documentCounts.leadership++;
                             }
-                        }
-                    });
-                }
-            })
-            .catch(error => {
-                console.error(`Error loading checklist status for ${awardType}:`, error);
-            });
-        });
-    }
+                            if (fullContent.includes('education') || fullContent.includes('curriculum') || fullContent.includes('program')) {
+                                documentCounts.education++;
+                            }
+                            if (fullContent.includes('emerging') || fullContent.includes('innovation') || fullContent.includes('new')) {
+                                documentCounts.emerging++;
+                            }
+                            if (fullContent.includes('regional') || fullContent.includes('local') || fullContent.includes('community')) {
+                                documentCounts.regional++;
+                            }
+                            if (fullContent.includes('global') || fullContent.includes('citizenship') || fullContent.includes('worldwide')) {
+                                documentCounts.global++;
+                            }
+                            
+                            documentCounts.total++;
+                        });
 
-    // Load available content when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        updateChecklistStatusAutomatically();
-        // Set up periodic refresh of checklist data
-        setInterval(refreshChecklistData, 30000); // Refresh every 30 seconds
-    });
+                        // Update counters
+                        document.getElementById('leadership-count').textContent = documentCounts.leadership;
+                        document.getElementById('education-count').textContent = documentCounts.education;
+                        document.getElementById('emerging-count').textContent = documentCounts.emerging;
+                        document.getElementById('regional-count').textContent = documentCounts.regional;
+                        document.getElementById('global-count').textContent = documentCounts.global;
+                        document.getElementById('activities-count').textContent = documentCounts.total;
+                        document.getElementById('overall-score').textContent = documentCounts.total;
 
-    // Function to refresh checklist data
-    function refreshChecklistData() {
-        if (typeof loadAwardDocumentCounts === 'function') {
-            loadAwardDocumentCounts();
-        }
-        if (typeof loadReadinessSummary === 'function') {
-            loadReadinessSummary();
-        }
-        if (typeof updateChecklistStatusAutomatically === 'function') {
-            updateChecklistStatusAutomatically();
-        }
-        // Update Award Match Analysis counters
-        updateAwardMatchCounters();
-        
-        // Auto-refresh counters every 5 seconds when Awards Match Analysis tab is active
-        setInterval(() => {
-            if (document.getElementById('tab-awardmatch').classList.contains('active')) {
-                updateAwardMatchCounters();
-            }
-        }, 5000);
-        
-        // Listen for document uploads from other pages via localStorage
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'documentUploaded' && e.newValue === 'true') {
-                console.log('Document upload detected from another page, refreshing counters...');
-                // Add a small delay to ensure the database is updated
-                setTimeout(() => {
-                    updateAwardMatchCounters();
-                }, 1000);
-                // Clear the flag
-                localStorage.removeItem('documentUploaded');
-            }
-        });
-        
-        // Check for upload flag on page load
-        if (localStorage.getItem('documentUploaded') === 'true') {
-            console.log('Document upload detected on page load, refreshing counters...');
-            // Add a small delay to ensure the database is updated
-            setTimeout(() => {
-                updateAwardMatchCounters();
-            }, 1000);
-            localStorage.removeItem('documentUploaded');
-        }
-        
-        // Also listen for focus events to refresh when user returns to the page
-        window.addEventListener('focus', function() {
-            if (localStorage.getItem('documentUploaded') === 'true') {
-                console.log('Document upload detected on window focus, refreshing counters...');
-                setTimeout(() => {
-                    updateAwardMatchCounters();
-                }, 500);
-                localStorage.removeItem('documentUploaded');
-            }
-        });
-    }
-    
-    // Function to update Award Match Analysis counters with real data
-    function updateAwardMatchCounters() {
-        // Get all documents from the database
-        fetch('api/documents.php?action=get_all')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.text();
-        })
-        .then(text => {
-            if (!text.trim()) {
-                throw new Error('Empty response from server');
-            }
-            return JSON.parse(text);
-        })
-        .then(data => {
-            if (data.success) {
-                const documents = data.documents || [];
-                
-                console.log('Documents from database:', documents);
-                
-                // CHED Award Criteria (20 criteria total: 5+5+4+3+3)
-                const criteria = {
-                    'leadership': [
-                        'Champion Bold Innovation',
-                        'Cultivate Global Citizens', 
-                        'Nurture Lifelong Learning',
-                        'Lead with Purpose',
-                        'Ethical and Inclusive Leadership'
-                    ],
-                    'education': [
-                        'Expand Access to Global Opportunities',
-                        'Foster Collaborative Innovation',
-                        'Embrace Inclusivity and Beyond',
-                        'Drive Academic Excellence',
-                        'Build Sustainable Partnerships'
-                    ],
-                    'emerging': [
-                        'Pioneer New Frontiers',
-                        'Adapt and Transform',
-                        'Build Capacity',
-                        'Create Impact'
-                    ],
-                    'regional': [
-                        'Comprehensive Internationalization Efforts',
-                        'Cooperation and Collaboration',
-                        'Measurable Impact'
-                    ],
-                    'global': [
-                        'Ignite Intercultural Understanding',
-                        'Empower Changemakers',
-                        'Cultivate Active Engagement'
-                    ]
-                };
-                
-                // Initialize counters
-                const documentCounts = {
-                    'leadership': 0,
-                    'education': 0,
-                    'emerging': 0,
-                    'regional': 0,
-                    'global': 0,
-                    'total': 0
-                };
-                
-                // Analyze each document
-                documents.forEach(doc => {
-                    const content = (doc.extracted_content || '').toLowerCase();
-                    const docName = (doc.document_name || '').toLowerCase();
-                    const fullContent = content + ' ' + docName;
-                    
-                    console.log('Analyzing document:', doc.document_name, 'Content length:', content.length);
-                    
-                    // Check each award type - count documents that match each award type
-                    Object.keys(criteria).forEach(awardType => {
-                        let matches = 0;
-                        criteria[awardType].forEach(criterion => {
-                            if (fullContent.includes(criterion.toLowerCase())) {
-                                matches++;
+                        // Find best match
+                        let bestMatch = 'None';
+                        let maxCount = 0;
+                        const categories = [
+                            { name: 'International Leadership', count: documentCounts.leadership },
+                            { name: 'Outstanding Education', count: documentCounts.education },
+                            { name: 'Emerging Leadership', count: documentCounts.emerging },
+                            { name: 'Regional Excellence', count: documentCounts.regional },
+                            { name: 'Global Citizenship', count: documentCounts.global }
+                        ];
+
+                        categories.forEach(category => {
+                            if (category.count > maxCount) {
+                                maxCount = category.count;
+                                bestMatch = category.name;
                             }
                         });
-                        
-                        // Only count the document once per award type if it matches any criteria
-                        if (matches > 0) {
-                            documentCounts[awardType]++;
-                            console.log(`Document ${doc.document_name} matches ${awardType} (${matches} criteria)`);
-                        }
-                    });
-                });
-                
-                // Calculate total
-                documentCounts.total = documentCounts.leadership + documentCounts.education + 
-                                     documentCounts.emerging + documentCounts.regional + documentCounts.global;
-                
-                console.log('Calculated document counts:', documentCounts);
-                
-                // Update counters using document counts (files matching criteria)
-                const activitiesCountElement = document.getElementById('activities-count');
-                const overallScoreElement = document.getElementById('overall-score');
-                
-                if (activitiesCountElement) {
-                    activitiesCountElement.textContent = documentCounts.total || 0;
-                }
-                if (overallScoreElement) {
-                    overallScoreElement.textContent = documentCounts.total || 0;
-                }
-                
-                // Find best match (highest document count)
-                const awardTypes = ['leadership', 'education', 'emerging', 'regional', 'global'];
-                let bestMatch = { award_key: 'leadership', count: 0 };
-                
-                awardTypes.forEach(awardType => {
-                    if (documentCounts[awardType] > bestMatch.count) {
-                        bestMatch = { award_key: awardType, count: documentCounts[awardType] };
-                    }
-                });
-                
-                const bestMatchElement = document.getElementById('best-match');
-                if (bestMatchElement) {
-                    if (bestMatch.count > 0) {
-                        const awardNames = {
-                            'leadership': 'Internationalization (IZN) Leadership',
-                            'education': 'Outstanding International Education Program',
-                            'emerging': 'Emerging Internationalization',
-                            'regional': 'Regional Internationalization',
-                            'global': 'Global Citizenship'
-                        };
-                        bestMatchElement.textContent = awardNames[bestMatch.award_key] || bestMatch.award_key;
-                    } else {
-                        bestMatchElement.textContent = 'None';
-                    }
-                }
-                
-                // Update individual award card counters
-                const leadershipCountEl = document.getElementById('leadership-score');
-                const educationCountEl = document.getElementById('education-score');
-                const emergingCountEl = document.getElementById('emerging-score');
-                const regionalCountEl = document.getElementById('regional-score');
-                const globalCountEl = document.getElementById('citizenship-score');
-                
-                console.log('Updating counters:', {
-                    leadership: documentCounts.leadership || 0,
-                    education: documentCounts.education || 0,
-                    emerging: documentCounts.emerging || 0,
-                    regional: documentCounts.regional || 0,
-                    global: documentCounts.global || 0
-                });
-                
-                if (leadershipCountEl) {
-                    leadershipCountEl.textContent = documentCounts.leadership || 0;
-                    console.log('Updated leadership counter to:', documentCounts.leadership || 0);
-                }
-                if (educationCountEl) {
-                    educationCountEl.textContent = documentCounts.education || 0;
-                    console.log('Updated education counter to:', documentCounts.education || 0);
-                }
-                if (emergingCountEl) {
-                    emergingCountEl.textContent = documentCounts.emerging || 0;
-                    console.log('Updated emerging counter to:', documentCounts.emerging || 0);
-                }
-                if (regionalCountEl) {
-                    regionalCountEl.textContent = documentCounts.regional || 0;
-                    console.log('Updated regional counter to:', documentCounts.regional || 0);
-                }
-                if (globalCountEl) {
-                    globalCountEl.textContent = documentCounts.global || 0;
-                    console.log('Updated global counter to:', documentCounts.global || 0);
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error updating award match counters:', error);
-        });
-    }
 
-    // Function to show detailed compliance report
-    function showDetailedComplianceReport(results) {
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        
-        // Group results by award type
-        const groupedResults = {};
-        results.forEach(result => {
-            if (!groupedResults[result.award]) {
-                groupedResults[result.award] = [];
-            }
-            groupedResults[result.award].push(result);
-        });
-        
-        let reportHTML = `
-            <div class="bg-white rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-semibold text-gray-900">CHED Award Criteria Compliance Report</h3>
-                    <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="space-y-6">
-        `;
-        
-        const awardNames = {
-            'leadership': 'Internationalization (IZN) Leadership',
-            'education': 'Outstanding International Education Program',
-            'emerging': 'Emerging Internationalization',
-            'regional': 'Regional Internationalization',
-            'citizenship': 'Global Citizenship'
-        };
-        
-        Object.keys(groupedResults).forEach(awardKey => {
-            const awardResults = groupedResults[awardKey];
-            const awardName = awardNames[awardKey] || awardKey;
-            
-            reportHTML += `
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <h4 class="text-lg font-medium text-gray-900 mb-3">${awardName}</h4>
-                    <div class="space-y-2">
-            `;
-            
-            awardResults.forEach(result => {
-                const typeIcon = result.type === 'mou_document' ? '🤝' : 
-                                result.type === 'event' ? '📅' : '📄';
-                const typeLabel = result.type === 'mou_document' ? 'MOU' : 
-                                 result.type === 'event' ? 'Event' : 'Document';
-                
-                reportHTML += `
-                    <div class="flex items-start space-x-3 p-2 bg-gray-50 rounded">
-                        <span class="text-lg">${typeIcon}</span>
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-900">${result.name}</div>
-                            <div class="text-sm text-gray-600">${typeLabel}</div>
-                            <div class="text-sm text-green-600 mt-1">
-                                Criteria satisfied: ${result.satisfied_criteria.join(', ')}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            reportHTML += `
-                    </div>
-                </div>
-            `;
-        });
-        
-        reportHTML += `
-                </div>
-                <div class="mt-6 flex justify-end">
-                    <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Close Report
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        modal.innerHTML = reportHTML;
-        document.body.appendChild(modal);
-    }
-
-    // End of JavaScript - Cache buster: 2024-12-19-10
+                        document.getElementById('best-match').textContent = bestMatch;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating award match counters:', error);
+                });
+        }
     </script>
-
 </body>
-
 </html>
-

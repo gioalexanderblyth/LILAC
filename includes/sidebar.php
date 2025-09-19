@@ -107,6 +107,9 @@ window.LILACSidebar = {
     },
     
     loadState: async function() {
+        // Start with sidebar closed by default
+        this.isOpen = false;
+        
         try {
             const response = await fetch('api/sidebar_state.php?action=get_state');
             if (!response.ok) {
@@ -114,19 +117,17 @@ window.LILACSidebar = {
             }
             const data = await response.json();
             if (data.success) {
-                this.isOpen = data.data.state === 'open';
-            } else {
-                // Default state based on screen size
-                this.isOpen = window.innerWidth >= 1024;
+                const savedState = data.data.state === 'open';
+                // Only apply state if it's different from the current state
+                if (savedState !== this.isOpen) {
+                    this.isOpen = savedState;
+                    this.applyState();
+                }
             }
         } catch (error) {
             console.warn('Could not load sidebar state from database:', error);
-            // Default state based on screen size
-            this.isOpen = window.innerWidth >= 1024;
+            // Keep the default closed state
         }
-        
-        // Apply initial state immediately
-        this.applyState();
     },
     
     saveState: function() {

@@ -4,6 +4,11 @@
  * Provides award criteria-based file retrieval and counting
  */
 
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
@@ -199,6 +204,9 @@ if ($action === 'get_awards' || $action === 'get_all' || $action === 'list') {
     } catch (PDOException $e) {
         error_log("Database error in get_awards: " . $e->getMessage());
         awards_respond(false, ['message' => 'Database error: ' . $e->getMessage()]);
+    } catch (Exception $e) {
+        error_log("General error in get_awards: " . $e->getMessage());
+        awards_respond(false, ['message' => 'Error: ' . $e->getMessage()]);
     }
 }
 
@@ -304,29 +312,8 @@ if ($action === 'get_counts') {
 if ($action === 'get_awards_by_period') {
     $period = $_GET['period'] ?? '';
     
-    // Return received awards for this year (mock data for now)
-    $receivedAwards = [
-        [
-            'id' => 1,
-            'title' => 'Outstanding International Education Program Award',
-            'recipient' => 'LILAC System',
-            'date' => '2024-11-15',
-            'category' => 'Education',
-            'amount' => '$5,000',
-            'status' => 'active',
-            'description' => 'Awarded for excellence in international education programs'
-        ],
-        [
-            'id' => 2,
-            'title' => 'Regional Internationalization Award',
-            'recipient' => 'LILAC System',
-            'date' => '2024-10-20',
-            'category' => 'Regional',
-            'amount' => '$3,000',
-            'status' => 'active',
-            'description' => 'Recognized for comprehensive regional internationalization efforts'
-        ]
-    ];
+    // Return empty awards array since no awards have been won yet
+    $receivedAwards = [];
     
     awards_respond(true, ['awards' => $receivedAwards, 'period' => $period]);
 }

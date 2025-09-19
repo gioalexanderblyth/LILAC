@@ -623,53 +623,18 @@ require_once 'classes/DateTimeUtility.php';
                 return JSON.parse(text);
             })
             .then(data => {
-                if (data.success && data.awards) {
-                    let awardsHTML = '';
-                    
-                    data.awards.forEach(award => {
-                        const awardDate = new Date(award.date).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                        });
-                        
-                        awardsHTML += `
-                            <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-lg font-semibold text-gray-900">${award.title}</h3>
-                                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                                        Received
-                                    </span>
-                                </div>
-                                <div class="mb-4">
-                                    <p class="text-gray-600 text-sm mb-1">${award.description}</p>
-                                    <div class="flex justify-between text-sm">
-                                        <span class="text-gray-500">Recipient:</span>
-                                        <span class="font-medium">${award.recipient}</span>
-                                    </div>
-                                    </div>
-                                <div class="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <span class="text-gray-500">Date:</span>
-                                        <span class="font-medium">${awardDate}</span>
-                                </div>
-                                    <div>
-                                        <span class="text-gray-500">Amount:</span>
-                                        <span class="font-medium">${award.amount}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    container.innerHTML = awardsHTML;
+                if (data.success && data.awards && data.awards.length > 0) {
+                    // Show awards in table format when there are awards
+                    displayDocuments(data.awards);
                 } else {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-8">No awards received this year</p>';
+                    // Show empty table structure when no awards
+                    displayDocuments([]);
                 }
             })
             .catch(error => {
                 console.error('Error loading awards:', error);
-                container.innerHTML = '<p class="text-red-500 text-center py-8">Error loading awards data</p>';
+                // Show empty table structure on error
+                displayDocuments([]);
             });
         }
 
@@ -741,10 +706,10 @@ require_once 'classes/DateTimeUtility.php';
                             <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                             </svg>
-                            <h3 class="text-lg font-medium text-gray-900 mb-1">No awards yet</h3>
-                            <p class="text-gray-500 mb-4">Add your first award to get started</p>
-                            <button onclick="document.getElementById('award-title').focus()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
-                                Add Award
+                            <h3 class="text-lg font-medium text-gray-900 mb-1">No awards received yet</h3>
+                            <p class="text-gray-500 mb-4">Start building your award portfolio by adding your first award</p>
+                            <button onclick="showAddAwardModal()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                                Add Your First Award
                             </button>
                         </div>
                     </td>
@@ -2534,11 +2499,18 @@ LILAC Awards - Keyboard Shortcuts:
 
     <!-- Navigation Bar -->
     <nav class="fixed top-0 left-0 right-0 z-[60] modern-nav p-4 h-16 flex items-center justify-between relative transition-all duration-300 ease-in-out">
-        <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-        </button>
+        <div class="flex items-center space-x-4 pl-16">
+            <button id="hamburger-toggle" class="btn btn-secondary btn-sm absolute top-4 left-4 z-[70]" title="Toggle sidebar">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            
+            <h1 class="text-xl font-bold text-gray-800 cursor-pointer" onclick="location.reload()">Awards Progress</h1>
+            
+            <a href="dashboard.php" class="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer">
+            </a>
+        </div>
     </nav>
 
     
@@ -2548,6 +2520,10 @@ LILAC Awards - Keyboard Shortcuts:
 
     <!-- Main Content -->
     <div id="main-content" class="p-4 pt-3 min-h-screen bg-[#F8F8FF] transition-all duration-300 ease-in-out">
+
+        
+
+
 
         <!-- Tab Navigation -->
         <div class="mb-1">
@@ -2561,16 +2537,14 @@ LILAC Awards - Keyboard Shortcuts:
                             Award Match Analysis
                         </button>
                     </nav>
-                    <div class="flex flex-col items-end gap-2">
-                        <div class="flex items-center gap-2">
-                            <button onclick="updateAwardMatchCounters()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2" title="Refresh Analysis">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                                Refresh Analysis
-                            </button>
-                            <button id="add-award-btn" aria-label="Upload" class="px-4 py-2 bg-purple-600 text-white rounded-md shadow hover:bg-purple-700 transition-colors text-sm flex items-center" onclick="showAddAwardModal()">Upload</button>
-                        </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="updateAwardMatchCounters()" class="px-3 py-1.5 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition-colors text-sm flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Refresh Analysis
+                        </button>
+                        <button id="add-award-btn" aria-label="Upload" class="px-3 py-1.5 bg-purple-600 text-white rounded-md shadow hover:bg-purple-700 transition-colors text-sm" onclick="showAddAwardModal()">Upload</button>
                     </div>
                 </div>
             </div>
@@ -2817,14 +2791,14 @@ LILAC Awards - Keyboard Shortcuts:
 
             <!-- Recent Activity -->
             <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity Status</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
                 <div class="space-y-3">
                     <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                         <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
                             RV
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-900"><span class="font-medium">Global Citizenship Awards</span></p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Ruby Vetrovs</span> 5 minutes ago</p>
                             <p class="text-sm text-gray-600">Added 3 new awards data with certificates.</p>
                         </div>
                     </div>
@@ -2833,7 +2807,7 @@ LILAC Awards - Keyboard Shortcuts:
                             MJ
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-900"><span class="font-medium">Outstanding International Education Program Awards</span></p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Maria Johnson</span> 2 hours ago</p>
                             <p class="text-sm text-gray-600">Updated award status for Research Excellence.</p>
                         </div>
                     </div>
@@ -2842,7 +2816,7 @@ LILAC Awards - Keyboard Shortcuts:
                             AS
                         </div>
                         <div class="flex-1">
-                            <p class="text-sm text-gray-900"><span class="font-medium">Emerging Leadership Award</span></p>
+                            <p class="text-sm text-gray-900"><span class="font-medium">Alex Smith</span> 1 day ago</p>
                             <p class="text-sm text-gray-600">Uploaded certificate for Academic Achievement.</p>
                         </div>
                     </div>
@@ -2865,8 +2839,14 @@ LILAC Awards - Keyboard Shortcuts:
         </div>
         </div> <!-- End of tab-overview-content -->
 
+        <!-- AwardMatch Tab Content -->
+        <div id="tab-awardmatch-content" class="tab-content hidden">
+            <!-- Header -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Awards Match Analysis</h3>
+            </div>
             <!-- CHED Awards Progress -->
-            <div class="grid grid-cols-5 gap-5 mb-5 mt-6">
+            <div class="grid grid-cols-5 gap-4 mb-8">
                 <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">
@@ -4285,11 +4265,11 @@ LILAC Awards - Keyboard Shortcuts:
                 }
                 
                 // Update individual award card counters
-                const leadershipCountEl = document.getElementById('leadership-count');
-                const educationCountEl = document.getElementById('education-count');
-                const emergingCountEl = document.getElementById('emerging-count');
-                const regionalCountEl = document.getElementById('regional-count');
-                const globalCountEl = document.getElementById('global-count');
+                const leadershipCountEl = document.getElementById('leadership-score');
+                const educationCountEl = document.getElementById('education-score');
+                const emergingCountEl = document.getElementById('emerging-score');
+                const regionalCountEl = document.getElementById('regional-score');
+                const globalCountEl = document.getElementById('citizenship-score');
                 
                 console.log('Updating counters:', {
                     leadership: documentCounts.leadership || 0,

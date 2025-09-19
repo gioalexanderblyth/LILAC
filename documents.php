@@ -1,4 +1,8 @@
 <?php
+// Include required files first
+require_once 'config/documents_config.php';
+require_once 'classes/DateTimeUtility.php';
+
 // Start session for authentication
 session_start();
 
@@ -20,9 +24,6 @@ if (!in_array($_SESSION['user_role'], $allowed_roles)) {
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(DocumentsConfig::$SECURITY['csrf_token_length']));
 }
-
-require_once 'classes/DateTimeUtility.php';
-require_once 'config/documents_config.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -34,7 +35,6 @@ require_once 'config/documents_config.php';
     <script src="js/error-handler.js"></script>
     <script src="js/security-utils.js"></script>
     <script src="js/awards-check.js"></script>
-    <script src="js/documents-config.js"></script>
     <script src="js/documents-management.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -56,6 +56,27 @@ require_once 'config/documents_config.php';
             pagination: <?php echo json_encode(DocumentsConfig::$PAGINATION); ?>,
             ui: <?php echo json_encode(DocumentsConfig::$UI); ?>,
             security: <?php echo json_encode(DocumentsConfig::$SECURITY); ?>,
+            api: {
+                upload: 'api/documents.php',
+                list: 'api/documents.php',
+                delete: 'api/documents.php',
+                search: 'api/documents.php'
+            },
+            upload: {
+                maxFileSize: 50 * 1024 * 1024, // 50MB
+                allowedTypes: [
+                    'application/pdf',
+                    'image/jpeg',
+                    'image/png',
+                    'image/gif',
+                    'text/plain',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                ],
+                maxFiles: 10
+            },
             currentUser: {
                 id: '<?php echo $_SESSION['user_id']; ?>',
                 role: '<?php echo $_SESSION['user_role']; ?>'

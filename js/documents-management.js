@@ -81,7 +81,7 @@ class DocumentsManager {
     async loadDocuments() {
         try {
             const params = new URLSearchParams(this.currentFilters);
-            const response = await fetch(`${DocumentsConfig.api.list}?action=list&${params}`);
+            const response = await fetch(`${DocumentsConfig.api.list}?action=get_all&${params}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

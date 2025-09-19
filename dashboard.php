@@ -248,9 +248,9 @@ ob_clean();
                         <!-- Notifications will be populated by JavaScript -->
                     </div>
                     <div class="p-3 border-t border-gray-200">
-                        <button class="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium">
+                        <a href="notifications.php" class="block w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium">
                             View All Notifications
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>

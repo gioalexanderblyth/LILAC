@@ -57,15 +57,8 @@
         });
 
         function updateCurrentDate() {
-            const now = new Date();
-            if (dateElement) {
-                dateElement.textContent = now.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                });
-            }
+            // Date update functionality - no date element in templates page
+            // This function is kept for compatibility but does nothing
         }
 
 
@@ -1054,15 +1047,7 @@ Approved by: _________________________
         }
     }
 
-        // Update date in top-right
-        function updateCurrentDate() {
-            if (el) {
-                var now = new Date();
-                el.textContent = now.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-            }
-        }
-        updateCurrentDate();
-        setInterval(updateCurrentDate, 60000);
+        // Date update functionality removed - no date element in templates page
     </script>
 
     <!-- Main Content -->

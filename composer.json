@@ -3,5 +3,10 @@
         "smalot/pdfparser": "^2.0",
         "phpoffice/phpword": "^1.0",
         "alchemy/zippy": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "LILAC\\Files\\": "classes/"
+        }
     }
 }

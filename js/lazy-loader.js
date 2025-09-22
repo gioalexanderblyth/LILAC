@@ -105,17 +105,43 @@ class LazyLoader {
      * @returns {Promise} Promise that resolves when PDF.js is loaded
      */
     async loadPDFJS() {
+        const version = '3.11.174';
+        const jsUrls = [
+            `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.min.js`,
+            `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.min.js`,
+            `https://unpkg.com/pdfjs-dist@${version}/build/pdf.min.js`
+        ];
+        const workerUrls = [
+            `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`,
+            `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.js`,
+            `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.js`
+        ];
+        
         try {
-            await this.loadLibrary('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjs');
+            // Try multiple CDNs for robustness
+            await this.loadLibraryWithFallback(jsUrls, 'pdfjs');
             
-            // Configure PDF.js worker
-            if (typeof pdfjsLib !== 'undefined') {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            if (typeof pdfjsLib === 'undefined') {
+                throw new Error('PDF.js loaded but pdfjsLib is undefined');
+            }
+            
+            // Configure worker with fallback
+            let workerSet = false;
+            for (const url of workerUrls) {
+                try {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = url;
+                    workerSet = true;
+                    break;
+                } catch (_) {}
+            }
+            
+            if (!workerSet) {
+                console.warn('PDF.js worker could not be configured from CDNs. Inline rendering may still work.');
             }
             
             return Promise.resolve();
         } catch (error) {
-            console.error('Failed to load PDF.js:', error);
+            console.error('Failed to load PDF.js from all sources:', error);
             throw error;
         }
     }

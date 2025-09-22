@@ -19,9 +19,100 @@ require_once 'classes/DateTimeUtility.php';
     <script src="js/modal-handlers.js"></script>
     <link rel="stylesheet" href="modern-design-system.css">
     <link rel="stylesheet" href="sidebar-enhanced.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
     <script src="connection-status.js"></script>
     <script src="lilac-enhancements.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        /* Material Symbols Outlined */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Progress circle styles */
+        .progress-circle {
+            transform: rotate(-90deg);
+        }
+        
+        /* Sidebar collapse functionality */
+        .sidebar-collapsed .sidebar-text {
+            display: none !important;
+        }
+        .sidebar-collapsed .sidebar-logo-text {
+            display: none !important;
+        }
+        .sidebar-collapsed .sidebar {
+            width: 5rem !important;
+        }
+        .sidebar-collapsed .sidebar-profile-info {
+            display: none !important;
+        }
+        .sidebar-collapsed .sidebar-toggle-icon-open {
+            display: none !important;
+        }
+        .sidebar-collapsed .sidebar-toggle-icon-closed {
+            display: block !important;
+        }
+        .sidebar-toggle-icon-closed {
+            display: none !important;
+        }
+        
+        /* Smooth transitions */
+        .sidebar {
+            transition: width 0.3s ease;
+        }
+        main {
+            transition: all 0.3s ease;
+        }
+        
+        /* Custom button styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: #137fec;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0f66bc;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(19, 127, 236, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: white;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #f9fafb;
+            transform: translateY(-1px);
+        }
+        
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+        }
+    </style>
     <script>
         // Cache buster: 2024-12-19
         // Define category constant for awards
@@ -4390,6 +4481,36 @@ LILAC Awards - Keyboard Shortcuts:
         modal.innerHTML = reportHTML;
         document.body.appendChild(modal);
     }
+
+    // Sidebar functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const hamburgerToggle = document.getElementById('hamburger-toggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainContent = document.getElementById('main-content');
+        
+        if (hamburgerToggle && sidebar) {
+            hamburgerToggle.addEventListener('click', function() {
+                // Toggle sidebar visibility
+                if (sidebar.classList.contains('hidden')) {
+                    sidebar.classList.remove('hidden');
+                    mainContent.classList.remove('ml-0');
+                    mainContent.classList.add('ml-64');
+                } else {
+                    sidebar.classList.add('hidden');
+                    mainContent.classList.remove('ml-64');
+                    mainContent.classList.add('ml-0');
+                }
+            });
+        }
+        
+        // Initialize sidebar state from localStorage
+        const sidebarState = localStorage.getItem('sidebarState');
+        if (sidebarState === 'closed' && sidebar && mainContent) {
+            sidebar.classList.add('hidden');
+            mainContent.classList.remove('ml-64');
+            mainContent.classList.add('ml-0');
+        }
+    });
 
     // End of JavaScript - Cache buster: 2024-12-19-10
     </script>

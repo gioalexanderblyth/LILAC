@@ -1,19 +1,16 @@
 <?php
-/**
- * Robust File Processor - Streamlined and Fail-Fast
- * Eliminates redundant logic and unreliable fallbacks
- */
-
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use Smalot\PdfParser\Parser as PdfParser;
-use PhpOffice\PhpWord\IOFactory;
+use LILAC\Files\FileReaderInterface;
+use LILAC\Files\Readers\PdfReader;
+use LILAC\Files\Readers\DocxReader;
+use LILAC\Files\Readers\TxtReader;
 
 class DynamicFileProcessor {
     private $logger;
     
     public function __construct() {
-        $this->logger = new FileProcessorLogger();
+        $this->logger = new FileProcessorLogger(getenv('LILAC_LOG_PATH') ?: null);
     }
     
     /**
@@ -21,13 +18,18 @@ class DynamicFileProcessor {
      */
     public function processFile($file, $additionalData = []) {
         try {
-            // Save file to disk first
-            $filePath = $this->saveFile($file);
-            
-            // Process using the robust method
-            $result = $this->processFileRobust($file, $filePath);
-            
+            // Process directly from the temporary upload path to avoid redundant I/O
+            $tempPath = $file['tmp_name'] ?? null;
+            if (empty($tempPath) || !file_exists($tempPath)) {
+                throw new FileProcessingException('Temporary upload file not found');
+            }
+
+            // Process using the robust method against temp path
+            $result = $this->processFileRobust($file, $tempPath);
+
             if ($result['is_readable']) {
+                // Persist file only after successful processing
+                $filePath = $this->saveFile($file);
                 return [
                     'success' => true,
                     'document_id' => null, // Will be set by caller
@@ -41,7 +43,12 @@ class DynamicFileProcessor {
                     'error_message' => $result['error_message'] ?? 'File processing failed'
                 ];
             }
-            
+
+        } catch (FileProcessingException $e) {
+            return [
+                'success' => false,
+                'error_message' => $e->getMessage()
+            ];
         } catch (Exception $e) {
             return [
                 'success' => false,
@@ -71,7 +78,7 @@ class DynamicFileProcessor {
     }
     
     /**
-     * Main file processing method - streamlined and fail-fast with security checks
+     * Main file processing method - orchestrates dispatch to reader strategies
      */
     public function processFileRobust($fileArray, $filePath) {
         try {
@@ -83,183 +90,160 @@ class DynamicFileProcessor {
                 throw new FileProcessingException("File not found or not readable: " . basename($filePath));
             }
             
-            // Get file extension and detect type
+            // Detect file type using MIME and extension as fallback
             $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
             $detectedType = $this->detectFileType($filePath, $extension);
-            
-            // Extract content based on file type
-            $extractedContent = $this->extractContentByType($detectedType, $filePath);
-            
-            // Prioritize extracted content over filename fallback
-            if (empty(trim($extractedContent))) {
-                // Only use filename if no content was extracted
-                $extractedContent = $this->extractFromFilename(basename($filePath));
+
+            // Size guardrails (50MB cap already in validateFileSecurity)
+
+            // Dispatch to specialized reader by MIME/type
+            $reader = $this->resolveReader($filePath, $detectedType);
+            if (!$reader) {
+                throw new FileProcessingException("Unsupported file type: " . $detectedType);
             }
+
+            $readResult = $reader->read($filePath);
+            $extractedContent = $readResult['content'] ?? '';
             
-            // Validate extracted content
-            $validationResult = $this->validateContent($extractedContent, $detectedType);
-            
-            if (!$validationResult['is_valid']) {
-                throw new FileProcessingException($validationResult['error_message']);
+            // Clean and validate content
+            $extractedContent = trim($extractedContent);
+            $isReadable = !empty($extractedContent);
+
+            // Always prioritize content first, fallback only if truly empty
+            $documentName = $fileArray['name'] ?? basename($filePath);
+            $contentToCheck = $isReadable ? $extractedContent : $documentName;
+
+            // Debug logging
+            error_log("Extracted " . strlen($extractedContent) . " chars from $filePath → using " . ($isReadable ? "CONTENT" : "FILENAME"));
+
+            // Debug: log immediate extraction outcome
+            $this->logger->logSystemError('EXTRACTION_RESULT', [
+                'file' => basename($filePath),
+                'type' => $detectedType,
+                'len' => strlen((string)$extractedContent),
+                'preview' => substr((string)$extractedContent, 0, 50)
+            ]);
+
+            if ($isReadable) {
+                $this->logger->logExtractionSuccess(basename($filePath), $detectedType, strlen($extractedContent));
             }
-            
-            $trimmedContent = trim($extractedContent);
-            
-            // Log successful extraction with details
-            $this->logger->logExtractionSuccess(basename($filePath), $detectedType, strlen($trimmedContent));
-            
+
+            // Category detection logging
+            $this->logger->logSystemError('CATEGORY_DETECTION', [
+                'file' => basename($filePath),
+                'extracted_length' => strlen($extractedContent),
+                'source' => ($isReadable ? 'content' : 'filename')
+            ]);
+
             return [
-                'content' => $trimmedContent,
-                'is_readable' => true,
+                'content' => $extractedContent,
+                'is_readable' => $isReadable,
                 'file_type' => $detectedType,
-                'processing_method' => $validationResult['method'],
-                'category_hints' => $this->detectContentCategory($trimmedContent)
+                'processing_method' => 'success',
+                'category_hints' => $this->detectContentCategory($contentToCheck)
             ];
             
         } catch (FileProcessingException $e) {
-            // Handle file processing errors gracefully
+            // Handle file processing errors gracefully; keep partial content if available
             $this->logger->logExtractionFailure($fileArray['name'], $extension ?? 'unknown', $e->getMessage());
+            error_log("Extraction failed for $filePath: " . $e->getMessage());
             
-            return [
-                'content' => '',
-                'is_readable' => false,
-                'file_type' => $extension ?? 'unknown',
-                'processing_method' => 'failed',
-                'error_message' => $e->getMessage()
-            ];
+            // Check if we have any partial content
+            $partial = isset($extractedContent) ? trim((string)$extractedContent) : '';
+            $documentName = $fileArray['name'] ?? basename($filePath);
+            
+            if ($partial !== '') {
+                // We have partial content, use it
+                $contentToCheck = $partial;
+                $this->logger->logSystemError('PARTIAL_CONTENT_USED', [
+                    'file' => $fileArray['name'] ?? 'unknown',
+                    'length' => strlen($partial)
+                ]);
+                return [
+                    'content' => $partial,
+                    'is_readable' => true,
+                    'file_type' => $extension ?? 'unknown',
+                    'processing_method' => 'partial_with_error',
+                    'error_message' => $e->getMessage(),
+                    'category_hints' => $this->detectContentCategory($contentToCheck)
+                ];
+            } else {
+                // No content, fallback to filename
+                $contentToCheck = $documentName;
+                return [
+                    'content' => '',
+                    'is_readable' => false,
+                    'file_type' => $extension ?? 'unknown',
+                    'processing_method' => 'failed',
+                    'error_message' => $e->getMessage(),
+                    'category_hints' => $this->detectContentCategory($contentToCheck)
+                ];
+            }
             
         } catch (Exception $e) {
-            // Handle unexpected errors
+            // Handle unexpected errors; keep partial content if available
             $this->logger->logSystemError("Unexpected error in file processing", [
                 'file' => $fileArray['name'] ?? 'unknown',
                 'error' => $e->getMessage()
             ]);
+            error_log("Extraction failed for $filePath: " . $e->getMessage());
             
-            return [
-                'content' => '',
-                'is_readable' => false,
-                'file_type' => $extension ?? 'unknown',
-                'processing_method' => 'failed',
-                'error_message' => 'An unexpected error occurred while processing the file'
-            ];
-        }
-    }
-    
-    /**
-     * Extract content based on file type - single method for each type
-     */
-    private function extractContentByType($fileType, $filePath) {
-        switch ($fileType) {
-            case 'txt':
-                return $this->extractFromText($filePath);
-                
-            case 'pdf':
-                return $this->extractFromPdf($filePath);
-                
-            case 'docx':
-                return $this->extractFromDocx($filePath);
-                
-            case 'doc':
-                return $this->extractFromDoc($filePath);
-                
-            case 'rtf':
-                return $this->extractFromRtf($filePath);
-                
-            case 'csv':
-                return $this->extractFromCsv($filePath);
-                
-            case 'html':
-            case 'htm':
-                return $this->extractFromHtml($filePath);
-                
-            case 'xml':
-                return $this->extractFromXml($filePath);
-                
-            case 'json':
-                return $this->extractFromJson($filePath);
-                
-            default:
-                throw new FileProcessingException("Unsupported file type: " . $fileType);
-        }
-    }
-    
-    /**
-     * Extract from TXT files - Enhanced with proper UTF-8 handling
-     */
-    private function extractFromText($filePath) {
-        $content = file_get_contents($filePath);
-        if ($content === false) {
-            throw new FileProcessingException("Could not read text file");
-        }
-        
-        // Handle different encodings with comprehensive detection
-        $encoding = mb_detect_encoding($content, [
-            'UTF-8', 'UTF-16', 'UTF-32', 
-            'ISO-8859-1', 'ISO-8859-15', 'Windows-1252', 
-            'ASCII', 'CP1252', 'ISO-8859-2'
-        ], true);
-        
-        if ($encoding && $encoding !== 'UTF-8') {
-            $converted = mb_convert_encoding($content, 'UTF-8', $encoding);
-            if ($converted !== false) {
-                $content = $converted;
+            // Check if we have any partial content
+            $partial = isset($extractedContent) ? trim((string)$extractedContent) : '';
+            $documentName = $fileArray['name'] ?? basename($filePath);
+            
+            if ($partial !== '') {
+                // We have partial content, use it
+                $contentToCheck = $partial;
+                $this->logger->logSystemError('PARTIAL_CONTENT_USED', [
+                    'file' => $fileArray['name'] ?? 'unknown',
+                    'length' => strlen($partial)
+                ]);
+                return [
+                    'content' => $partial,
+                    'is_readable' => true,
+                    'file_type' => $extension ?? 'unknown',
+                    'processing_method' => 'partial_with_error',
+                    'error_message' => $e->getMessage(),
+                    'category_hints' => $this->detectContentCategory($contentToCheck)
+                ];
+            } else {
+                // No content, fallback to filename
+                $contentToCheck = $documentName;
+                return [
+                    'content' => '',
+                    'is_readable' => false,
+                    'file_type' => $extension ?? 'unknown',
+                    'processing_method' => 'failed',
+                    'error_message' => 'An unexpected error occurred while processing the file',
+                    'category_hints' => $this->detectContentCategory($contentToCheck)
+                ];
             }
         }
-        
-        // Normalize line endings and clean up
-        $content = str_replace(["\r\n", "\r"], "\n", $content);
-        $content = preg_replace('/\n{3,}/', "\n\n", $content); // Remove excessive line breaks
-        
-        return $content;
+    }
+
+    /**
+     * Resolve a reader strategy by detected type or MIME
+     */
+    private function resolveReader(string $filePath, string $detectedType): ?FileReaderInterface
+    {
+        $mime = function_exists('mime_content_type') ? mime_content_type($filePath) : null;
+        $map = [
+            'application/pdf' => PdfReader::class,
+            'text/plain' => TxtReader::class,
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => DocxReader::class,
+        ];
+        $byType = [
+            'pdf' => PdfReader::class,
+            'txt' => TxtReader::class,
+            'docx' => DocxReader::class,
+        ];
+        $class = $map[$mime] ?? $byType[$detectedType] ?? null;
+        if ($class === null) return null;
+        return new $class();
     }
     
-    /**
-     * Extract from PDF files - streamlined with fail-fast approach
-     */
-    private function extractFromPdf($filePath) {
-        try {
-            $parser = new PdfParser();
-                $pdf = $parser->parseFile($filePath);
-            $text = $pdf->getText();
-            
-            if (empty(trim($text))) {
-                throw new FileProcessingException("PDF contains no extractable text - may be image-based or password protected");
-            }
-            
-            return $text;
-            
-        } catch (Exception $e) {
-            // Fail-fast: Don't attempt unreliable fallbacks
-            throw new FileProcessingException("PDF extraction failed: " . $e->getMessage());
-        }
-    }
-    
-    /**
-     * Extract from DOCX files
-     */
-    private function extractFromDocx($filePath) {
-        try {
-            $phpWord = IOFactory::load($filePath);
-                $text = '';
-                
-                foreach ($phpWord->getSections() as $section) {
-                    foreach ($section->getElements() as $element) {
-                        if (method_exists($element, 'getText')) {
-                            $text .= $element->getText() . "\n";
-                        }
-                    }
-                }
-                
-            if (empty(trim($text))) {
-                throw new FileProcessingException("DOCX file contains no extractable text");
-            }
-            
-            return $text;
-            
-        } catch (Exception $e) {
-            throw new FileProcessingException("DOCX extraction failed: " . $e->getMessage());
-        }
-    }
+    // Removed inline extractors in favor of reader strategies (TxtReader, PdfReader, DocxReader)
     
     /**
      * Extract from DOC files - fully native PHP implementation with prioritized content
@@ -275,9 +259,8 @@ class DynamicFileProcessor {
             $this->logger->logSystemError("DOC extraction failed: " . $e->getMessage(), ['file' => basename($filePath)]);
         }
         
-        // Fallback: filename-based extraction (but prioritize any extracted content)
-        $filename = basename($filePath);
-        return $this->extractFromFilename($filename);
+        // Do not fallback to filename here; return empty so caller can decide
+        return '';
     }
     
     /**
@@ -305,10 +288,6 @@ class DynamicFileProcessor {
         
         // Clean up the extracted text
         $text = $this->cleanExtractedText($text);
-        
-        if (strlen($text) < 10) {
-            throw new FileProcessingException("Insufficient text extracted from DOC file");
-        }
         
         return $text;
     }
@@ -609,54 +588,7 @@ class DynamicFileProcessor {
         return trim($name);
     }
     
-    /**
-     * Validate extracted content - Relaxed validation to prioritize content over filename
-     */
-    private function validateContent($content, $fileType) {
-        $trimmedContent = trim($content);
-        
-        // Only reject if truly empty - accept any non-empty content
-        if (empty($trimmedContent)) {
-            return [
-                'is_valid' => false,
-                'error_message' => 'No content could be extracted from the file',
-                'method' => 'validation_failed'
-            ];
-        }
-        
-        // Very minimal length check - only reject obviously corrupted content
-        if (strlen($trimmedContent) < 3) {
-            return [
-                'is_valid' => false,
-                'error_message' => 'Content too short (less than 3 characters)',
-                'method' => 'validation_failed'
-            ];
-        }
-        
-        // Check for meaningful content - very relaxed
-        $wordCount = str_word_count($trimmedContent);
-        if ($wordCount < 1) {
-            return [
-                'is_valid' => false,
-                'error_message' => 'Content appears to contain no meaningful text',
-                'method' => 'validation_failed'
-            ];
-        }
-        
-        // Log successful validation with content details
-        $this->logger->logSystemError("Content validation passed", [
-            'file_type' => $fileType,
-            'length' => strlen($trimmedContent),
-            'words' => $wordCount,
-            'preview' => substr($trimmedContent, 0, 50) . '...'
-        ]);
-        
-        return [
-            'is_valid' => true,
-            'error_message' => null,
-            'method' => 'success'
-        ];
-    }
+    // Removed old validateContent() in favor of simple non-empty check after trim
     
     /**
      * Validate file security - MIME type, size limits, and path sanitization
@@ -670,8 +602,17 @@ class DynamicFileProcessor {
         
         // Sanitize file path
         $realPath = realpath($filePath);
-        if ($realPath === false || strpos($realPath, realpath('uploads/')) !== 0) {
+        if ($realPath === false) {
             throw new FileProcessingException("Invalid file path");
+        }
+        // Allow PHP's upload temp directory as a valid source path, or our uploads directory
+        $uploadsRoot = realpath('uploads/');
+        $tempDir = ini_get('upload_tmp_dir') ?: sys_get_temp_dir();
+        $tempRoot = realpath($tempDir);
+        $inUploads = $uploadsRoot && strpos($realPath, $uploadsRoot) === 0;
+        $inTmp = $tempRoot && strpos($realPath, $tempRoot) === 0;
+        if (!$inUploads && !$inTmp) {
+            throw new FileProcessingException("Invalid file location");
         }
         
         // Validate MIME type against extension
@@ -858,8 +799,10 @@ class FileProcessorLogger {
     private $logFile;
     private $isProduction;
     
-    public function __construct() {
-        $this->logFile = __DIR__ . '/../logs/file_processing.log';
+    public function __construct($logFilePath = null) {
+        $defaultPath = __DIR__ . '/../logs/file_processing.log';
+        $envPath = getenv('LILAC_LOG_PATH');
+        $this->logFile = $logFilePath ?: ($envPath ?: $defaultPath);
         $this->isProduction = $this->isProductionEnvironment();
     
         // Ensure log directory exists

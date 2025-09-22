@@ -5,6 +5,49 @@
 
 class DocumentCategorizer {
     constructor() {
+        // Initialize with empty rules - will be populated from PHP config
+        this.rules = {};
+
+        // Initialize from PHP configuration if available
+        this.initializeFromConfig();
+    }
+
+    /**
+     * Initialize rules from PHP configuration
+     */
+    initializeFromConfig() {
+        console.log('DocumentCategorizer: Checking for DocumentsConfig...');
+
+        if (typeof DocumentsConfig !== 'undefined' && DocumentsConfig.categories) {
+            console.log('DocumentCategorizer: Found DocumentsConfig, initializing with PHP rules...');
+            this.rules = {};
+
+            // Convert PHP configuration to JavaScript format
+            Object.keys(DocumentsConfig.categories).forEach(category => {
+                const phpRules = DocumentsConfig.categories[category];
+
+                this.rules[category] = {
+                    keywords: phpRules.keywords || [],
+                    filePatterns: phpRules.patterns ? phpRules.patterns.map(pattern => new RegExp(pattern.replace(/\\\\/g, '\\'), 'i')) : [],
+                    datePatterns: [],
+                    priority: phpRules.priority || 10
+                };
+            });
+
+            console.log('✅ DocumentCategorizer initialized with PHP config:', Object.keys(this.rules));
+            console.log('📋 Categories loaded:', this.rules);
+        } else {
+            // Fallback to basic rules if PHP config not available
+            console.warn('❌ PHP config not available (DocumentsConfig undefined), using default rules');
+            console.log('DocumentsConfig:', typeof DocumentsConfig, DocumentsConfig);
+            this.initializeDefaultRules();
+        }
+    }
+
+    /**
+     * Initialize default rules as fallback
+     */
+    initializeDefaultRules() {
         this.rules = {
             'MOUs & MOAs': {
                 keywords: ['mou', 'moa', 'agreement', 'memorandum', 'partnership', 'collaboration'],
@@ -17,9 +60,9 @@ class DocumentCategorizer {
                 datePatterns: [/\d{1,2}-\d{1,2}-\d{2,4}/, /\d{4}-\d{1,2}-\d{1,2}/],
                 priority: 2
             },
-            'Awards Progress': {
-                keywords: ['award', 'recognition', 'progress', 'achievement', 'certificate', 'honor', 'prize'],
-                filePatterns: [/award/i, /recognition/i, /progress/i, /achievement/i, /certificate/i, /honor/i, /prize/i],
+            'Awards': {
+                keywords: ['award', 'recognition', 'certificate', 'certification', 'accreditation', 'achievement', 'honor', 'distinction', 'excellence', 'quality', 'standard', 'compliance'],
+                filePatterns: [/award/i, /recognition/i, /certificate/i, /certification/i, /accreditation/i, /achievement/i, /honor/i, /distinction/i, /excellence/i, /quality/i, /standard/i, /compliance/i],
                 priority: 3
             },
             'Templates': {
@@ -27,6 +70,11 @@ class DocumentCategorizer {
                 filePatterns: [/template/i, /form/i, /blank/i, /sample/i, /example/i, /draft/i],
                 priority: 4
             },
+            'Registrar Files': {
+                keywords: ['registrar', 'enrollment', 'transcript', 'tor', 'certificate', 'cor', 'student record', 'gwa', 'grades'],
+                filePatterns: [/registrar/i, /enrollment/i, /transcript/i, /tor/i, /certificate/i, /cor/i, /student\s*record/i, /gwa/i, /grades/i],
+                priority: 5
+            }
         };
     }
 
@@ -215,6 +263,33 @@ class DocumentCategorizer {
             datePatterns: rule.datePatterns || [],
             priority: rule.priority || 10
         };
+        console.log('Added rule for category:', category, this.rules[category]);
+    }
+
+    /**
+     * Update rule from PHP configuration
+     * @param {string} category - Category name
+     * @param {Object} phpRule - Rule from PHP configuration
+     */
+    updateRule(category, phpRule) {
+        this.rules[category] = {
+            keywords: phpRule.keywords || [],
+            filePatterns: phpRule.patterns ? phpRule.patterns.map(pattern => new RegExp(pattern.replace(/\\\\/g, '\\'), 'i')) : [],
+            datePatterns: [],
+            priority: phpRule.priority || 10
+        };
+    }
+
+    /**
+     * Reload rules from PHP configuration
+     */
+    reloadFromConfig() {
+        if (typeof DocumentsConfig !== 'undefined' && DocumentsConfig.categories) {
+            Object.keys(DocumentsConfig.categories).forEach(category => {
+                this.updateRule(category, DocumentsConfig.categories[category]);
+            });
+            console.log('DocumentCategorizer reloaded from PHP config');
+        }
     }
 
     /**

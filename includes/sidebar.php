@@ -126,6 +126,16 @@ window.LILACSidebar = {
             }
         } catch (error) {
             console.warn('Could not load sidebar state from database:', error);
+            // Fallback to localStorage
+            try {
+                const localState = localStorage.getItem('sidebarState');
+                if (localState === 'open') {
+                    this.isOpen = true;
+                    this.applyState();
+                }
+            } catch (localError) {
+                console.warn('Could not load sidebar state from localStorage:', localError);
+            }
             // Keep the default closed state
         }
     },
@@ -155,6 +165,12 @@ window.LILACSidebar = {
             }
         } catch (error) {
             console.warn('Could not save sidebar state to database:', error);
+            // Fallback to localStorage
+            try {
+                localStorage.setItem('sidebarState', this.isOpen ? 'open' : 'closed');
+            } catch (localError) {
+                console.warn('Could not save sidebar state to localStorage:', localError);
+            }
         }
     },
     

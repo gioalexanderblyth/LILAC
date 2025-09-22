@@ -1,307 +1,255 @@
-/* Enhanced Sidebar Styling - Based on Documents Page Design */
+/* Enhanced Sidebar Styles for LILAC */
 
-/* Smooth transitions for sidebar navigation items */
-.nav-item {
-    transition: all 0.3s ease-in-out !important;
+/* Sidebar base styles */
+.sidebar {
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    transition: all 0.3s ease;
+    z-index: 50;
 }
 
-.nav-text {
-    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out !important;
+/* Sidebar header */
+.sidebar-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-/* Enhanced sidebar styling */
-#sidebar {
-    /* Enhanced gradient and shadows */
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
-    border-radius: 0 24px 24px 0 !important;
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
-/* Enhanced navigation area spacing */
-#sidebar nav {
-    padding: 16px 12px 24px 12px !important;
-    gap: 8px !important;
+.sidebar-logo img {
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--border-radius);
 }
 
-/* Enhanced navigation item styling */
-#sidebar .nav-item {
-    margin: 2px 0 !important;
-    border-radius: 30px !important;
-    padding: 10px 16px !important;
-    transition: all 0.2s ease, transform 0.12s ease !important;
-    position: relative !important;
-    overflow: hidden !important;
-    font-size: 14px !important;
+.sidebar-logo h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text);
 }
 
-#sidebar .nav-item:hover {
-    background: rgba(255, 255, 255, 0.15) !important;
-    transform: translateX(4px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+/* Sidebar navigation */
+.sidebar-nav {
+    flex: 1;
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
 }
 
-#sidebar .nav-item:active {
-    background: rgba(255, 255, 255, 0.25) !important;
-    transform: translateX(2px) scale(0.98) !important;
+.sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    margin-bottom: 0.25rem;
+    border-radius: var(--border-radius);
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-weight: 500;
 }
 
-/* Enhanced icon styling */
-#sidebar .nav-item svg {
-    width: 18px !important;
-    height: 18px !important;
-    margin-right: 12px !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+.sidebar-nav-item:hover {
+    background-color: var(--border);
+    color: var(--text);
+    transform: translateX(4px);
 }
 
-#sidebar .nav-item:hover svg {
-    transform: scale(1.1) !important;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
+.sidebar-nav-item.active {
+    background-color: var(--primary-50);
+    color: var(--primary-600);
+    font-weight: 600;
 }
 
-/* Enhanced text styling */
-#sidebar .nav-text {
-    font-weight: 500 !important;
-    font-size: 14px !important;
-    letter-spacing: 0.025em !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+.sidebar-nav-item.active:hover {
+    background-color: var(--primary-100);
 }
 
-#sidebar .nav-item:hover .nav-text {
-    font-weight: 700 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+/* Sidebar icon styles */
+.sidebar-nav-item .icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
 }
 
-/* Enhanced close button */
-#sidebar-close {
-    background: rgba(255, 255, 255, 0.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    border-radius: 12px !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    backdrop-filter: blur(8px) !important;
+/* Sidebar footer */
+.sidebar-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
 }
 
-#sidebar-close:hover {
-    background: rgba(255, 255, 255, 0.3) !important;
-    transform: scale(1.05) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+.sidebar-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
 }
 
-/* Enhanced header area for larger logo */
-#sidebar .h-20 {
-    height: 88px !important;
-    padding: 16px 24px !important;
+.sidebar-profile-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background-color: var(--primary-500);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
 }
 
-/* Enhanced logo styling */
-#sidebar img[alt="CPU Logo"] {
-    width: 56px !important;
-    height: 56px !important;
-    min-width: 56px !important;
-    min-height: 56px !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
+.sidebar-profile-info h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
 }
 
-#sidebar img[alt="CPU Logo"]:hover {
-    transform: scale(1.05) rotate(5deg) !important;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)) !important;
+.sidebar-profile-info p {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
 }
 
-/* Enhanced connection status styling */
-#connection-status {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 12px !important;
-    padding: 8px 12px !important;
-    margin: 0 12px !important;
-    backdrop-filter: blur(8px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+/* Sidebar toggle button */
+.sidebar-toggle {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-/* Enhanced divider */
-#sidebar .border-t {
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    margin: 0 12px !important;
+.sidebar-toggle:hover {
+    background-color: var(--border);
+    color: var(--text);
 }
 
-/* Enhanced backdrop */
-#sidebar-backdrop {
-    backdrop-filter: blur(4px) !important;
-    background: rgba(0, 0, 0, 0.4) !important;
+/* Collapsed sidebar styles */
+.sidebar-collapsed .sidebar {
+    width: 5rem !important;
 }
 
-/* Active page highlighting */
-#sidebar .nav-item.active {
-    background: rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+.sidebar-collapsed .sidebar-text {
+    display: none !important;
 }
 
-/* Responsive enhancements */
+.sidebar-collapsed .sidebar-logo-text {
+    display: none !important;
+}
+
+.sidebar-collapsed .sidebar-profile-info {
+    display: none !important;
+}
+
+.sidebar-collapsed .sidebar-toggle-icon-open {
+    display: none !important;
+}
+
+.sidebar-collapsed .sidebar-toggle-icon-closed {
+    display: block !important;
+}
+
+.sidebar-collapsed .sidebar-nav-item {
+    justify-content: center;
+    padding: 0.625rem;
+}
+
+.sidebar-collapsed .sidebar-profile {
+    justify-content: center;
+}
+
+.sidebar-collapsed .sidebar-footer {
+    padding: 1rem 0.75rem;
+}
+
+/* Responsive sidebar */
 @media (max-width: 1024px) {
-    #sidebar {
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
+    .sidebar {
+        position: fixed;
+        left: -16rem;
+        top: 0;
+        height: 100vh;
+        width: 16rem;
+        z-index: 60;
+        transition: left 0.3s ease;
+    }
+    
+    .sidebar.open {
+        left: 0;
+    }
+    
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 55;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .sidebar-overlay.show {
+        opacity: 1;
+        visibility: visible;
     }
 }
 
-/* Animation for sidebar entrance */
-#sidebar {
-    animation: slideInFromLeft 0.3s ease-out;
+/* Dark mode adjustments */
+.dark .sidebar-nav-item:hover {
+    background-color: var(--border-dark);
 }
 
-@keyframes slideInFromLeft {
+.dark .sidebar-nav-item.active {
+    background-color: var(--primary-900);
+    color: var(--primary-300);
+}
+
+.dark .sidebar-toggle:hover {
+    background-color: var(--border-dark);
+}
+
+/* Animation for sidebar items */
+.sidebar-nav-item {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes slideInLeft {
     from {
-        transform: translateX(-100%);
         opacity: 0;
+        transform: translateX(-20px);
     }
     to {
-        transform: translateX(0);
         opacity: 1;
+        transform: translateX(0);
     }
 }
 
-/* Enhanced hamburger button animation */
-#hamburger-toggle {
-    transition: transform 0.08s ease !important;
+/* Stagger animation for multiple items */
+.sidebar-nav-item:nth-child(1) { animation-delay: 0.1s; }
+.sidebar-nav-item:nth-child(2) { animation-delay: 0.2s; }
+.sidebar-nav-item:nth-child(3) { animation-delay: 0.3s; }
+.sidebar-nav-item:nth-child(4) { animation-delay: 0.4s; }
+.sidebar-nav-item:nth-child(5) { animation-delay: 0.5s; }
+.sidebar-nav-item:nth-child(6) { animation-delay: 0.6s; }
+
+/* Focus states for accessibility */
+.sidebar-nav-item:focus {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
 }
 
-/* Faster sidebar slide animation */
-#sidebar {
-    transition: transform 0.2s ease-out !important;
-}
-
-/* Enhanced focus states for accessibility */
-#sidebar .nav-item:focus,
-#sidebar .nav-item:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.8) !important;
-    outline-offset: 2px !important;
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2) !important;
-}
-
-/* Remove focus styling for specific links if needed */
-#sidebar .nav-item.no-focus:focus,
-#sidebar .nav-item.no-focus:focus-visible,
-#sidebar .nav-item.no-focus:active {
-    outline: none !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Enhanced Dashboard Navigation Elements */
-
-/* Notification Bell Styling */
-#notification-bell {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
-    border-radius: 12px !important;
-    padding: 10px !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    backdrop-filter: blur(8px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-}
-
-#notification-bell:hover {
-    background: rgba(255, 255, 255, 1) !important;
-    transform: translateY(-2px) scale(1.05) !important;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
-    border-color: rgba(99, 102, 241, 0.3) !important;
-}
-
-#notification-bell:active {
-    transform: translateY(0) scale(0.98) !important;
-}
-
-#notification-bell svg {
-    width: 20px !important;
-    height: 20px !important;
-    color: #4B5563 !important;
-    transition: color 0.3s ease !important;
-}
-
-#notification-bell:hover svg {
-    color: #6366F1 !important;
-}
-
-/* Notification Badge Styling */
-#notification-badge {
-    background: linear-gradient(135deg, #EF4444, #DC2626) !important;
-    border: 2px solid white !important;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4) !important;
-    font-weight: 600 !important;
-    font-size: 10px !important;
-}
-
-/* User Profile Button Styling */
-#user-profile-btn {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
-    border-radius: 16px !important;
-    padding: 6px 12px !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    backdrop-filter: blur(8px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-}
-
-#user-profile-btn:hover {
-    background: rgba(255, 255, 255, 1) !important;
-    transform: translateY(-2px) scale(1.02) !important;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
-    border-color: rgba(245, 158, 11, 0.3) !important;
-}
-
-#user-profile-btn:active {
-    transform: translateY(0) scale(0.98) !important;
-}
-
-/* Enhanced User Avatar */
-#user-profile-btn .w-9 {
-    width: 40px !important;
-    height: 40px !important;
-    background: linear-gradient(135deg, #F59E0B, #D97706) !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
-    border: 2px solid rgba(255, 255, 255, 0.8) !important;
-    transition: all 0.3s ease !important;
-}
-
-#user-profile-btn:hover .w-9 {
-    transform: scale(1.05) !important;
-    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4) !important;
-}
-
-#user-profile-btn .w-9 span {
-    font-size: 14px !important;
-    font-weight: 700 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
-}
-
-/* Enhanced Dropdowns */
-#notification-dropdown,
-#user-dropdown {
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
-    overflow: hidden !important;
-}
-
-/* Enhanced Dropdown Animation */
-#notification-dropdown.hidden,
-#user-dropdown.hidden {
-    opacity: 0 !important;
-    transform: translateY(-10px) scale(0.95) !important;
-    pointer-events: none !important;
-}
-
-#notification-dropdown:not(.hidden),
-#user-dropdown:not(.hidden) {
-    opacity: 1 !important;
-    transform: translateY(0) scale(1) !important;
-    pointer-events: auto !important;
-}
-
-/* Enhanced Navigation Bar */
-nav.modern-nav {
-    background: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: saturate(1.2) blur(16px) !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+.sidebar-toggle:focus {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
 }

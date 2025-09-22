@@ -136,17 +136,54 @@ foreach ($meetings as $meeting) {
         // Force cache refresh - version 1.1
         // Scheduler script loaded
         
-        // Ensure LILAC enhancements are loaded
-        if (typeof window.lilacNotifications === 'undefined') {
-            console.warn('LILAC notifications not loaded, waiting for initialization...');
-            // Wait for the enhancement system to initialize
-            const checkLILAC = setInterval(() => {
-                if (typeof window.lilacNotifications !== 'undefined') {
-                    // LILAC notifications loaded
-                    clearInterval(checkLILAC);
+        // LILAC components are initialized with DOM readiness detection
+        console.log('LILAC components status:', window.isLILACComponentsReady ? window.isLILACComponentsReady() : 'Check functions not available');
+
+        // Position LILAC notifications after DOM is ready
+        const positionNotifications = () => {
+            if (window.lilacNotifications && window.lilacNotifications.container) {
+                window.lilacNotifications.container.style.top = '80px';
+                window.lilacNotifications.container.style.zIndex = '99999';
+                console.log('LILAC notifications positioned successfully');
+            } else {
+                console.warn('LILAC notifications container not ready for positioning');
+            }
+        };
+
+        // Check if DOM is ready and position notifications
+        const checkAndPosition = () => {
+            // Check if DOM is ready
+            const isReady = window.isDOMReady ? window.isDOMReady() : (document.body && document.readyState !== 'loading');
+
+            if (isReady) {
+                if (window.lilacNotifications && window.lilacNotifications.container) {
+                    positionNotifications();
+                } else {
+                    console.warn('LILAC notifications not available for positioning');
                 }
-            }, 100);
-        }
+            } else {
+                console.log('DOM not ready yet, waiting for notifications...');
+            }
+        };
+
+        // Try to position immediately, with fallback
+        checkAndPosition();
+
+        // Also wait for notifications to be ready (in case they initialize after DOM is ready)
+        let attempts = 0;
+        const maxAttempts = 20; // 2 seconds max
+
+        const checkNotifications = setInterval(() => {
+            attempts++;
+            if (window.lilacNotifications && window.lilacNotifications.container) {
+                positionNotifications();
+                clearInterval(checkNotifications);
+                console.log('LILAC notifications positioned after', attempts, 'attempts');
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkNotifications);
+                console.warn('LILAC notifications positioning timed out after', maxAttempts, 'attempts');
+            }
+        }, 100);
         // Initialize Scheduler functionality
         let currentMeetings = [];
         let currentWeek = new Date();
@@ -192,16 +229,8 @@ foreach ($meetings as $meeting) {
             // Update date every minute
             setInterval(updateCurrentDate, 60000);
             
-            // Ensure LILAC notifications appear below navbar
-            setTimeout(function() {
-                if (window.lilacNotifications && window.lilacNotifications.container) {
-                    window.lilacNotifications.container.style.top = '80px';
-                    window.lilacNotifications.container.style.zIndex = '99999';
-                }
-            }, 500);
-            
             // Debug LILAC notifications initialization
-            // DOM loaded - LILAC notifications initialized
+            // Notifications positioning is now handled above
         });
 
         function updateCurrentDate() {

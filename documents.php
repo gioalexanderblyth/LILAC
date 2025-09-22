@@ -38,15 +38,14 @@ if (!isset($_SESSION['csrf_token'])) {
     <script src="js/documents-management.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="document-categorizer.js"></script>
+    
     <script src="js/document-analyzer.js"></script>
     <script src="js/modal-handlers.js"></script>
     <script src="js/text-config.js"></script>
     <script src="js/date-time-utility.js"></script>
     <script src="js/pdf-text-extractor.js"></script>
-    <script src="js/enhanced-document-upload.js"></script>
     <script>
-        // Dynamic configuration from PHP
+        // Dynamic configuration from PHP - MUST be loaded before document-categorizer.js
         const DocumentsConfig = {
             categories: <?php echo json_encode(DocumentsConfig::getCategoryRulesForJS()); ?>,
             categoriesByPriority: <?php echo json_encode(DocumentsConfig::getCategoriesByPriority()); ?>,
@@ -61,31 +60,11 @@ if (!isset($_SESSION['csrf_token'])) {
                 list: 'api/documents.php',
                 delete: 'api/documents.php',
                 search: 'api/documents.php'
-            },
-            upload: {
-                maxFileSize: 50 * 1024 * 1024, // 50MB
-                allowedTypes: [
-                    'application/pdf',
-                    'image/jpeg',
-                    'image/png',
-                    'image/gif',
-                    'text/plain',
-                    'application/msword',
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'application/vnd.ms-excel',
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                ],
-                maxFiles: 10
-            },
-            currentUser: {
-                id: '<?php echo $_SESSION['user_id']; ?>',
-                role: '<?php echo $_SESSION['user_role']; ?>'
             }
         };
-        
-        // PDF.js will be loaded lazily when needed
-        // Configuration will be handled by the lazy loader
     </script>
+    <script src="js/enhanced-document-upload.js"></script>
+    <script src="document-categorizer.js"></script>
     <title>LILAC Documents</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="modern-design-system.css">
@@ -99,7 +78,7 @@ if (!isset($_SESSION['csrf_token'])) {
         // Global variables for pagination and filtering
         let currentFilters = {
             page: 1,
-            limit: DocumentsConfig.pagination.defaultLimit,
+            limit: DocumentsConfig.pagination.default_limit,
             search: '',
             category: '',
             sort_by: DocumentsConfig.ui.default_sort_by,
@@ -257,6 +236,17 @@ if (!isset($_SESSION['csrf_token'])) {
                     wrap.appendChild(b);
                 });
             })();
+
+            // Reload categorizer rules from PHP config after page load
+            if (window.documentCategorizer) {
+                window.documentCategorizer.reloadFromConfig();
+                console.log('DocumentCategorizer rules reloaded from PHP config');
+            } else {
+                console.error('DocumentCategorizer not found - document-categorizer.js may not be loaded');
+            }
+
+            // Debug: Show available categories
+            console.log('Available categories:', window.documentCategorizer ? window.documentCategorizer.getCategories() : 'No categorizer');
         });
 
         function updateActiveFilterChips(){
@@ -815,14 +805,36 @@ if (!isset($_SESSION['csrf_token'])) {
 
             // Display documents based on current view mode
             if (currentViewMode === 'list') {
-                const html = documents.map((doc) => createDocumentTableRow(doc)).join('');
+                console.log('🧾 Rendering list rows for:', documents.map(function(d){ return (d && (d.document_name||d.title||d.filename)) || 'unknown'; }));
+                const html = documents.map(function(doc){
+                    try {
+                        return createDocumentTableRow(doc);
+                    } catch (e) {
+                        console.error('Row render error for doc:', doc, e);
+                        // Fallback minimal row to avoid dropping subsequent items
+                        var name = (doc && (doc.document_name||doc.title||doc.filename)) || 'Untitled Document';
+                        var ext = getFileExtension((doc && doc.filename) || '');
+                        return `
+                            <tr>
+                                <td class="px-6 py-4"></td>
+                                <td class="px-6 py-4 text-sm font-medium text-gray-900">${name}</td>
+                                <td class="px-6 py-4 text-sm text-gray-500">—</td>
+                                <td class="px-6 py-4 text-sm text-gray-500">${(ext||'').toUpperCase()}</td>
+                                <td class="px-6 py-4 text-sm text-gray-500">—</td>
+                                <td class="px-6 py-4 text-sm"></td>
+                            </tr>`;
+                    }
+                }).join('');
                 listContainer.innerHTML = html;
                 
                 // Update bulk selection UI
                 updateBulkDeleteUI();
                 updateSelectAllCheckbox();
             } else {
-                const html = documents.map((doc) => createDocumentGridCard(doc)).join('');
+                const html = documents.map(function(doc){
+                    try { return createDocumentGridCard(doc); }
+                    catch(e){ console.error('Grid render error for doc:', doc, e); return ''; }
+                }).join('');
                 gridContainer.innerHTML = html;
             }
         }
@@ -1427,14 +1439,31 @@ if (!isset($_SESSION['csrf_token'])) {
         }
 
         function loadRuleCategories() {
+            console.log('Loading rule categories...');
             const container = document.getElementById('rule-categories-container');
-            if (!container || !window.documentCategorizer) return;
+            if (!container) {
+                console.error('Rule categories container not found');
+                return;
+            }
+
+            if (!window.documentCategorizer) {
+                console.error('DocumentCategorizer not available');
+                container.innerHTML = '<p class="text-red-500">DocumentCategorizer not loaded. Please refresh the page.</p>';
+                return;
+            }
 
             const categories = window.documentCategorizer.getCategories();
+            console.log('Found categories:', categories);
             let html = '';
+
+            if (categories.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No categories found. DocumentCategorizer may not have rules.</p>';
+                return;
+            }
 
             categories.forEach(category => {
                 const rules = window.documentCategorizer.getCategoryRules(category);
+                console.log('Category:', category, 'Rules:', rules);
                 if (rules) {
                     html += `
                         <div class="border border-gray-200 rounded-lg p-4">
@@ -1457,8 +1486,8 @@ if (!isset($_SESSION['csrf_token'])) {
                                 <div>
                                     <h5 class="text-sm font-medium text-gray-700 mb-2">File Patterns</h5>
                                     <div class="flex flex-wrap gap-1">
-                                        ${rules.filePatterns.map(pattern => 
-                                            `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">${pattern.source}</span>`
+                                        ${rules.filePatterns.map(pattern =>
+                                            `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">${pattern.toString()}</span>`
                                         ).join('')}
                                     </div>
                                 </div>
@@ -1494,6 +1523,7 @@ if (!isset($_SESSION['csrf_token'])) {
             window.documentCategorizer.addRule(category, {
                 keywords: keywords,
                 filePatterns: filePatterns,
+                datePatterns: [],
                 priority: priority
             });
 
@@ -2150,9 +2180,8 @@ if (!isset($_SESSION['csrf_token'])) {
             });
             
             if (isDuplicate) {
-                showNotification(`File "${baseFileName}" already exists (including any versions). Please rename the file or choose a different one.`, 'error');
-                onError();
-                return;
+                // Allow upload by auto-versioning the name instead of blocking
+                console.warn(`Duplicate base name detected for "${baseFileName}". Proceeding with versioned name.`);
             }
             
             const formData = new FormData();
@@ -2826,124 +2855,33 @@ if (!isset($_SESSION['csrf_token'])) {
             }
         }
 
-        // Modal-based document viewer
-        async function showDocumentViewer(doc) {
-            const title = doc.document_name || doc.title || 'Untitled Document';
-            const originalFilename = doc.original_filename || doc.document_name || doc.title || 'Untitled Document';
-            let filePath = doc.file_path || doc.filename || doc.filename;
-            const ext = getFileExtension(filePath || '');
+		// Modal-based document viewer using shared component
+		async function showDocumentViewer(doc) {
+			const title = doc.document_name || doc.title || 'Untitled Document';
+			const originalFilename = doc.original_filename || doc.document_name || doc.title || 'Untitled Document';
+			let filePath = doc.file_path || doc.filename || '';
+			const ext = getFileExtension(filePath || '');
 
-            if (filePath && !filePath.startsWith('uploads/') && !filePath.startsWith('/uploads/')) {
-                filePath = `uploads/${filePath}`;
-            }
+			if (filePath && !filePath.startsWith('uploads/') && !filePath.startsWith('/uploads/')) {
+				filePath = `uploads/${filePath}`;
+			}
 
-            const overlay = document.getElementById('document-viewer-overlay');
-            const titleEl = document.getElementById('document-viewer-title');
-            const contentEl = document.getElementById('document-viewer-content');
-            const downloadBtn = document.getElementById('document-viewer-download');
-            const openBtn = document.getElementById('document-viewer-open');
+			let viewerType = 'unknown';
+			if (ext === 'pdf') viewerType = 'pdf';
+			else if (['png','jpg','jpeg','gif','webp','bmp','svg'].includes(ext)) viewerType = 'image';
+			else if (['txt'].includes(ext)) viewerType = 'text';
 
-            if (!overlay || !titleEl || !contentEl || !downloadBtn) {
-                showNotification('Document viewer elements not found', 'error');
-                return;
-            }
+			if (!filePath) {
+				showNotification('File path not available.', 'error');
+				return;
+			}
 
-            titleEl.textContent = title;
-            contentEl.innerHTML = '';
-
-            if (openBtn) {
-                openBtn.onclick = function(){
-                    if (!filePath) return;
-                    const href = new URL(filePath, window.location.origin).href;
-                    window.open(href, '_blank');
-                };
-            }
-
-            if (!filePath) {
-                contentEl.innerHTML = '<div class="text-center text-gray-600">File path not available.</div>';
-            } else if (['png','jpg','jpeg','gif','webp','bmp','svg'].includes(ext)) {
-                const img = document.createElement('img');
-                img.src = filePath;
-                img.alt = title;
-                img.className = 'max-h-full max-w-full object-contain mx-auto';
-                contentEl.appendChild(img);
-            } else if (ext === 'pdf') {
-                // Show extracted content if available
-                if (doc.ocr_text && doc.ocr_text.trim()) {
-                    const textContainer = document.createElement('div');
-                    textContainer.className = 'mb-4 p-4 bg-gray-50 rounded-lg';
-                    textContainer.innerHTML = `
-                        <h4 class="text-sm font-semibold text-gray-700 mb-2">Extracted Content:</h4>
-                        <div class="text-sm text-gray-600 whitespace-pre-wrap">${doc.ocr_text}</div>
-                    `;
-                    contentEl.appendChild(textContainer);
-                }
-                const container = document.createElement('div');
-                container.className = 'w-full h-full';
-                contentEl.appendChild(container);
-                try {
-                    // Load PDF.js lazily if not already loaded
-                    if (!window['pdfjsLib']) {
-                        await window.lazyLoader.loadPDFJS();
-                    }
-                    
-                    pdfjsLib.getDocument(filePath).promise.then(pdf => {
-                        const numPages = pdf.numPages;
-                        const renderPage = (pageNum) => {
-                            pdf.getPage(pageNum).then(page => {
-                                const availableWidth = contentEl.clientWidth - 16; // account for padding
-                                const viewport = page.getViewport({ scale: 1 });
-                                const scale = Math.min(1.5, Math.max(0.6, availableWidth / viewport.width));
-                                const scaledViewport = page.getViewport({ scale });
-                                const canvas = document.createElement('canvas');
-                                const ctx = canvas.getContext('2d');
-                                canvas.width = scaledViewport.width;
-                                canvas.height = scaledViewport.height;
-                                canvas.className = 'block mx-auto mb-4 bg-white max-w-full h-auto';
-                                container.appendChild(canvas);
-                                page.render({ canvasContext: ctx, viewport: scaledViewport }).promise.then(() => {
-                                    if (pageNum < numPages) renderPage(pageNum + 1);
-                                });
-                            });
-                        };
-                        renderPage(1);
-                    }).catch(() => {
-                        const fallback = document.createElement('iframe');
-                        fallback.src = filePath;
-                        fallback.className = 'w-full h-full rounded';
-                        contentEl.innerHTML = '';
-                        contentEl.appendChild(fallback);
-                    });
-                } catch (e) {
-                    const fallback = document.createElement('iframe');
-                    fallback.src = filePath;
-                    fallback.className = 'w-full h-full rounded';
-                    contentEl.appendChild(fallback);
-                }
-            } else if (['doc','docx','ppt','pptx','xls','xlsx'].includes(ext)) {
-                const isLocalhost = ['localhost','127.0.0.1','::1'].includes(location.hostname);
-                if (isLocalhost) {
-                    const info = document.createElement('div');
-                    info.className = 'text-center text-gray-600';
-                    info.textContent = 'Preview for Office files is not available on localhost. Please use Download to view the file.';
-                    contentEl.appendChild(info);
-                } else {
-                    const absoluteUrl = new URL(filePath, window.location.origin).href;
-                    const officeUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(absoluteUrl);
-                    const iframe = document.createElement('iframe');
-                    iframe.src = officeUrl;
-                    iframe.className = 'w-full rounded bg-white';
-                    iframe.style.height = 'calc(100% - 0px)';
-                    iframe.style.display = 'block';
-                    contentEl.appendChild(iframe);
-                }
-            } else {
-                contentEl.innerHTML = '<div class="text-center text-gray-600">Preview not supported for this file type. Please download to view.</div>';
-            }
-
-            downloadBtn.onclick = function() { downloadDocument(doc.id); };
-            overlay.classList.remove('hidden');
-        }
+			if (window.documentViewer && typeof window.documentViewer.showDocument === 'function') {
+				window.documentViewer.showDocument(filePath, viewerType, title, originalFilename);
+			} else {
+				showNotification('Document viewer is not initialized.', 'error');
+			}
+		}
 
         // Download document
         function downloadDocument(docId) {

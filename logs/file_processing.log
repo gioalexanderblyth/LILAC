@@ -8,3 +8,25 @@
 2025-09-18 18:06:42 - EXTRACTION FAILED - File: 20.pdf, Type: pdf, Reason: No meaningful content extracted
 [2025-09-18 20:05:04] SYSTEM_ERROR: Content validation passed - Context: {"file_type":"pdf","length":3017,"words":169,"preview":"REG FORM NO. 60 REV.0 (June 1, 2014) \nPERSONAL HIS..."}
 [2025-09-18 20:05:04] EXTRACTION_SUCCESS: doc_68c9e4581026b.pdf (pdf) - 3017 characters
+[2025-09-22 15:39:20] EXTRACTION_FAILED: 20.pdf (unknown) - Invalid file path
+[2025-09-22 15:46:16] EXTRACTION_FAILED: 20.pdf (unknown) - Invalid file path
+[2025-09-22 16:11:24] EXTRACTION_FAILED: 20.pdf (unknown) - Invalid file path
+[2025-09-22 16:15:57] EXTRACTION_FAILED: 20.pdf (unknown) - Invalid file path
+[2025-09-22 16:38:28] EXTRACTION_FAILED: 11.txt (unknown) - Invalid file location
+[2025-09-22 16:38:28] EXTRACTION_FAILED: mou.txt (unknown) - Invalid file location
+[2025-09-22 16:38:28] EXTRACTION_FAILED: mou_document.txt (unknown) - Invalid file location
+[2025-09-22 16:38:28] EXTRACTION_FAILED: award.txt (unknown) - Invalid file location
+[2025-09-22 16:38:28] EXTRACTION_FAILED: 123.txt (unknown) - Invalid file location
+[2025-09-22 16:50:44] SYSTEM_ERROR: EXTRACTION_RESULT - Context: {"file":"11.txt","type":"txt","len":55,"preview":"This is an Agreement between parties for collabora"}
+[2025-09-22 16:50:44] EXTRACTION_SUCCESS: 11.txt (txt) - 55 characters
+[2025-09-22 16:50:44] SYSTEM_ERROR: CATEGORY_DETECTION - Context: {"file":"11.txt","extracted_length":55,"source":"content"}
+[2025-09-22 16:50:44] SYSTEM_ERROR: EXTRACTION_RESULT - Context: {"file":"mou.txt","type":"txt","len":58,"preview":"Memorandum of Understanding for international part"}
+[2025-09-22 16:50:44] EXTRACTION_SUCCESS: mou.txt (txt) - 58 characters
+[2025-09-22 16:50:44] SYSTEM_ERROR: CATEGORY_DETECTION - Context: {"file":"mou.txt","extracted_length":58,"source":"content"}
+[2025-09-22 16:50:44] EXTRACTION_FAILED: mou_document.txt (unknown) - File type mismatch - extension suggests txt but MIME type is application/x-empty
+[2025-09-22 16:50:44] SYSTEM_ERROR: EXTRACTION_RESULT - Context: {"file":"award.txt","type":"txt","len":60,"preview":"Certificate of Excellence Award for outstanding ac"}
+[2025-09-22 16:50:44] EXTRACTION_SUCCESS: award.txt (txt) - 60 characters
+[2025-09-22 16:50:44] SYSTEM_ERROR: CATEGORY_DETECTION - Context: {"file":"award.txt","extracted_length":60,"source":"content"}
+[2025-09-22 16:50:44] SYSTEM_ERROR: EXTRACTION_RESULT - Context: {"file":"123.txt","type":"txt","len":54,"preview":"Conference and workshop schedule for training sess"}
+[2025-09-22 16:50:44] EXTRACTION_SUCCESS: 123.txt (txt) - 54 characters
+[2025-09-22 16:50:44] SYSTEM_ERROR: CATEGORY_DETECTION - Context: {"file":"123.txt","extracted_length":54,"source":"content"}

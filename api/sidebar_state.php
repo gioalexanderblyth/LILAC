@@ -35,8 +35,18 @@ function api_respond($success, $data = [], $httpCode = 200) {
 }
 
 try {
+    // Check if database config exists
+    if (!file_exists(__DIR__ . '/../config/database.php')) {
+        throw new Exception('Database configuration not found');
+    }
+    
     $db = new Database();
     $pdo = $db->getConnection();
+    
+    // Test the connection
+    if (!$pdo) {
+        throw new Exception('Database connection failed');
+    }
     
     // Create user_sidebar_state table if it doesn't exist
     $createTableSQL = "CREATE TABLE IF NOT EXISTS user_sidebar_state (
@@ -175,6 +185,20 @@ try {
     }
     
 } catch (Exception $e) {
-    api_respond(false, ['message' => 'Server error: ' . $e->getMessage()], 500);
+    // Log the error for debugging
+    error_log('Sidebar State API Error: ' . $e->getMessage());
+    
+    // For database connection issues, return a fallback response
+    if (strpos($e->getMessage(), 'Database') !== false || strpos($e->getMessage(), 'connection') !== false) {
+        api_respond(true, [
+            'state' => 'closed',
+            'updated_at' => null,
+            'synced' => false,
+            'fallback' => true,
+            'message' => 'Using fallback state due to database connection issue'
+        ]);
+    } else {
+        api_respond(false, ['message' => 'Server error: ' . $e->getMessage()], 500);
+    }
 }
 ?>

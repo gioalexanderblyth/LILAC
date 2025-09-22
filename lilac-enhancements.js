@@ -11,18 +11,69 @@ class LILACNotifications {
     }
 
     init() {
+        // More robust DOM readiness check
+        const isDOMReady = () => {
+            // Check if document is ready in multiple ways
+            return document.readyState === 'interactive' ||
+                   document.readyState === 'complete' ||
+                   (document.body && document.readyState === undefined) ||
+                   (document.body && document.readyState !== 'loading');
+        };
+
+        if (!document.body || !isDOMReady()) {
+            console.warn('LILAC Notifications: DOM not ready, waiting...');
+            // Wait for DOM to be ready using a more robust approach
+            let attempts = 0;
+            const maxAttempts = 100; // Prevent infinite loops
+
+            const waitForDOM = () => {
+                attempts++;
+                if (document.body && isDOMReady()) {
+                    this.createContainer();
+                    console.log('LILAC Notifications: DOM ready after', attempts, 'attempts');
+                } else if (attempts < maxAttempts) {
+                    setTimeout(waitForDOM, 10);
+                } else {
+                    console.error('LILAC Notifications: DOM never became ready after', maxAttempts, 'attempts');
+                    console.log('Final state - readyState:', document.readyState, 'body:', !!document.body);
+                    // Try to create container anyway as fallback
+                    if (document.body) {
+                        this.createContainer();
+                        console.log('LILAC Notifications: Created container as fallback');
+                    } else {
+                        console.error('LILAC Notifications: Cannot create container - document.body is null');
+                    }
+                }
+            };
+            waitForDOM();
+        } else {
+            this.createContainer();
+        }
+    }
+
+    createContainer() {
         // Create notification container - positioned well below static navbar
         this.container = document.createElement('div');
         this.container.id = 'notification-container';
         this.container.className = 'fixed top-32 right-4 z-[9999] space-y-2 max-w-sm';
         document.body.appendChild(this.container);
+        console.log('LILAC Notifications container created');
     }
 
     show(message, type = 'info', duration = 5000) {
+        // Ensure container is ready
+        if (!this.container) {
+            console.warn('LILAC Notifications: Container not ready, creating now...');
+            this.init();
+            // Wait a moment for container to be created
+            setTimeout(() => this.show(message, type, duration), 100);
+            return;
+        }
+
         const notification = document.createElement('div');
         const id = 'notification-' + Date.now();
         notification.id = id;
-        
+
         const typeStyles = {
             success: 'bg-green-500 border-green-600',
             error: 'bg-red-500 border-red-600',
@@ -72,6 +123,12 @@ class LILACNotifications {
     }
 
     dismiss(id) {
+        // Ensure container is ready
+        if (!this.container) {
+            console.warn('LILAC Notifications: Container not ready for dismiss');
+            return;
+        }
+
         const notification = document.getElementById(id);
         if (notification) {
             notification.classList.add('translate-x-full');
@@ -100,6 +157,45 @@ class LILACNotifications {
     }
 
     confirm(message, onConfirm, onCancel) {
+        // More robust DOM readiness check
+        const isDOMReady = () => {
+            return document.readyState === 'interactive' ||
+                   document.readyState === 'complete' ||
+                   (document.body && document.readyState === undefined) ||
+                   (document.body && document.readyState !== 'loading');
+        };
+
+        // Ensure DOM is ready before creating modal
+        if (!document.body || !isDOMReady()) {
+            console.warn('LILAC Form Validator: DOM not ready, waiting for confirm modal...');
+            let attempts = 0;
+            const maxAttempts = 50; // Shorter timeout for confirm dialogs
+
+            const waitForDOM = () => {
+                attempts++;
+                if (document.body && isDOMReady()) {
+                    this.createConfirmModal(message, onConfirm, onCancel);
+                } else if (attempts < maxAttempts) {
+                    setTimeout(waitForDOM, 10);
+                } else {
+                    console.error('LILAC Form Validator: DOM never became ready after', maxAttempts, 'attempts for confirm modal');
+                    console.log('Final state - readyState:', document.readyState, 'body:', !!document.body);
+                    // Fallback to browser confirm
+                    if (confirm(message)) {
+                        if (typeof onConfirm === 'function') onConfirm();
+                    } else {
+                        if (typeof onCancel === 'function') onCancel();
+                    }
+                }
+            };
+            waitForDOM();
+            return;
+        }
+
+        this.createConfirmModal(message, onConfirm, onCancel);
+    }
+
+    createConfirmModal(message, onConfirm, onCancel) {
         // Create confirmation modal
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]';
@@ -353,6 +449,43 @@ class LILACLoadingManager {
     }
 
     showPageLoading() {
+        // More robust DOM readiness check
+        const isDOMReady = () => {
+            return document.readyState === 'interactive' ||
+                   document.readyState === 'complete' ||
+                   (document.body && document.readyState === undefined) ||
+                   (document.body && document.readyState !== 'loading');
+        };
+
+        // Ensure DOM is ready before creating loading overlay
+        if (!document.body || !isDOMReady()) {
+            console.warn('LILAC Loading Manager: DOM not ready, waiting for page loading overlay...');
+            let attempts = 0;
+            const maxAttempts = 50; // Shorter timeout for loading overlays
+
+            const waitForDOM = () => {
+                attempts++;
+                if (document.body && isDOMReady()) {
+                    this.createPageLoadingOverlay();
+                } else if (attempts < maxAttempts) {
+                    setTimeout(waitForDOM, 10);
+                } else {
+                    console.error('LILAC Loading Manager: DOM never became ready after', maxAttempts, 'attempts for loading overlay');
+                    console.log('Final state - readyState:', document.readyState, 'body:', !!document.body);
+                    // Fallback - try to create overlay anyway
+                    if (document.body) {
+                        this.createPageLoadingOverlay();
+                    }
+                }
+            };
+            waitForDOM();
+            return;
+        }
+
+        this.createPageLoadingOverlay();
+    }
+
+    createPageLoadingOverlay() {
         const overlay = document.createElement('div');
         overlay.id = 'page-loading-overlay';
         overlay.className = 'fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50';
@@ -408,10 +541,45 @@ class LILACMobileNav {
 
     addOverlay() {
         if (!document.getElementById('menu-overlay')) {
-            const overlay = document.createElement('div');
-            overlay.id = 'menu-overlay';
-            overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden';
-            document.body.appendChild(overlay);
+            // More robust DOM readiness check
+            const isDOMReady = () => {
+                return document.readyState === 'interactive' ||
+                       document.readyState === 'complete' ||
+                       (document.body && document.readyState === undefined) ||
+                       (document.body && document.readyState !== 'loading');
+            };
+
+            // Ensure DOM is ready before creating overlay
+            let attempts = 0;
+            const maxAttempts = 100; // Prevent infinite loops
+
+            const createOverlay = () => {
+                attempts++;
+                if (document.body && isDOMReady()) {
+                    const overlay = document.createElement('div');
+                    overlay.id = 'menu-overlay';
+                    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden';
+                    document.body.appendChild(overlay);
+                    console.log('LILAC Mobile Nav overlay created after', attempts, 'attempts');
+                } else if (attempts < maxAttempts) {
+                    setTimeout(createOverlay, 10);
+                } else {
+                    console.error('LILAC Mobile Nav: DOM never became ready after', maxAttempts, 'attempts');
+                    console.log('Final state - readyState:', document.readyState, 'body:', !!document.body);
+                    // Try to create overlay anyway as fallback
+                    if (document.body) {
+                        const overlay = document.createElement('div');
+                        overlay.id = 'menu-overlay';
+                        overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden';
+                        document.body.appendChild(overlay);
+                        console.log('LILAC Mobile Nav overlay created as fallback');
+                    } else {
+                        console.error('LILAC Mobile Nav: Cannot create overlay - document.body is null');
+                    }
+                }
+            };
+
+            createOverlay();
         }
     }
 
@@ -585,13 +753,132 @@ window.LilacTags = {
 
 console.log('🏷️ LilacTags object defined successfully:', !!window.LilacTags);
 
-// Initialize all systems
+// Comprehensive DOM readiness check - MUST be defined before initializeLILACComponents
+window.isDOMReady = function() {
+    const readyState = document.readyState;
+    const hasBody = !!document.body;
+    const isNotLoading = readyState !== 'loading';
+
+    const result = readyState === 'interactive' ||
+                   readyState === 'complete' ||
+                   (hasBody && readyState === undefined) ||
+                   (hasBody && isNotLoading);
+
+    // Debug logging for DOM readiness
+    console.log('DOM readiness check:', {
+        readyState: readyState,
+        hasBody: hasBody,
+        isNotLoading: isNotLoading,
+        result: result
+    });
+
+    return result;
+};
+
+// Initialize all systems immediately with DOM readiness detection
+const initializeLILACComponents = () => {
+    console.log('Initializing LILAC components...');
+
+    // Use multiple DOM readiness detection methods
+    const ensureDOMReady = (callback) => {
+        if (window.isDOMReady()) {
+            callback();
+        } else {
+            // Listen for readyState changes
+            const handleReadyStateChange = () => {
+                if (window.isDOMReady()) {
+                    document.removeEventListener('readystatechange', handleReadyStateChange);
+                    callback();
+                }
+            };
+
+            document.addEventListener('readystatechange', handleReadyStateChange);
+
+            // Also use MutationObserver as backup
+            const observer = new MutationObserver(() => {
+                if (window.isDOMReady()) {
+                    observer.disconnect();
+                    callback();
+                }
+            });
+
+            observer.observe(document, { childList: true, subtree: true });
+
+            // Timeout fallback
+            setTimeout(() => {
+                observer.disconnect();
+                document.removeEventListener('readystatechange', handleReadyStateChange);
+                if (document.body) {
+                    callback();
+                } else {
+                    console.error('DOM readiness detection failed');
+                }
+            }, 5000);
+        }
+    };
+
+    ensureDOMReady(() => {
+        console.log('DOM ready, initializing components...');
+        console.log('DOM state at initialization:', {
+            readyState: document.readyState,
+            body: !!document.body,
+            isDOMReady: window.isDOMReady()
+        });
+
+        try {
+            window.lilacNotifications = new LILACNotifications();
+            console.log('✅ LILAC Notifications initialized');
+        } catch (error) {
+            console.error('❌ Failed to initialize LILAC Notifications:', error);
+        }
+
+        try {
+            window.lilacValidator = new LILACFormValidator();
+            console.log('✅ LILAC Form Validator initialized');
+        } catch (error) {
+            console.error('❌ Failed to initialize LILAC Form Validator:', error);
+        }
+
+        try {
+            window.lilacLoading = new LILACLoadingManager();
+            console.log('✅ LILAC Loading Manager initialized');
+        } catch (error) {
+            console.error('❌ Failed to initialize LILAC Loading Manager:', error);
+        }
+
+        try {
+            window.lilacMobileNav = new LILACMobileNav();
+            console.log('✅ LILAC Mobile Nav initialized');
+        } catch (error) {
+            console.error('❌ Failed to initialize LILAC Mobile Nav:', error);
+        }
+
+        console.log('All LILAC components initialization completed');
+    });
+};
+
+initializeLILACComponents();
+
+// Utility functions to check if LILAC components are ready
+window.isLILACNotificationsReady = function() {
+    return window.lilacNotifications &&
+           window.lilacNotifications.container !== null &&
+           window.lilacNotifications.container !== undefined;
+};
+
+window.isLILACComponentsReady = function() {
+    return {
+        notifications: window.isLILACNotificationsReady(),
+        validator: !!window.lilacValidator,
+        loading: !!window.lilacLoading,
+        mobileNav: !!window.lilacMobileNav
+    };
+};
+
+// isDOMReady function is now defined above
+
+// Additional initialization after DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize enhancement systems
-    window.lilacNotifications = new LILACNotifications();
-    window.lilacValidator = new LILACFormValidator();
-    window.lilacLoading = new LILACLoadingManager();
-    window.lilacMobileNav = new LILACMobileNav();
 
     // Smooth page transitions (fade-out on navigation)
     try {
@@ -654,6 +941,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('🚀 LILAC Enhancement System initialized');
     console.log('🏷️ LilacTags available:', !!window.LilacTags);
+
+    // Final safety check: Ensure all components are properly initialized
+    let retryCount = 0;
+    const maxRetries = 5;
+
+    const finalSafetyCheck = () => {
+        retryCount++;
+        let needsRetry = false;
+
+        if (!window.lilacNotifications || !window.lilacNotifications.container) {
+            console.warn('LILAC Notifications not properly initialized, retrying... (attempt', retryCount, ')');
+            window.lilacNotifications = new LILACNotifications();
+            needsRetry = true;
+        }
+
+        if (!window.lilacMobileNav) {
+            console.warn('LILAC Mobile Nav not properly initialized, retrying... (attempt', retryCount, ')');
+            window.lilacMobileNav = new LILACMobileNav();
+            needsRetry = true;
+        }
+
+        const status = window.isLILACComponentsReady();
+        console.log('✅ LILAC Components final status (attempt', retryCount, '):', status);
+
+        if (needsRetry && retryCount < maxRetries) {
+            setTimeout(finalSafetyCheck, 100);
+        } else if (needsRetry) {
+            console.error('LILAC Components failed to initialize after', maxRetries, 'attempts');
+        }
+    };
+
+    finalSafetyCheck();
 });
 
 // Export for module use

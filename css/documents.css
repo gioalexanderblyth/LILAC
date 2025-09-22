@@ -476,7 +476,6 @@
     width: 0%;
     transition: width 0.3s ease;
 }
-
 /* Dynamic progress bar width */
 .progress-bar[data-progress="0"] { width: 0%; }
 .progress-bar[data-progress="10"] { width: 10%; }
